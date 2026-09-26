@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Factory Town OnSite</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="OnSite">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f7f7f9; --line:#e6e6eb; --ink:#111118; --muted:#6b6b76; --brand:#181818;
+  --pink:#ec4899; --pink-t:#fdf2f8;
+  --blue:#2563eb; --blue-t:#eff6ff;
+  --purple:#7c3aed; --purple-t:#f5f3ff;
+  --amber:#d97706; --amber-t:#fffbeb;
+  --red:#dc2626; --red-t:#fef2f2;
+  --green:#16a34a; --green-t:#f0fdf4;
+  --r:22px;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding-top:calc(86px + var(--safe-t));padding-bottom:calc(20px + var(--safe-b));overscroll-behavior-y:none}
+body.hasnav{padding-bottom:calc(84px + var(--safe-b))}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input{font:inherit}
+.hidden{display:none!important}
+
+/* header */
+header{position:fixed;left:0;right:0;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line);padding:calc(12px + var(--safe-t)) 20px 12px;display:flex;align-items:center;gap:12px}
+.hwrap{flex:1;min-width:0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:22px;width:auto;display:block;border-radius:3px}
+.brand .os{font-size:12px;font-weight:900;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.sync{width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block}
+.sync.off{background:var(--red)} .sync.busy{background:#f59e0b}
+h1{margin:4px 0 0;font-size:26px;line-height:1.15;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--soft);border:1px solid var(--line);flex:none}
+.iconbtn svg{width:26px;height:26px}
+.iconbtn:active{transform:scale(.96)}
+body.locked header .iconbtn{display:none}
+
+main{padding:18px 20px 30px;max-width:1100px;margin:0 auto}
+
+/* bottom nav (scan mode) */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding:6px 10px calc(4px + var(--safe-b) * .5)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border-radius:13px;font-size:12px;font-weight:700;color:var(--muted)}
+nav button svg{width:22px;height:22px}
+nav button.on{color:var(--blue);background:var(--blue-t)}
+
+/* home */
+.home{display:flex;flex-direction:column;gap:18px;max-width:640px;margin:4vh auto 0}
+.hero{background:var(--brand);border-radius:28px;padding:28px 26px 24px;color:#fff}
+.hero img{width:min(320px,80%);display:block}
+.hero .bo{margin-top:14px;font-size:13px;font-weight:800;letter-spacing:.22em;color:#a1a1aa}
+.hero .who{margin-top:14px;font-size:16px;color:#d4d4d8;font-weight:600}
+.mode{display:flex;align-items:center;gap:20px;width:100%;min-height:150px;border-radius:28px;padding:24px 26px;text-align:left;color:#fff;transition:transform .08s}
+.mode:active{transform:scale(.985)}
+.mode svg{width:54px;height:54px;flex:none}
+.mode b{display:block;font-size:40px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
+.mode span{display:block;font-size:17px;font-weight:600;opacity:.85;margin-top:4px}
+.mode.sell{background:var(--pink)} .mode.scan{background:var(--blue)}
+
+/* shared big buttons */
+.big{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;min-height:96px;border-radius:26px;font-size:28px;font-weight:800;color:#fff;margin-top:14px;letter-spacing:-.01em}
+.big svg{width:32px;height:32px}
+.big:active{transform:scale(.985)}
+.big:disabled{opacity:.35}
+.big.blue{background:var(--blue)} .big.green{background:var(--green)} .big.pink{background:var(--pink)} .big.red{background:var(--red)} .big.dark{background:var(--brand)}
+.big.ghost{background:#fff;color:var(--ink);border:2px solid var(--line)}
+.row2{display:flex;gap:14px}.row2 .big{flex:1}
+.linkbtn{display:block;margin:20px auto 0;font-size:17px;font-weight:700;color:var(--muted);text-decoration:underline;text-underline-offset:4px;padding:8px}
+.step{max-width:640px;margin:0 auto}
+.q{font-size:30px;font-weight:900;letter-spacing:-.02em;margin:6px 0 4px}
+.qs{font-size:18px;color:var(--muted);margin:0 0 18px;font-weight:500}
+
+/* ticket types */
+.types{display:flex;flex-direction:column;gap:14px}
+.typebtn{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:112px;border-radius:26px;padding:20px 26px;text-align:left;border:2.5px solid;transition:transform .08s}
+.typebtn:active{transform:scale(.985)}
+.typebtn b{font-size:38px;font-weight:900;letter-spacing:-.02em}
+.typebtn span{display:block;font-size:16px;font-weight:600;margin-top:2px;opacity:.8}
+.typebtn svg{width:30px;height:30px;flex:none}
+.t-GA{background:var(--blue-t);border-color:#bfdbfe;color:#1d4ed8}
+.t-VIP{background:var(--amber-t);border-color:#fde68a;color:#b45309}
+.t-UPG{background:var(--purple-t);border-color:#ddd6fe;color:#6d28d9}
+.tbadge{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:999px;font-size:14px;font-weight:900;letter-spacing:.02em;border:1.5px solid;white-space:nowrap}
+
+/* keypads */
+.digits{display:flex;justify-content:center;gap:12px;margin:8px 0 22px}
+.digits i{width:64px;height:78px;border-radius:18px;border:2.5px solid var(--line);display:grid;place-items:center;font-style:normal;font-size:40px;font-weight:900}
+.digits i.on{border-color:var(--ink)}
+.cardpre{font-size:40px;font-weight:900;color:var(--muted);align-self:center;letter-spacing:.06em;margin-right:4px}
+.dots{display:flex;justify-content:center;gap:18px;margin:6px 0 24px}
+.dots i{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--ink)}
+.dots i.on{background:var(--ink)}
+.dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:420px;margin:0 auto}
+.pad button{height:80px;border-radius:22px;background:var(--soft);border:1px solid var(--line);font-size:34px;font-weight:800}
+.pad button:active{background:var(--line)}
+.pad button.blank{visibility:hidden}
+.pad svg{width:30px;height:30px}
+.perr{min-height:26px;text-align:center;color:var(--red);font-weight:700;font-size:17px;margin-top:14px}
+
+/* confirm */
+.summary{border:2px solid var(--line);border-radius:26px;overflow:hidden;margin-top:6px}
+.summary .tr{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;font-size:21px;border-top:1px solid var(--line)}
+.summary .tr:first-child{border-top:0}
+.summary .tr span{color:var(--muted);font-weight:600}
+.summary .tr b{font-weight:900}
+.summary .tbadge{height:40px;padding:0 18px;font-size:20px}
+.handoff{margin-top:18px;border-radius:22px;background:var(--pink-t);border:2px solid #fbcfe8;color:#9d174d;padding:16px 18px;font-size:18px;font-weight:700;text-align:center;line-height:1.35}
+
+/* customer screen */
+.cust{max-width:560px;margin:0 auto}
+.custhero{background:var(--brand);color:#fff;border-radius:28px;padding:26px 24px}
+.custhero img{width:220px;max-width:70%;display:block}
+.custhero .bo{margin-top:12px;font-size:12px;font-weight:800;letter-spacing:.22em;color:#a1a1aa}
+.custhero h2{margin:16px 0 0;font-size:30px;font-weight:900;letter-spacing:-.02em}
+.custhero p{margin:6px 0 0;color:#d4d4d8;font-size:17px;line-height:1.4}
+.field{display:block;margin-top:18px}
+.field span{display:block;font-size:16px;font-weight:800;color:var(--muted);margin:0 0 8px 4px}
+.field input{width:100%;height:68px;border-radius:20px;border:2px solid var(--line);padding:0 20px;font-size:24px;font-weight:600;outline:0;background:#fff;color:var(--ink)}
+.field input:focus{border-color:var(--ink)}
+.checkmail{font-size:28px;font-weight:900;text-align:center;word-break:break-all;margin:10px 0 4px}
+
+/* done */
+.done{text-align:center;padding:10px 0 4px}
+.badge{width:116px;height:116px;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;color:#fff}
+.badge svg{width:62px;height:62px}
+.done h2{font-size:36px;margin:0;font-weight:900;letter-spacing:-.02em}
+.done .dt{font-size:20px;color:var(--muted);margin-top:8px;font-weight:600;line-height:1.4;word-break:break-word}
+.qrbox{display:inline-block;background:#fff;border:2px solid var(--line);border-radius:22px;padding:10px;margin-top:18px}
+.qrbox svg{display:block}
+.mailfail{margin-top:16px;border-radius:20px;background:var(--red-t);border:2px solid #fecaca;color:var(--red);padding:14px 16px;font-size:18px;font-weight:700;line-height:1.35}
+.handback{margin-top:18px;font-size:22px;font-weight:900}
+
+/* scanner */
+.cam{position:relative;border-radius:28px;overflow:hidden;background:#000;aspect-ratio:3/4;max-height:calc(100vh - 230px);margin:0 auto;width:100%;max-width:640px}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .frame{position:absolute;inset:18% 14%;border-radius:26px;box-shadow:0 0 0 2000px rgba(0,0,0,.35);border:4px solid rgba(255,255,255,.9)}
+.cam .cstat{position:absolute;left:0;right:0;bottom:18px;text-align:center;color:#fff;font-size:19px;font-weight:800;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.cam.blocked .frame,.cam.blocked .cstat{display:none}
+.cam .cmsg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:30px;text-align:center;color:#fff;font-size:19px;line-height:1.45}
+.cam .cmsg b{font-size:24px}
+.cam .cmsg button{margin-top:8px;height:56px;padding:0 24px;border-radius:999px;background:#fff;color:#111;font-weight:800;font-size:18px}
+.scanfoot{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.scanfoot .stat{font-size:16px;font-weight:700;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:10px 16px}
+.scanfoot .stat b{color:var(--ink)}
+
+/* scan result: full screen */
+.result{position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;color:#fff}
+.result.ok{background:var(--green)} .result.bad{background:var(--red)} .result.wait{background:#27272a}
+.result .rb{width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;animation:pop .25s ease-out}
+.result .rb svg{width:110px;height:110px}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.result h2{font-size:48px;font-weight:900;letter-spacing:-.02em;margin:24px 0 0;line-height:1.05}
+.result .rt{margin-top:14px;display:inline-block;background:#fff;border-radius:999px;padding:8px 22px;font-size:30px;font-weight:900}
+.result .rn{font-size:30px;font-weight:800;margin-top:14px}
+.result .rm{font-size:24px;font-weight:600;margin-top:12px;line-height:1.35;max-width:620px;opacity:.95}
+.result .rtap{position:absolute;bottom:calc(26px + var(--safe-b));font-size:16px;font-weight:700;opacity:.75}
+
+/* tickets sold */
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.search{flex:1 1 260px;display:flex;align-items:center;gap:10px;background:var(--soft);border:1px solid var(--line);border-radius:18px;padding:0 16px;height:56px}
+.search svg{width:22px;height:22px;color:var(--muted);flex:none}
+.search input{border:0;background:transparent;outline:0;font-size:20px;width:100%;color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);font-size:16px;font-weight:700;color:var(--muted);background:#fff;display:inline-flex;align-items:center;gap:6px}
+.fchip b{font-weight:900;color:var(--ink)}
+.fchip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.fchip.on{border-color:var(--ink);color:var(--ink)}
+.typeline{font-size:15px;color:var(--muted);font-weight:700;margin:-4px 0 14px 2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.tk{position:relative;text-align:left;border-radius:var(--r);border:2px solid var(--line);background:var(--soft);padding:16px 18px 16px 26px;display:flex;flex-direction:column;gap:6px;transition:transform .08s;min-height:120px}
+.tk:active{transform:scale(.98)}
+.tk::before{content:"";position:absolute;left:10px;top:16px;bottom:16px;width:6px;border-radius:6px;background:#a1a1aa}
+.tk .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tk .num{font-size:15px;font-weight:800;color:var(--muted)}
+.tk .nm{font-size:22px;font-weight:800;letter-spacing:-.01em;line-height:1.15;word-break:break-word}
+.tk .st{font-size:15px;font-weight:700;color:var(--muted);line-height:1.35}
+.tk.in{background:var(--green-t);border-color:#bbf7d0}.tk.in::before{background:var(--green)}.tk.in .st{color:var(--green)}
+.tk.rep{background:var(--red-t);border-color:#fecaca}.tk.rep::before{background:var(--red)}.tk.rep .st{color:var(--red)}
+.tk.void{background:#fff;border-style:dashed;opacity:.6}.tk.void .nm{text-decoration:line-through}
+.tk.pend{background:#fff;border-style:dashed}
+.tk.fresh{animation:flash 1.2s ease-out}
+@keyframes flash{from{box-shadow:0 0 0 6px rgba(37,99,235,.35)}}
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;color:var(--muted);font-size:19px;line-height:1.5}
+.empty b{color:var(--ink)}
+
+/* modal sheet */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(17,17,24,.35);display:flex;align-items:center;justify-content:center;padding:20px}
+.sheet{background:#fff;width:100%;max-width:600px;max-height:calc(100vh - 40px);overflow:auto;border-radius:30px;padding:28px 26px 26px;box-shadow:0 30px 80px rgba(0,0,0,.25);position:relative}
+.close{position:absolute;right:16px;top:16px;width:48px;height:48px;border-radius:50%;background:var(--soft);display:grid;place-items:center}
+.close svg{width:24px;height:24px}
+.mname{font-size:32px;font-weight:900;letter-spacing:-.02em;margin:4px 56px 4px 0;line-height:1.1;word-break:break-word}
+.msub{font-size:17px;color:var(--muted);margin-bottom:18px;font-weight:600}
+.kv{border:2px solid var(--line);border-radius:22px;overflow:hidden}
+.kv .tr{display:flex;justify-content:space-between;gap:14px;padding:13px 18px;font-size:17px;border-top:1px solid var(--line)}
+.kv .tr:first-child{border-top:0}
+.kv .tr span{color:var(--muted);font-weight:600;flex:none}
+.kv .tr b{font-weight:800;text-align:right;word-break:break-word}
+.hist{margin-top:16px}
+.hist .h{display:flex;gap:12px;align-items:flex-start;padding:10px 4px;border-top:1px solid var(--line);font-size:17px}
+.hist .h:first-child{border-top:0}
+.hist .h i{width:12px;height:12px;border-radius:50%;margin-top:6px;flex:none;background:#a1a1aa}
+.hist .h i.g{background:var(--green)} .hist .h i.r{background:var(--red)}
+.hist .h small{display:block;color:var(--muted);font-weight:600;font-size:15px}
+.notes{white-space:pre-wrap;font-size:15px;color:var(--muted);background:var(--soft);border-radius:16px;padding:12px 14px;margin-top:14px;line-height:1.45}
+.bigset{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:64px;border-radius:20px;font-size:20px;font-weight:800;margin-top:12px;background:var(--soft);border:2px solid var(--line)}
+.bigset svg{width:24px;height:24px;flex:none}
+.bigset.red{background:var(--red);color:#fff;border-color:var(--red)}
+.bigset.green{background:var(--green);color:#fff;border-color:var(--green)}
+.bigset.dark{background:var(--brand);color:#fff;border-color:var(--brand)}
+.setrow{display:flex;justify-content:space-between;align-items:center;padding:14px 4px;border-top:1px solid var(--line);font-size:18px}
+.setrow:first-of-type{border-top:0}
+.setrow span{color:var(--muted);font-weight:600}
+.setrow b{font-weight:800}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translateX(-50%);z-index:90;background:#111118;color:#fff;border-radius:999px;padding:14px 22px;font-size:17px;font-weight:700;max-width:calc(100% - 40px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+
+/* live ticket (customer opens their email link) */
+body.ticketpage{min-height:100vh;background:#0b0b0c;padding:calc(24px + var(--safe-t)) 14px 30px}
+body.ticketpage header,body.ticketpage nav{display:none}
+.live{max-width:420px;margin:0 auto;background:#181818;border-radius:24px;color:#fff;padding:28px 26px 30px}
+.live img.logo{width:220px;max-width:100%;display:block}
+.live .bo{margin-top:12px;font-size:13px;font-weight:800;letter-spacing:.22em;color:#a1a1aa}
+.live .lt{font-size:30px;font-weight:900;margin-top:16px}
+.live .ln{font-size:17px;font-weight:700;margin-top:2px}
+.live .ls{font-size:15px;color:#a1a1aa;margin-top:2px}
+.live .lq{background:#fff;border-radius:18px;padding:12px;display:inline-block;margin-top:22px}
+.live .lq svg{display:block}
+.live .lstate{margin-top:18px;border-radius:16px;padding:14px 16px;font-size:18px;font-weight:800;text-align:center}
+.live .lstate.open{background:#27272a;color:#e4e4e7}
+.live .lstate.in{background:var(--green);color:#fff}
+.live .lstate.void{background:var(--red);color:#fff}
+.center{text-align:center}
+@media (max-width:520px){h1{font-size:21px} main{padding:14px 14px 30px} .mode{min-height:124px} .mode b{font-size:34px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand"><img id="hlogo" alt="Factory Town"><span class="os">OnSite</span><span class="sync" id="sync"></span></div>
+    <h1 id="title">Factory Town OnSite</h1>
+  </div>
+  <button class="iconbtn hidden" id="homeBtn" aria-label="Home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+  </button>
+  <button class="iconbtn" id="gearBtn" aria-label="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</header>
+
+<main id="main"></main>
+
+<nav id="nav" class="hidden">
+  <button data-tab="scan" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+    Scan
+  </button>
+  <button data-tab="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg>
+    Tickets Sold
+  </button>
+</nav>
+
+<div id="modal"></div>
+<div id="result"></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+/* ============ boot values from the server ============ */
+// The same file runs two ways: Apps Script fills in its template tags below; build.js swaps these lines for the GitHub copy.
+const HOSTED = true;
+const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+const LOGO = 'logo.png';
+const APP_URL = '';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
+const APP_VERSION = '2';
+
+/* ============ icons ============ */
+const I = {
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-5 6M12 9l5 6"/></svg>',
+  sell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"/><path d="M12 9v6M9 12h6"/></svg>',
+  scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9.5"/></svg>',
+};
+
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const TYPE_CLASS = { 'GA': 'GA', 'VIP': 'VIP', 'VIP Upgrade': 'UPG' };
+const TYPE_COLOR = { 'GA': ['#1d4ed8', '#eff6ff', '#bfdbfe'], 'VIP': ['#b45309', '#fffbeb', '#fde68a'], 'VIP Upgrade': ['#6d28d9', '#f5f3ff', '#ddd6fe'] };
+function tbadge(type) {
+  const c = TYPE_COLOR[type] || ['#111', '#fff', '#ddd'];
+  return '<span class="tbadge" style="color:' + c[0] + ';background:' + c[1] + ';border-color:' + c[2] + '">' + esc(type) + '</span>';
+}
+const fmtT = ms => ms ? new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+const fmtTs = ms => ms ? new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '';
+function titleCase(s) { return String(s || '').toLowerCase().replace(/(^|[\s'-])\S/g, m => m.toUpperCase()); }
+
+function toast(msg, ms) {
+  const el = $('#toast');
+  el.innerHTML = '<div class="toast">' + esc(msg) + '</div>';
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { el.innerHTML = ''; }, ms || 3200);
+}
+
+/** QR as crisp SVG from the server's "0101/1100/..." rows. */
+function qrSvg(str, px) {
+  const rows = String(str || '').split('/'), n = rows.length, b = 3, N = n + 2 * b;
+  let d = '';
+  rows.forEach((r, y) => { for (let x = 0; x < n; x++) if (r[x] === '1') d += 'M' + (x + b) + ' ' + (y + b) + 'h1v1h-1z'; });
+  return '<svg viewBox="0 0 ' + N + ' ' + N + '" width="' + px + '" height="' + px + '" shape-rendering="crispEdges"><rect width="' + N + '" height="' + N + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}
+
+/* ============ server calls ============ */
+const HAS_GAS = !!(window.google && google.script && google.script.run);
+function call(fn, ...args) {
+  setSync('busy');
+  // GitHub copy: plain-text POST to the Apps Script web app (a "simple" request, so no CORS preflight)
+  const p = HAS_GAS
+    ? new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args))
+    : fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow' })
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(r => { if (r && r.error) throw new Error(r.error); return r; });
+  return p.then(r => {
+    setSync('ok');
+    if (r && r.auth === false) { signedOut(); throw new Error(r.msg || 'Signed out'); }
+    return r;
+  }, err => { setSync('off'); throw err; });
+}
+function setSync(s) { const el = $('#sync'); el.className = 'sync' + (s === 'busy' ? ' busy' : s === 'off' ? ' off' : ''); }
+
+/* ============ login that sticks until Sign Out ============ */
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem('ftos.' + k) || 'null'); } catch (e) { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem('ftos.' + k) : localStorage.setItem('ftos.' + k, JSON.stringify(v)); } catch (e) {} },
+};
+let AUTH = store.get('auth');   // { token, name }
+
+function signedOut() {
+  AUTH = null; store.set('auth', null);
+  stopCamera();
+  mode = 'home'; render();
+  toast('You were signed out. Enter your code again.');
+}
+
+/** Opens the 6-digit keypad; resolves once the device is signed in. */
+function requireLogin(then) {
+  if (AUTH && AUTH.token) return then();
+  let code = '';
+  const draw = (err, shake) => {
+    $('#modal').innerHTML = '<div class="overlay"><div class="sheet">' +
+      '<button class="close" id="kx">' + I.x + '</button>' +
+      '<div class="mname">Enter your code</div><div class="msub">Last 6 of your SSN. This device stays signed in until you tap Sign Out in Settings.</div>' +
+      '<div class="dots' + (shake ? ' shake' : '') + '">' + [0, 1, 2, 3, 4, 5].map(i => '<i class="' + (i < code.length ? 'on' : '') + '"></i>').join('') + '</div>' +
+      padHtml() + '<div class="perr">' + esc(err || '') + '</div></div></div>';
+    $('#kx').onclick = () => { $('#modal').innerHTML = ''; };
+    bindPad(d => {
+      if (d === 'del') code = code.slice(0, -1);
+      else if (code.length < 6) code += d;
+      draw();
+      if (code.length === 6) {
+        const tried = code; code = '';
+        call('api_login', tried).then(r => {
+          if (!r.ok) return draw(r.msg, true);
+          AUTH = { token: r.token, name: r.name }; store.set('auth', AUTH);
+          $('#modal').innerHTML = '';
+          toast('Signed in as ' + r.name);
+          then();
+        }).catch(() => draw('No connection. Try again.', true));
+      }
+    });
+  };
+  draw();
+}
+
+function padHtml() {
+  return '<div class="pad">' + ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del']
+    .map(k => k === '' ? '<button class="blank"></button>' : '<button data-k="' + k + '">' + (k === 'del' ? I.del : k) + '</button>').join('') + '</div>';
+}
+function bindPad(fn) {
+  document.querySelectorAll('.pad button[data-k]').forEach(b => { b.onclick = () => fn(b.dataset.k); });
+}
+
+/* ============ app state ============ */
+let mode = 'home';      // home | sell | scan
+let tab = 'scan';       // scan | list  (inside scan mode)
+let S = null;           // tonight's state from the server
+let sale = null;        // the sale in progress
+let filter = 'all', query = '';
+let seenLast = {};      // ticket id -> last activity, to flash changed cards
+
+function setTitle(t) { $('#title').textContent = t; }
+
+function render() {
+  document.body.classList.toggle('hasnav', mode === 'scan');
+  $('#nav').classList.toggle('hidden', mode !== 'scan');
+  $('#homeBtn').classList.toggle('hidden', mode === 'home');
+  document.body.classList.toggle('locked', mode === 'sell' && sale && (sale.step === 'customer' || sale.step === 'checkmail'));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  if (mode === 'home') { stopCamera(); (HAS_GAS && APP_URL) ? renderMoved() : renderHome(); }
+  else if (mode === 'sell') { stopCamera(); renderSell(); }
+  else if (mode === 'scan') { tab === 'scan' ? renderScan() : (stopCamera(), renderList()); }
+}
+
+/* ============ home ============ */
+/** The old Apps Script link: the camera can't work there, so send staff to the GitHub app. */
+function renderMoved() {
+  setTitle('New link');
+  $('#main').innerHTML = '<div class="home"><div class="hero"><img src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE &middot; ONSITE</div>' +
+    '<div class="who">This app has a new home so the camera works on iPads.</div></div>' +
+    '<a class="mode scan" style="text-decoration:none" href="' + esc(APP_URL) + '" target="_blank" rel="noopener">' + I.scan + '<div><b>Open the app</b><span>Then Share &gt; Add to Home Screen, and delete the old icon</span></div></a>' +
+    '<div class="qs" style="text-align:center;word-break:break-all">' + esc(APP_URL) + '</div></div>';
+}
+function renderHome() {
+  setTitle('Box Office');
+  $('#main').innerHTML = '<div class="home">' +
+    '<div class="hero"><img src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE &middot; ONSITE</div>' +
+    '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' : 'Tap Sell or Scan and enter your code') + '</div></div>' +
+    '<button class="mode sell" id="goSell">' + I.sell + '<div><b>Sell</b><span>Log a sale and send the customer their QR</span></div></button>' +
+    '<button class="mode scan" id="goScan">' + I.scan + '<div><b>Scan</b><span>Check tickets at the gate</span></div></button>' +
+    '</div>';
+  $('#goSell').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'sell'; sale = { step: 'type' }; render(); }); };
+  $('#goScan').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'scan'; tab = 'scan'; render(); poll(true); }); };
+}
+
+/* ============ sell ============ */
+function renderSell() {
+  if (!sale) sale = { step: 'type' };
+  const m = $('#main');
+  if (sale.step === 'type') {
+    setTitle('Sell');
+    m.innerHTML = '<div class="step"><div class="q">Ticket type</div><p class="qs">Sold in DICE? Pick what they bought.</p><div class="types">' +
+      '<button class="typebtn t-GA" data-t="GA"><div><b>GA</b><span>General admission</span></div>' + I.chev + '</button>' +
+      '<button class="typebtn t-VIP" data-t="VIP"><div><b>VIP</b><span>VIP admission</span></div>' + I.chev + '</button>' +
+      '<button class="typebtn t-UPG" data-t="VIP Upgrade"><div><b>VIP Upgrade</b><span>Already has a DICE GA ticket</span></div>' + I.chev + '</button>' +
+      '</div></div>';
+    m.querySelectorAll('.typebtn').forEach(b => { b.onclick = () => { sale = { step: 'card', type: b.dataset.t, last4: '' }; render(); }; });
+  } else if (sale.step === 'card') {
+    setTitle('Sell · ' + sale.type);
+    const d = sale.last4;
+    m.innerHTML = '<div class="step"><div class="q">Card last 4</div><p class="qs">The last 4 digits of the card they paid with.</p>' +
+      '<div class="digits"><span class="cardpre">••••</span>' + [0, 1, 2, 3].map(i => '<i class="' + (i < d.length ? 'on' : '') + '">' + esc(d[i] || '') + '</i>').join('') + '</div>' +
+      padHtml() +
+      '<div class="row2" style="max-width:420px;margin:8px auto 0"><button class="big ghost" id="bk">' + I.back + 'Back</button><button class="big dark" id="nx"' + (d.length === 4 ? '' : ' disabled') + '>Next</button></div></div>';
+    bindPad(k => {
+      if (k === 'del') sale.last4 = sale.last4.slice(0, -1);
+      else if (sale.last4.length < 4) sale.last4 += k;
+      render();
+    });
+    $('#bk').onclick = () => { sale = { step: 'type' }; render(); };
+    $('#nx').onclick = () => { if (sale.last4.length === 4) { sale.step = 'confirm'; render(); } };
+  } else if (sale.step === 'confirm') {
+    setTitle('Confirm sale');
+    m.innerHTML = '<div class="step"><div class="q">Confirm sale</div><p class="qs">Check it, then hand the device to the customer.</p>' +
+      '<div class="summary"><div class="tr"><span>Ticket</span>' + tbadge(sale.type) + '</div>' +
+      '<div class="tr"><span>Card</span><b>•••• ' + esc(sale.last4) + '</b></div>' +
+      '<div class="tr"><span>Sold by</span><b>' + esc(AUTH.name) + '</b></div></div>' +
+      '<div class="handoff">Next screen is for the customer: they type their name and email and get their QR code.</div>' +
+      '<button class="big pink" id="ok">' + I.check + 'Confirm & hand over</button>' +
+      '<button class="linkbtn" id="bk">Back</button></div>';
+    $('#bk').onclick = () => { sale.step = 'card'; render(); };
+    $('#ok').onclick = e => {
+      e.target.disabled = true;
+      call('api_startSale', AUTH.token, { type: sale.type, last4: sale.last4 }).then(r => {
+        if (!r.ok) { toast(r.msg); e.target.disabled = false; return; }
+        sale = Object.assign(sale, { step: 'customer', id: r.ticket.id, n: r.ticket.n, name: '', email: '' });
+        render();
+      }).catch(() => { toast('No connection. Try again.'); e.target.disabled = false; });
+    };
+  } else if (sale.step === 'customer') {
+    setTitle('Your ticket');
+    m.innerHTML = '<div class="cust"><div class="custhero"><img src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE</div>' +
+      '<h2>Get your ticket</h2><p>Enter your name and email. We\'ll send your ' + esc(sale.type) + ' QR code right away.</p></div>' +
+      '<label class="field"><span>Full name</span><input id="cn" autocomplete="off" autocapitalize="words" enterkeyhint="next" value="' + esc(sale.name) + '"></label>' +
+      '<label class="field"><span>Email</span><input id="ce" type="email" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="send" value="' + esc(sale.email) + '"></label>' +
+      '<button class="big dark" id="send">' + I.mail + 'Send my ticket</button>' +
+      '<button class="linkbtn" id="cx">Staff: cancel this sale</button></div>';
+    const cn = $('#cn'), ce = $('#ce');
+    cn.oninput = () => { sale.name = cn.value; };
+    ce.oninput = () => { sale.email = ce.value; };
+    cn.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); ce.focus(); } };
+    ce.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#send').click(); } };
+    $('#send').onclick = () => {
+      sale.name = cn.value.replace(/\s+/g, ' ').trim();
+      sale.email = ce.value.trim().toLowerCase();
+      if (!sale.name) return (toast('Please enter your name.'), cn.focus());
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(sale.email)) return (toast('Please check your email.'), ce.focus());
+      document.activeElement && document.activeElement.blur();
+      sale.step = 'checkmail'; render();
+    };
+    $('#cx').onclick = () => confirmBox('Cancel this sale?', 'The sale stays in the log, marked Void.', 'Cancel sale', 'red', () => {
+      call('api_cancelSale', AUTH.token, sale.id).catch(() => {});
+      sale = { step: 'type' }; render();
+    });
+  } else if (sale.step === 'checkmail') {
+    setTitle('Your ticket');
+    m.innerHTML = '<div class="cust"><div class="q center">Is your email right?</div>' +
+      '<div class="checkmail">' + esc(sale.email) + '</div><p class="qs center">Your ticket goes here, so double-check it.</p>' +
+      '<button class="big green" id="yes">' + I.check + 'Yes, send it</button>' +
+      '<button class="big ghost" id="fix">Fix it</button></div>';
+    $('#fix').onclick = () => { sale.step = 'customer'; render(); };
+    $('#yes').onclick = e => {
+      e.target.disabled = true; e.target.textContent = 'Sending…';
+      call('api_finishSale', AUTH.token, { id: sale.id, name: sale.name, email: sale.email }).then(r => {
+        if (!r.ok) { toast(r.msg, 4500); sale.step = 'customer'; render(); return; }
+        sale = Object.assign(sale, { step: 'done', ticket: r.ticket, emailed: r.emailed, mailMsg: r.mailMsg });
+        render();
+      }).catch(() => { toast('No connection. Try again.'); e.target.disabled = false; e.target.textContent = 'Yes, send it'; });
+    };
+  } else if (sale.step === 'done') {
+    setTitle('All set');
+    const t = sale.ticket, first = titleCase(String(t.name).split(' ')[0]);
+    m.innerHTML = '<div class="cust done">' +
+      '<div class="badge" style="background:var(--green)">' + I.check + '</div>' +
+      '<h2>You\'re all set, ' + esc(first) + '!</h2>' +
+      (sale.emailed
+        ? '<div class="dt">Your ' + esc(t.type) + ' ticket is on its way to<br><b style="color:var(--ink)">' + esc(t.email) + '</b></div>'
+        : '<div class="mailfail">The email did not go through. Take a screenshot of this QR code now. Staff can resend it from Tickets Sold.</div>') +
+      '<div class="qrbox">' + qrSvg(t.qr, 220) + '</div>' +
+      '<div class="dt" style="font-size:16px">Ticket #' + t.n + ' &middot; ' + tbadge(t.type) + '</div>' +
+      '<div class="handback">Please hand the device back to staff.</div>' +
+      '<button class="big pink" id="next">Next sale</button></div>';
+    $('#next').onclick = () => { sale = { step: 'type' }; render(); window.scrollTo(0, 0); };
+  }
+}
+
+/* ============ scan ============ */
+let stream = null, video = null, canvas = null, scanTimer = null, busy = false;
+let lastCode = '', lastCodeAt = 0;
+const detector = ('BarcodeDetector' in window) ? (() => { try { return new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { return null; } })() : null;
+
+function renderScan() {
+  setTitle('Scan');
+  const t = S ? S.tickets : [];
+  const inCount = t.filter(x => x.status === 'Scanned' || x.status === 'Repeat attempt').length;
+  const live = t.filter(x => x.status !== 'Void').length;
+  $('#main').innerHTML = '<div class="cam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
+    '<div class="scanfoot"><div class="stat">Checked in <b>' + inCount + '</b> of <b>' + live + '</b> tonight</div></div>';
+  startCamera();
+}
+
+function camMsg(html) {
+  const cam = $('#cam');
+  if (!cam) return;
+  cam.querySelectorAll('.cmsg').forEach(e => e.remove());
+  cam.classList.toggle('blocked', !!html);
+  if (html) cam.insertAdjacentHTML('beforeend', '<div class="cmsg">' + html + '</div>');
+}
+
+function startCamera() {
+  video = $('#vid');
+  if (!video) return;
+  if (stream) { video.srcObject = stream; video.play().catch(() => {}); loopScan(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return camMsg('<b>No camera access here</b>Open this app in Safari or Chrome, or check in by hand from Tickets Sold.');
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+    .then(s => {
+      stream = s;
+      if (!video || !document.body.contains(video)) { stopCamera(); return; }
+      video.srcObject = s; video.play().catch(() => {});
+      $('#cstat').textContent = 'Point at a ticket QR';
+      loopScan();
+    })
+    .catch(err => {
+      camMsg('<b>Camera blocked</b>Allow camera access for this app, then try again. You can still check people in by hand from Tickets Sold.' +
+        '<button id="camRetry">Try again</button>');
+      const b = $('#camRetry'); if (b) b.onclick = () => { camMsg(''); startCamera(); };
+      console.warn(err);
+    });
+}
+
+function stopCamera() {
+  clearTimeout(scanTimer); scanTimer = null;
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+
+function loopScan() {
+  clearTimeout(scanTimer);
+  const tick = async () => {
+    if (!stream || mode !== 'scan' || tab !== 'scan') return;
+    if (!busy && video && video.readyState >= 2) {
+      const code = await readFrame();
+      if (code) onCode(code);
+    }
+    scanTimer = setTimeout(tick, 120);
+  };
+  tick();
+}
+
+async function readFrame() {
+  try {
+    if (detector) {
+      const found = await detector.detect(video);
+      return found && found[0] ? found[0].rawValue : '';
+    }
+    if (!window.jsQR) return '';
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw) return '';
+    const scale = Math.min(1, 720 / Math.max(vw, vh));
+    const w = Math.round(vw * scale), h = Math.round(vh * scale);
+    canvas = canvas || document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const g = canvas.getContext('2d', { willReadFrequently: true });
+    g.drawImage(video, 0, 0, w, h);
+    const r = jsQR(g.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
+    return r ? r.data : '';
+  } catch (e) { return ''; }
+}
+
+function onCode(code) {
+  const now = Date.now();
+  // the camera keeps seeing the same QR: ignore it for a few seconds after its result closes
+  if (code === lastCode && now - lastCodeAt < 6000) return;
+  busy = true; lastCode = code; lastCodeAt = now;
+  showResult({ wait: true });
+  call('api_scan', AUTH.token, code, false).then(r => {
+    showResult(r);
+    if (r.ticket) mergeTicket(r.ticket);
+  }).catch(err => {
+    if (!AUTH) return;
+    lastCode = '';
+    showResult({ result: 'offline', msg: 'No connection. Scan again.' });
+  });
+}
+
+/** Full-screen green check or red X. Closes itself (green 2.5 s, red 4 s) or on tap. */
+function showResult(r) {
+  const el = $('#result');
+  clearTimeout(showResult.t);
+  if (r.wait) {
+    el.innerHTML = '<div class="result wait"><div class="rb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9" stroke-dasharray="40 20"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur=".8s" repeatCount="indefinite"/></circle></svg></div><h2>Checking…</h2></div>';
+    return;
+  }
+  const ok = r.result === 'admit';
+  const t = r.ticket;
+  const heads = { admit: 'Admitted', repeat: 'Already scanned', void: 'Voided ticket', night: 'Wrong night', unknown: 'Not valid', pending: 'Not valid', offline: 'Not checked' };
+  let msg = r.msg || '';
+  if (r.result === 'repeat' && r.first) msg = 'Scanned by ' + r.first.by + ' at ' + fmtT(r.first.t) + '.' + (t && t.repeats > 1 ? ' Tried ' + t.repeats + ' times since.' : '');
+  if (ok && t && t.type === 'VIP Upgrade') msg = 'VIP Upgrade: they also need their DICE GA ticket.' + (msg ? ' ' + msg : '');
+  el.innerHTML = '<div class="result ' + (ok ? 'ok' : 'bad') + '" id="res">' +
+    '<div class="rb">' + (ok ? I.check : r.result === 'offline' ? I.alert : I.x) + '</div>' +
+    '<h2>' + esc(heads[r.result] || 'Not valid') + '</h2>' +
+    (t ? '<div class="rt" style="color:' + (TYPE_COLOR[t.type] || ['#111'])[0] + '">' + esc(t.type) + '</div>' : '') +
+    (t && t.name ? '<div class="rn">' + esc(titleCase(t.name)) + ' &middot; #' + t.n + '</div>' : '') +
+    (msg ? '<div class="rm">' + esc(msg) + '</div>' : '') +
+    '<div class="rtap">Tap to scan next</div></div>';
+  ok ? beepOk() : beepBad();
+  if (navigator.vibrate) navigator.vibrate(ok ? 80 : [120, 80, 120]);
+  const close = () => { clearTimeout(showResult.t); el.innerHTML = ''; busy = false; lastCodeAt = Date.now(); if (mode === 'scan' && tab === 'scan') renderScanFoot(); };
+  $('#res').onclick = close;
+  showResult.t = setTimeout(close, ok ? 2500 : 4000);
+}
+function renderScanFoot() {
+  const f = document.querySelector('.scanfoot .stat');
+  if (!f || !S) return;
+  const t = S.tickets;
+  f.innerHTML = 'Checked in <b>' + t.filter(x => x.status === 'Scanned' || x.status === 'Repeat attempt').length + '</b> of <b>' + t.filter(x => x.status !== 'Void').length + '</b> tonight';
+}
+
+/* sounds: Web Audio, unlocked by the first tap on Sell or Scan (iOS needs a tap first) */
+let AC = null;
+function unlockAudio() {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain(); g.gain.value = 0; o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + .01);
+  } catch (e) {}
+}
+function tone(freq, start, dur, type, vol) {
+  if (!AC) return;
+  const t0 = AC.currentTime + start, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol || .3, t0 + .01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0 + dur + .02);
+}
+function beepOk() { tone(1318, 0, .11, 'sine', .35); tone(1760, .12, .2, 'sine', .35); }
+function beepBad() { tone(196, 0, .28, 'square', .2); tone(147, .32, .4, 'square', .2); }
+
+/* ============ tickets sold ============ */
+function stateOf(t) {
+  if (t.status === 'Void') return 'void';
+  if (t.status === 'Waiting on customer') return 'pend';
+  if (t.status === 'Repeat attempt' || t.repeats > 0) return 'rep';
+  if (t.status === 'Scanned') return 'in';
+  return 'open';
+}
+
+function renderList() {
+  setTitle('Tickets Sold' + (S ? ' · ' + S.nightLabel : ''));
+  const all = S ? S.tickets.slice() : [];
+  const count = k => all.filter(t => k === 'all' ? stateOf(t) !== 'void' : stateOf(t) === k || (k === 'open' && stateOf(t) === 'pend')).length;
+  const types = ['GA', 'VIP', 'VIP Upgrade'].map(ty => ty + ' ' + all.filter(t => t.type === ty && t.status !== 'Void').length).join(' · ');
+  const chips = [['all', 'Sold', ''], ['open', 'Not scanned', '#a1a1aa'], ['in', 'Scanned', 'var(--green)'], ['rep', 'Repeat', 'var(--red)'], ['void', 'Void', '#d4d4d8']];
+  const q = query.trim().toLowerCase();
+  let list = all.filter(t => {
+    const st = stateOf(t);
+    if (filter === 'all' && st === 'void') return false;
+    if (filter !== 'all' && !(st === filter || (filter === 'open' && st === 'pend'))) return false;
+    if (!q) return true;
+    return (t.name + ' ' + t.email + ' ' + t.n + ' ' + t.id + ' ' + t.last4 + ' ' + t.type).toLowerCase().indexOf(q) >= 0;
+  });
+  list.sort((a, b) => b.last - a.last);
+  const prevFocus = document.activeElement && document.activeElement.id === 'q';
+  $('#main').innerHTML =
+    '<div class="toolbar"><label class="search">' + I.search + '<input id="q" placeholder="Search name, email, #, last 4" value="' + esc(query) + '" autocomplete="off"></label>' +
+    '<div class="chips">' + chips.map(c => '<button class="fchip' + (filter === c[0] ? ' on' : '') + '" data-f="' + c[0] + '">' + (c[2] ? '<i style="background:' + c[2] + '"></i>' : '') + c[1] + ' <b>' + count(c[0]) + '</b></button>').join('') + '</div></div>' +
+    '<div class="typeline">' + esc(types) + '</div>' +
+    (list.length ? '<div class="grid">' + list.map(cardHtml).join('') + '</div>'
+      : '<div class="empty">' + (all.length ? 'No tickets match.' : '<b>No tickets sold yet tonight.</b><br>Sales from the Sell screen show up here live.') + '</div>');
+  const qi = $('#q');
+  qi.oninput = () => { query = qi.value; renderList(); };
+  if (prevFocus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+  document.querySelectorAll('.fchip').forEach(b => { b.onclick = () => { filter = b.dataset.f; renderList(); }; });
+  document.querySelectorAll('.tk').forEach(b => { b.onclick = () => openTicket(b.dataset.id); });
+  list.forEach(t => { seenLast[t.id] = t.last; });
+}
+
+function cardHtml(t) {
+  const st = stateOf(t);
+  const admitted = t.scans.filter(s => s.res === 'Admitted')[0];
+  const lastTry = t.scans.filter(s => s.res === 'Already scanned').slice(-1)[0];
+  let line;
+  if (st === 'void') line = 'Void';
+  else if (st === 'pend') line = 'Waiting on customer · sold ' + fmtT(t.sold) + ' by ' + esc(t.by);
+  else if (st === 'rep') line = 'Tried again ' + fmtT(lastTry ? lastTry.t : t.last) + (t.repeats > 1 ? ' (' + t.repeats + '×)' : '') + '<br>Scanned ' + fmtT(admitted && admitted.t) + ' by ' + esc(admitted ? admitted.by : '');
+  else if (st === 'in') line = 'Scanned ' + fmtT(admitted && admitted.t) + ' by ' + esc(admitted ? admitted.by : '');
+  else line = 'Not scanned · sold ' + fmtT(t.sold) + ' by ' + esc(t.by);
+  const fresh = seenLast[t.id] && seenLast[t.id] !== t.last ? ' fresh' : '';
+  const mailWarn = /^Failed/.test(t.mail) ? ' <span style="color:var(--red)">· email failed</span>' : '';
+  return '<button class="tk ' + st + fresh + '" data-id="' + esc(t.id) + '">' +
+    '<div class="top">' + tbadge(t.type) + '<span class="num">#' + t.n + '</span></div>' +
+    '<div class="nm">' + esc(t.name ? titleCase(t.name) : 'No name yet') + '</div>' +
+    '<div class="st">' + line + mailWarn + '</div></button>';
+}
+
+function openTicket(id) {
+  const t = S && S.tickets.find(x => x.id === id);
+  if (!t) return;
+  const st = stateOf(t);
+  const hist = ['<div class="h"><i></i><div>Sold by ' + esc(t.by) + '<small>' + fmtT(t.sold) + ' · card •••• ' + esc(t.last4) + '</small></div></div>']
+    .concat(t.mail ? ['<div class="h"><i class="' + (/^Failed/.test(t.mail) ? 'r' : '') + '"></i><div>Email<small>' + esc(t.mail) + '</small></div></div>'] : [])
+    .concat(t.scans.map(s => '<div class="h"><i class="' + (s.res === 'Admitted' ? 'g' : 'r') + '"></i><div>' + esc(s.res) + '<small>' + fmtTs(s.t) + ' by ' + esc(s.by) + '</small></div></div>'));
+  $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
+    '<button class="close" id="mx">' + I.x + '</button>' +
+    '<div class="mname">' + esc(t.name ? titleCase(t.name) : 'No name yet') + '</div>' +
+    '<div class="msub">' + tbadge(t.type) + ' &nbsp;Ticket #' + t.n + ' · ' + esc(t.status) + '</div>' +
+    '<div class="kv"><div class="tr"><span>Email</span><b>' + esc(t.email || '(none)') + '</b></div>' +
+    '<div class="tr"><span>Card</span><b>•••• ' + esc(t.last4) + '</b></div>' +
+    '<div class="tr"><span>Code</span><b>' + esc(t.id) + '</b></div></div>' +
+    '<div class="hist">' + hist.join('') + '</div>' +
+    (t.notes ? '<div class="notes">' + esc(t.notes) + '</div>' : '') +
+    (st === 'open' || st === 'pend' ? '<button class="bigset green" id="mIn">' + I.check + 'Check in by hand</button>' : '') +
+    (st !== 'void' && t.email ? '<button class="bigset" id="mResend">' + I.mail + 'Resend email</button>' : '') +
+    (st !== 'void' ? '<button class="bigset" id="mEmail">Change email</button>' : '') +
+    (st !== 'void' ? '<button class="bigset red" id="mVoid">Void ticket</button>' : '') +
+    '</div></div>';
+  const close = () => { $('#modal').innerHTML = ''; };
+  $('#mx').onclick = close;
+  $('#ov').onclick = e => { if (e.target.id === 'ov') close(); };
+  const b = (sel, fn) => { const el = $(sel); if (el) el.onclick = fn; };
+  b('#mIn', () => confirmBox('Check in ' + (titleCase(t.name) || 'this ticket') + '?', 'Use this when the QR won\'t scan. It counts as their one entry.', 'Check in', 'green', () => {
+    call('api_scan', AUTH.token, t.id, true).then(r => { showResult(r); if (r.ticket) mergeTicket(r.ticket); }).catch(() => toast('No connection. Try again.'));
+  }));
+  b('#mResend', () => {
+    toast('Sending…');
+    call('api_resend', AUTH.token, t.id, '').then(r => { toast(r.ok ? 'Email sent to ' + t.email : (r.msg || 'Email failed')); if (r.ticket) mergeTicket(r.ticket); close(); }).catch(() => toast('No connection. Try again.'));
+  });
+  b('#mEmail', () => promptBox('Change email', 'The ticket is resent to the new address.', t.email, 'email', 'Save & send', v => {
+    toast('Sending…');
+    call('api_resend', AUTH.token, t.id, v).then(r => { toast(r.ok ? 'Email sent to ' + v : (r.msg || 'Email failed')); if (r.ticket) mergeTicket(r.ticket); }).catch(() => toast('No connection. Try again.'));
+  }));
+  b('#mVoid', () => promptBox('Void this ticket?', 'The QR stops working. The ticket stays in the log. Reason (optional):', '', 'text', 'Void ticket', v => {
+    call('api_void', AUTH.token, t.id, v).then(r => { toast(r.ok ? 'Ticket voided' : r.msg); if (r.ticket) mergeTicket(r.ticket); }).catch(() => toast('No connection. Try again.'));
+  }, 'red'));
+}
+
+function mergeTicket(t) {
+  if (!S) return;
+  const i = S.tickets.findIndex(x => x.id === t.id);
+  if (i >= 0) S.tickets[i] = t; else if (t.night === S.night) S.tickets.push(t);
+  if (mode === 'scan' && tab === 'list' && !$('#modal').innerHTML) renderList();
+}
+
+/* ============ small dialogs ============ */
+function confirmBox(title, sub, okText, color, onOk) {
+  $('#modal').innerHTML = '<div class="overlay"><div class="sheet"><div class="mname">' + esc(title) + '</div><div class="msub">' + esc(sub) + '</div>' +
+    '<div class="row2"><button class="bigset" id="cNo">Back</button><button class="bigset ' + color + '" id="cYes">' + esc(okText) + '</button></div></div></div>';
+  $('#cNo').onclick = () => { $('#modal').innerHTML = ''; };
+  $('#cYes').onclick = () => { $('#modal').innerHTML = ''; onOk(); };
+}
+function promptBox(title, sub, value, type, okText, onOk, color) {
+  $('#modal').innerHTML = '<div class="overlay"><div class="sheet"><div class="mname">' + esc(title) + '</div><div class="msub">' + esc(sub) + '</div>' +
+    '<label class="field" style="margin-top:0"><input id="pIn" type="' + (type === 'email' ? 'email' : 'text') + '" autocapitalize="none" autocomplete="off" spellcheck="false" value="' + esc(value) + '"></label>' +
+    '<div class="row2"><button class="bigset" id="cNo">Back</button><button class="bigset ' + (color || 'dark') + '" id="cYes">' + esc(okText) + '</button></div></div></div>';
+  const inp = $('#pIn');
+  setTimeout(() => inp.focus(), 50);
+  $('#cNo').onclick = () => { $('#modal').innerHTML = ''; };
+  $('#cYes').onclick = () => {
+    const v = inp.value.trim();
+    if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return toast('That email doesn\'t look right.');
+    $('#modal').innerHTML = ''; onOk(v);
+  };
+}
+
+/* ============ settings ============ */
+function openSettings() {
+  const draw = info => {
+    $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
+      '<button class="close" id="mx">' + I.x + '</button><div class="mname">Settings</div><div class="msub">Factory Town OnSite</div>' +
+      '<div class="setrow"><span>Signed in as</span><b>' + esc(AUTH ? AUTH.name : 'Nobody') + '</b></div>' +
+      '<div class="setrow"><span>Tonight</span><b>' + esc(info ? info.night : (S ? S.nightLabel : '…')) + '</b></div>' +
+      '<div class="setrow"><span>Emails left today</span><b style="' + (info && info.emailsLeft < 15 ? 'color:var(--red)' : '') + '">' + (info ? info.emailsLeft : '…') + '</b></div>' +
+      '<div class="setrow"><span>Version</span><b>App ' + esc(APP_VERSION) + (info ? ' &middot; Server ' + esc(info.build) : '') + '</b></div>' +
+      (mode !== 'home' ? '<button class="bigset" id="sHome">Back to Home</button>' : '') +
+      (AUTH ? '<button class="bigset red" id="sOut">Sign out</button>' : '') +
+      '</div></div>';
+    $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
+    $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
+    const h = $('#sHome'); if (h) h.onclick = () => { $('#modal').innerHTML = ''; goHome(); };
+    const o = $('#sOut'); if (o) o.onclick = () => confirmBox('Sign out ' + AUTH.name + '?', 'This device will ask for a code next time.', 'Sign out', 'red', () => {
+      call('api_logout', AUTH.token).catch(() => {});
+      AUTH = null; store.set('auth', null); goHome(); toast('Signed out');
+    });
+  };
+  draw(null);
+  if (AUTH) call('api_info', AUTH.token).then(r => { if (r.ok && $('#mx')) draw(r); }).catch(() => {});
+}
+function goHome() {
+  if (mode === 'sell' && sale && (sale.step === 'customer' || sale.step === 'checkmail')) return;
+  mode = 'home'; sale = null; render();
+}
+
+/* ============ live updates ============ */
+let polling = false;
+function poll(force) {
+  if (!AUTH || mode !== 'scan') return;
+  if (polling) return;
+  polling = true;
+  call('api_getState', AUTH.token, force ? '' : (S && S.version) || '').then(r => {
+    polling = false;
+    if (!r.ok || r.same) return;
+    S = r.state;
+    if (mode === 'scan' && !$('#modal').innerHTML) {
+      if (tab === 'list') renderList(); else renderScanFoot();
+    }
+  }).catch(() => { polling = false; });
+}
+setInterval(() => { if (!document.hidden) poll(false); }, 4000);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopCamera();
+  else if (mode === 'scan' && tab === 'scan') startCamera();
+});
+
+/* ============ updates (GitHub copy) ============
+ * version.txt holds the current APP_VERSION. When it changes, the app reloads itself the next time it is
+ * idle (home screen or Tickets Sold), never in the middle of a sale or a scan result. */
+function checkUpdate() {
+  if (!HOSTED || TICKET_PARAM || document.hidden) return;
+  if (!(mode === 'home' || (mode === 'scan' && tab === 'list')) || $('#modal').innerHTML || $('#result').innerHTML) return;
+  fetch('version.txt?ts=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
+    v = String(v || '').trim();
+    if (v && v !== APP_VERSION) location.replace(location.pathname + '?v=' + encodeURIComponent(v));
+  }).catch(() => {});
+}
+setInterval(checkUpdate, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+
+/* ============ live ticket page (customer opened the link in their email) ============ */
+function renderLiveTicket(v) {
+  document.body.className = 'ticketpage';
+  document.documentElement.style.background = '#0b0b0c';
+  if (!v || !v.ok) {
+    $('#main').innerHTML = '<div class="live"><img class="logo" src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE</div><div class="lt">Ticket not found</div><div class="ls">Check the link in your email, or ask the box office.</div></div>';
+    return;
+  }
+  const c = { 'GA': '#60a5fa', 'VIP': '#fbbf24', 'VIP Upgrade': '#c084fc' }[v.type] || '#fff';
+  const state = v.status === 'in' ? '<div class="lstate in">Checked in at ' + fmtT(v.inAt) + '. Enjoy the show!</div>'
+    : v.status === 'void' ? '<div class="lstate void">This ticket was voided.</div>'
+    : '<div class="lstate open">Show this QR code at the gate. It works once.</div>';
+  $('#main').innerHTML = '<div class="live"><img class="logo" src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE</div>' +
+    '<div class="lt" style="color:' + c + '">' + esc(v.type) + '</div>' +
+    '<div class="ln">' + esc(titleCase(v.first)) + '</div><div class="ls">' + esc(v.night) + ' · Ticket #' + v.n + '</div>' +
+    '<div class="center">' + (v.status === 'open' ? '<div class="lq">' + qrSvg(v.qr, 250) + '</div>' : '') + '</div>' +
+    state + (v.type === 'VIP Upgrade' && v.status === 'open' ? '<div class="ls" style="margin-top:12px">This upgrade adds VIP access to your DICE GA ticket. Keep your DICE ticket handy too.</div>' : '') +
+    '</div>';
+}
+function liveTicketLoop() {
+  call('api_ticketView', TICKET_PARAM).then(v => {
+    renderLiveTicket(v);
+    if (v && v.ok && v.status === 'open') setTimeout(liveTicketLoop, 10000);
+  }).catch(() => setTimeout(liveTicketLoop, 10000));
+}
+
+/* ============ start ============ */
+$('#hlogo').src = LOGO;
+$('#gearBtn').onclick = openSettings;
+$('#homeBtn').onclick = goHome;
+document.querySelectorAll('#nav button').forEach(b => { b.onclick = () => { tab = b.dataset.tab; render(); poll(false); }; });
+
+if (TICKET_PARAM && AUTH && AUTH.token) {
+  // a signed-in staff phone opened a ticket link (scanned with the phone's own camera): check it in
+  mode = 'scan'; tab = 'list'; render(); poll(true);
+  busy = true;
+  showResult({ wait: true });
+  call('api_scan', AUTH.token, TICKET_PARAM, false).then(r => { showResult(r); if (r.ticket) mergeTicket(r.ticket); })
+    .catch(() => showResult({ result: 'offline', msg: 'No connection. Try again.' }));
+} else if (TICKET_PARAM) {
+  liveTicketLoop();
+} else {
+  render();
+}
+</script>
+</body>
+</html>
