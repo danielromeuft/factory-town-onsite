@@ -65,7 +65,7 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .mode svg{width:54px;height:54px;flex:none}
 .mode b{display:block;font-size:40px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
 .mode span{display:block;font-size:17px;font-weight:600;opacity:.85;margin-top:4px}
-.mode.sell{background:var(--pink)} .mode.scan{background:var(--blue)}
+.mode.sell{background:var(--pink)} .mode.scan{background:var(--blue)} .mode.flag{background:#b91c1c}
 
 /* shared big buttons */
 .big{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;min-height:96px;border-radius:26px;font-size:28px;font-weight:800;color:#fff;margin-top:14px;letter-spacing:-.01em}
@@ -224,6 +224,33 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .setrow span{color:var(--muted);font-weight:600}
 .setrow b{font-weight:800}
 
+/* flag */
+.fl-alt{height:52px;padding:0 20px;border-radius:999px;border:2px solid var(--line);background:#fff;font-size:17px;font-weight:800}
+.cam .frame.idframe{inset:30% 5%}
+.digits.dob{align-items:center}
+.digits.dob i{width:48px;height:64px;font-size:32px}
+.digits.dob b{font-size:32px;color:var(--muted);font-weight:900}
+.fl-clear{display:flex;align-items:center;gap:16px;border-radius:26px;background:var(--green-t);border:2px solid #bbf7d0;color:var(--green);padding:22px 24px;margin:6px 0 4px}
+.fl-clear svg{width:48px;height:48px;flex:none}
+.fl-clear b{display:block;font-size:28px;font-weight:900;letter-spacing:-.02em;color:#166534}
+.fl-clear span{display:block;font-size:16px;font-weight:600;color:var(--green)}
+.fl-head{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;font-size:34px;font-weight:900;letter-spacing:-.02em;color:var(--red);margin:4px 0 14px}
+.fl-head svg{width:42px;height:42px}
+.fl-head span{flex-basis:100%;font-size:17px;font-weight:700;color:var(--muted);letter-spacing:0}
+.fl-card{border-radius:26px;background:var(--fc);color:#fff;padding:22px 22px 18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.fl-type{display:inline-block;background:#fff;color:var(--fc);border-radius:999px;padding:6px 16px;font-size:24px;font-weight:900}
+.fl-name{font-size:34px;font-weight:900;letter-spacing:-.02em;margin-top:12px;line-height:1.1;word-break:break-word}
+.fl-dob{font-size:20px;font-weight:700;margin-top:6px;opacity:.95}
+.fl-note{margin-top:12px;background:rgba(255,255,255,.18);border-radius:14px;padding:10px 14px;font-size:18px;font-weight:600;line-height:1.35}
+.fl-by{margin-top:12px;font-size:15px;font-weight:600;opacity:.85;line-height:1.4}
+.fl-card .row2{margin-top:6px}
+.fl-card .bigset{background:rgba(255,255,255,.95);color:#111;border-color:transparent}
+.fl-card .bigset.red{background:#111;color:#fff}
+.fl-types{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fl-t{min-height:72px;border-radius:20px;border:2.5px solid var(--line);background:#fff;font-size:20px;font-weight:900;color:var(--fc);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px}
+.fl-t.on{background:var(--fc);color:#fff;border-color:var(--fc)}
+.fl-t:disabled{opacity:.35}
+.fl-t small{font-size:13px;font-weight:700;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translateX(-50%);z-index:90;background:#111118;color:#fff;border-radius:999px;padding:14px 22px;font-size:17px;font-weight:700;max-width:calc(100% - 40px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 
 /* live ticket (customer opens their email link) */
@@ -286,7 +313,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '2';
+const APP_VERSION = '3';
 
 /* ============ icons ============ */
 const I = {
@@ -401,7 +428,7 @@ function bindPad(fn) {
 }
 
 /* ============ app state ============ */
-let mode = 'home';      // home | sell | scan
+let mode = 'home';      // home | sell | scan | flag
 let tab = 'scan';       // scan | list  (inside scan mode)
 let S = null;           // tonight's state from the server
 let sale = null;        // the sale in progress
@@ -419,6 +446,7 @@ function render() {
   if (mode === 'home') { stopCamera(); (HAS_GAS && APP_URL) ? renderMoved() : renderHome(); }
   else if (mode === 'sell') { stopCamera(); renderSell(); }
   else if (mode === 'scan') { tab === 'scan' ? renderScan() : (stopCamera(), renderList()); }
+  else if (mode === 'flag') renderFlag();
 }
 
 /* ============ home ============ */
@@ -437,9 +465,11 @@ function renderHome() {
     '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' : 'Tap Sell or Scan and enter your code') + '</div></div>' +
     '<button class="mode sell" id="goSell">' + I.sell + '<div><b>Sell</b><span>Log a sale and send the customer their QR</span></div></button>' +
     '<button class="mode scan" id="goScan">' + I.scan + '<div><b>Scan</b><span>Check tickets at the gate</span></div></button>' +
+    '<button class="mode flag" id="goFlag">' + I.alert + '<div><b>Flag</b><span>Flag or check a guest: Under 21, No re-entry, Ejected</span></div></button>' +
     '</div>';
   $('#goSell').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'sell'; sale = { step: 'type' }; render(); }); };
   $('#goScan').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'scan'; tab = 'scan'; render(); poll(true); }); };
+  $('#goFlag').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'flag'; flagStart(); }); };
 }
 
 /* ============ sell ============ */
@@ -569,16 +599,16 @@ function camMsg(html) {
 function startCamera() {
   video = $('#vid');
   if (!video) return;
-  if (stream) { video.srcObject = stream; video.play().catch(() => {}); loopScan(); return; }
+  if (stream) { video.srcObject = stream; video.play().catch(() => {}); const cs = $('#cstat'); if (cs) cs.textContent = camHint(); loopScan(); return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     return camMsg('<b>No camera access here</b>Open this app in Safari or Chrome, or check in by hand from Tickets Sold.');
   }
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false })
     .then(s => {
       stream = s;
       if (!video || !document.body.contains(video)) { stopCamera(); return; }
       video.srcObject = s; video.play().catch(() => {});
-      $('#cstat').textContent = 'Point at a ticket QR';
+      $('#cstat').textContent = camHint();
       loopScan();
     })
     .catch(err => {
@@ -589,6 +619,10 @@ function startCamera() {
     });
 }
 
+/** The camera runs on the Scan tab and on the Flag ticket and ID steps. */
+const camActive = () => (mode === 'scan' && tab === 'scan') || (mode === 'flag' && fl && (fl.step === 'ticket' || fl.step === 'id'));
+const camHint = () => mode === 'flag' && fl && fl.step === 'id' ? 'Point at the barcode on the back of the ID' : 'Point at a ticket QR';
+
 function stopCamera() {
   clearTimeout(scanTimer); scanTimer = null;
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
@@ -597,10 +631,10 @@ function stopCamera() {
 function loopScan() {
   clearTimeout(scanTimer);
   const tick = async () => {
-    if (!stream || mode !== 'scan' || tab !== 'scan') return;
+    if (!stream || !camActive()) return;
     if (!busy && video && video.readyState >= 2) {
-      const code = await readFrame();
-      if (code) onCode(code);
+      const code = await (mode === 'flag' && fl.step === 'id' ? readId() : readFrame());
+      if (code && camActive()) mode === 'flag' ? onFlagCode(code) : onCode(code);
     }
     scanTimer = setTimeout(tick, 120);
   };
@@ -695,6 +729,269 @@ function tone(freq, start, dur, type, vol) {
 }
 function beepOk() { tone(1318, 0, .11, 'sine', .35); tone(1760, .12, .2, 'sine', .35); }
 function beepBad() { tone(196, 0, .28, 'square', .2); tone(147, .32, .4, 'square', .2); }
+
+/* ============ flag ============
+ * Flag a guest so another gate or Guest Services sees it later (e.g. 18 to 20 let in as GA at VIP: no 21+ band).
+ * 1. Scan their ticket (any QR: DICE or ours). Already flagged: the flag shows in red, with Edit and Remove.
+ * 2. Not flagged: scan the barcode on the back of their ID (or type name + date of birth). Only the name and
+ *    date of birth leave the device; the rest of the ID barcode is thrown away right here.
+ * 3. Same name + DOB already flagged (they switched tickets): the flag shows, and this ticket can be added to it.
+ * 4. Otherwise pick the flag type and save.
+ */
+const FLAG_TYPES = ['Under 21', 'No re-entry', 'Ejected / banned', 'Other'];
+const FLAG_STYLE = { 'Under 21': ['#dc2626', 'U21'], 'No re-entry': ['#d97706', 'NR'], 'Ejected / banned': ['#18181b', 'BAN'], 'Other': ['#7c3aed', '!'] };
+let fl = null;   // the flag flow in progress
+
+/** ID barcode reader: the browser's own when it knows PDF417 (Chrome, Android), else ZXing (iPad Safari), loaded on first use. */
+let idDetector = null, zxingLoading = null;
+if ('BarcodeDetector' in window && BarcodeDetector.getSupportedFormats) {
+  BarcodeDetector.getSupportedFormats().then(f => { if (f.indexOf('pdf417') >= 0) idDetector = new BarcodeDetector({ formats: ['pdf417'] }); }).catch(() => {});
+}
+function loadZXing() {
+  if (window.ZXing) return Promise.resolve();
+  return zxingLoading || (zxingLoading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+    s.onload = res; s.onerror = () => { zxingLoading = null; rej(new Error('load')); };
+    document.head.appendChild(s);
+  }));
+}
+// ZXing reads PDF417 only when it is fairly straight, so each frame is also tried turned a few degrees.
+const ID_ANGLES = [0, 4, -4, 8, -8, 12, -12];
+let idTry = 0, idBase = null, idWork = null;
+async function readId() {
+  try {
+    if (idDetector) { const f = await idDetector.detect(video); return f && f[0] ? f[0].rawValue : ''; }
+    if (!window.ZXing) { loadZXing().catch(() => {}); return ''; }
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw) return '';
+    const scale = Math.min(1, 1280 / Math.max(vw, vh)), w = Math.round(vw * scale), h = Math.round(vh * scale);
+    idBase = idBase || document.createElement('canvas'); idWork = idWork || document.createElement('canvas');
+    idBase.width = idWork.width = w; idBase.height = idWork.height = h;
+    idBase.getContext('2d', { willReadFrequently: true }).drawImage(video, 0, 0, w, h);
+    const ang = ID_ANGLES[idTry++ % ID_ANGLES.length];
+    let src = idBase;
+    if (ang) {
+      const g = idWork.getContext('2d', { willReadFrequently: true });
+      g.save(); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.translate(w / 2, h / 2); g.rotate(ang * Math.PI / 180); g.drawImage(idBase, -w / 2, -h / 2); g.restore();
+      src = idWork;
+    }
+    const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(src)));
+    return new ZXing.PDF417Reader().decode(bmp, hints).getText();
+  } catch (e) { return ''; }
+}
+
+/**
+ * The barcode on the back of a US or Canadian ID (AAMVA). Returns { name, dob: 'yyyy-mm-dd' } or null.
+ * Only these two leave this function; address, license number and the rest are dropped.
+ */
+function parseAAMVA(text) {
+  const s = String(text || '');
+  if (!/ANSI|AAMVA/.test(s) || !/DBB/.test(s)) return null;
+  const f = code => { const m = new RegExp('(?:^|[\\n\\r\\x1e]|DL|ID)' + code + '([^\\n\\r\\x1e]*)').exec(s); return m ? m[1].trim() : ''; };
+  let first = f('DAC') || f('DCT'), last = f('DCS') || f('DAB'), middle = f('DAD');
+  if (!first && !last && f('DAA')) { const p = f('DAA').split(/[,$]/).map(x => x.trim()); last = p[0] || ''; first = p[1] || ''; middle = p[2] || ''; }
+  if (/,/.test(first) && !middle) { const p = first.split(','); first = p[0]; middle = p[1]; }
+  const none = x => !x || /^(NONE|UNAVL|UNAVAILABLE|NA)$/i.test(x);
+  const name = [first, none(middle) ? '' : middle, last].filter(x => !none(x)).join(' ').replace(/\s+/g, ' ').trim();
+  const d = (f('DBB').match(/\d{8}/) || [''])[0];
+  if (!name || !d) return null;
+  // US: MMDDCCYY. Canada: CCYYMMDD.
+  let y, m, dd;
+  if (/^(19|20)/.test(d)) { y = d.slice(0, 4); m = d.slice(4, 6); dd = d.slice(6, 8); }   // 19/20 is never a month
+  else { m = d.slice(0, 2); dd = d.slice(2, 4); y = d.slice(4, 8); }
+  const dob = y + '-' + m + '-' + dd;
+  return validDob(dob) ? { name: titleCase(name), dob } : null;
+}
+function validDob(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+  if (!m) return false;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return d.getMonth() === +m[2] - 1 && +m[1] > 1900 && d < new Date();
+}
+function ageOf(dob) {
+  const [y, m, d] = dob.split('-').map(Number), t = new Date();
+  return t.getFullYear() - y - ((t.getMonth() + 1 < m || (t.getMonth() + 1 === m && t.getDate() < d)) ? 1 : 0);
+}
+const fmtDob = dob => { const [y, m, d] = String(dob).split('-'); return y ? Number(m) + '/' + Number(d) + '/' + y : ''; };
+const fmtWhenMs = ms => ms ? new Date(ms).toLocaleString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+
+function flagStart() { fl = { step: 'ticket' }; lastCode = ''; render(); }
+
+function renderFlag() {
+  if (!fl) fl = { step: 'ticket' };
+  const m = $('#main');
+  const camStep = fl.step === 'ticket' || fl.step === 'id';
+  if (!camStep) stopCamera();
+  if (fl.step === 'ticket') {
+    setTitle('Flag · Scan ticket');
+    m.innerHTML = '<div class="step"><div class="q">Scan their ticket</div><p class="qs">Any ticket QR: DICE or ours. If it was flagged, it shows right away.</p></div>' +
+      '<div class="cam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
+      '<div class="scanfoot"><button class="fl-alt" id="noTk">No ticket? Check or flag by ID</button></div>';
+    $('#noTk').onclick = () => { fl = { step: 'id', code: '' }; render(); };
+    startCamera();
+  } else if (fl.step === 'id') {
+    setTitle('Flag · Scan ID');
+    m.innerHTML = '<div class="step"><div class="q">Scan the back of their ID</div><p class="qs">Hold the long barcode flat and inside the frame. Only their name and date of birth are kept.</p></div>' +
+      '<div class="cam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
+      '<div class="scanfoot"><button class="fl-alt" id="manual">Type name + DOB instead</button><button class="fl-alt" id="bk">Back</button></div>';
+    $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.step = 'manual'; render(); };
+    $('#bk').onclick = () => { flagStart(); };
+    if (!idDetector) loadZXing().catch(() => toast('The ID reader did not load. Type name + DOB instead.', 4500));
+    startCamera();
+  } else if (fl.step === 'manual') {
+    setTitle('Flag · Name + DOB');
+    const d = fl.man.dob;
+    const box = i => '<i class="' + (i < d.length ? 'on' : '') + '">' + esc(d[i] || '') + '</i>';
+    m.innerHTML = '<div class="step"><div class="q">Name and date of birth</div><p class="qs">Type them exactly as on their ID.</p>' +
+      '<label class="field" style="margin-top:0"><span>Full name</span><input id="mn" autocomplete="off" autocapitalize="words" value="' + esc(fl.man.name) + '"></label>' +
+      '<div class="field"><span>Date of birth (month, day, year)</span></div>' +
+      '<div class="digits dob">' + [0, 1].map(box).join('') + '<b>/</b>' + [2, 3].map(box).join('') + '<b>/</b>' + [4, 5, 6, 7].map(box).join('') + '</div>' +
+      padHtml() + '<div class="perr" id="merr"></div>' +
+      '<div class="row2" style="max-width:420px;margin:8px auto 0"><button class="big ghost" id="bk">' + I.back + 'Back</button><button class="big dark" id="nx">Next</button></div></div>';
+    const mn = $('#mn');
+    mn.oninput = () => { fl.man.name = mn.value; };
+    bindPad(k => {
+      fl.man.name = mn.value;
+      if (k === 'del') fl.man.dob = fl.man.dob.slice(0, -1); else if (fl.man.dob.length < 8) fl.man.dob += k;
+      render();
+    });
+    $('#bk').onclick = () => { fl.step = 'id'; render(); };
+    $('#nx').onclick = () => {
+      const name = mn.value.replace(/\s+/g, ' ').trim(), x = fl.man.dob;
+      const dob = x.length === 8 ? x.slice(4) + '-' + x.slice(0, 2) + '-' + x.slice(2, 4) : '';
+      if (!name) return ($('#merr').textContent = 'Enter their name.');
+      if (!validDob(dob)) return ($('#merr').textContent = 'Check the date of birth (MM / DD / YYYY).');
+      gotPerson({ name: titleCase(name), dob });
+    };
+  } else if (fl.step === 'checking') {
+    setTitle('Flag');
+    m.innerHTML = '<div class="step center" style="padding-top:12vh"><div class="q">Checking…</div></div>';
+  } else if (fl.step === 'clear') {
+    setTitle('Flag · Not flagged');
+    m.innerHTML = '<div class="step"><div class="fl-clear">' + I.check + '<div><b>No flag on this ticket</b><span>Checked just now.</span></div></div>' +
+      '<button class="big red" id="flagIt">' + I.alert + 'Flag this person</button>' +
+      '<p class="qs center" style="margin-top:10px">Next you\'ll scan their ID (or type name + DOB).</p>' +
+      '<button class="big ghost" id="next">Scan next ticket</button></div>';
+    $('#flagIt').onclick = () => { fl.step = 'id'; render(); };
+    $('#next').onclick = flagStart;
+  } else if (fl.step === 'found') {
+    setTitle('Flag · Flagged');
+    const cards = fl.flags.map((f, i) => {
+      const c = (FLAG_STYLE[f.type] || FLAG_STYLE.Other)[0];
+      return '<div class="fl-card" style="--fc:' + c + '"><div class="fl-type">' + esc(f.type) + '</div>' +
+        '<div class="fl-name">' + esc(titleCase(f.name)) + '</div>' +
+        '<div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) + (f.age != null ? ' &middot; <b>' + f.age + ' now</b>' : '') + '</div>' +
+        (f.note ? '<div class="fl-note">' + esc(f.note) + '</div>' : '') +
+        '<div class="fl-by">Flagged by ' + esc(f.by) + ' &middot; ' + esc(fmtWhenMs(f.at)) + (f.event ? ' &middot; ' + esc(f.event) : '') + '</div>' +
+        '<div class="row2"><button class="bigset" data-edit="' + i + '">Edit</button><button class="bigset red" data-rm="' + i + '">Remove</button></div></div>';
+    }).join('');
+    const link = fl.via === 'id' && fl.code;
+    m.innerHTML = '<div class="step"><div class="fl-head">' + I.alert + (fl.flags.length > 1 ? fl.flags.length + ' flags' : 'Flagged') +
+      '<span>' + (fl.via === 'id' ? 'Matched by name + date of birth' : 'This ticket was flagged') + '</span></div>' + cards +
+      (link ? '<button class="big dark" id="link">Add this ticket to the flag</button>' : '') +
+      (fl.via === 'id' && fl.person ? '<button class="bigset" id="newOne">Different person: flag them separately</button>' : '') +
+      '<button class="big ghost" id="next">Scan next ticket</button></div>';
+    m.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => { const f = fl.flags[+b.dataset.edit]; fl.edit = f; fl.person = { name: f.name, dob: f.dob }; fl.type = f.type; fl.note = f.note; fl.step = 'form'; render(); }; });
+    m.querySelectorAll('[data-rm]').forEach(b => { b.onclick = () => removeFlag(fl.flags[+b.dataset.rm]); });
+    if ($('#link')) $('#link').onclick = e => saveFlag(Object.assign({}, fl.flags[0], { code: fl.code }), e.target, 'Ticket added to the flag.');
+    if ($('#newOne')) $('#newOne').onclick = () => { fl.edit = null; fl.type = ''; fl.note = ''; fl.step = 'form'; render(); };
+    $('#next').onclick = flagStart;
+  } else if (fl.step === 'form') {
+    const p = fl.person, age = ageOf(p.dob), under = age < 21;
+    if (!fl.type && !fl.edit) fl.type = under ? 'Under 21' : '';
+    setTitle(fl.edit ? 'Edit flag #' + fl.edit.n : 'Flag · New');
+    m.innerHTML = '<div class="step"><div class="q">' + (fl.edit ? 'Edit flag' : 'Flag this person') + '</div>' +
+      '<div class="summary"><div class="tr"><span>Name</span><b>' + esc(p.name) + '</b></div>' +
+      '<div class="tr"><span>Date of birth</span><b>' + esc(fmtDob(p.dob)) + '</b></div>' +
+      '<div class="tr"><span>Age</span><b style="color:' + (under ? 'var(--red)' : 'var(--ink)') + '">' + age + (under ? ' &middot; UNDER 21' : '') + '</b></div>' +
+      (fl.code && !fl.edit ? '<div class="tr"><span>Ticket</span><b>Scanned</b></div>' : '') + '</div>' +
+      '<button class="linkbtn" id="fix" style="margin-top:8px">Fix name or date of birth</button>' +
+      '<div class="field"><span>Flag type</span></div><div class="fl-types">' +
+      FLAG_TYPES.map(t => {
+        const off = t === 'Under 21' && !under;
+        return '<button class="fl-t' + (fl.type === t ? ' on' : '') + '" data-t="' + esc(t) + '" style="--fc:' + FLAG_STYLE[t][0] + '"' + (off ? ' disabled' : '') + '>' + esc(t) + (off ? '<small>They are 21+</small>' : '') + '</button>';
+      }).join('') + '</div>' +
+      '<label class="field"><span>Note' + (fl.type === 'Other' ? ' (required)' : ' (optional)') + '</span><input id="fnote" autocomplete="off" maxlength="300" value="' + esc(fl.note || '') + '"></label>' +
+      '<button class="big red" id="save"' + (fl.type ? '' : ' disabled') + '>' + I.check + (fl.edit ? 'Save changes' : 'Save flag') + '</button>' +
+      '<button class="linkbtn" id="cx">Cancel</button></div>';
+    const note = $('#fnote');
+    note.oninput = () => { fl.note = note.value; };
+    m.querySelectorAll('.fl-t').forEach(b => { b.onclick = () => { fl.note = note.value; fl.type = b.dataset.t; render(); }; });
+    $('#fix').onclick = () => { fl.note = note.value; const [y, mo, d] = p.dob.split('-'); fl.man = { name: p.name, dob: mo + d + y }; fl.fixing = true; fl.step = 'manual'; render(); };
+    $('#cx').onclick = flagStart;
+    $('#save').onclick = e => {
+      fl.note = note.value.trim();
+      if (fl.type === 'Other' && !fl.note) return toast('Add a note for "Other".');
+      saveFlag({ n: fl.edit ? fl.edit.n : 0, type: fl.type, name: p.name, dob: p.dob, note: fl.note, code: fl.edit ? '' : (fl.code || '') }, e.target);
+    };
+  } else if (fl.step === 'saved') {
+    const f = fl.saved, c = (FLAG_STYLE[f.type] || FLAG_STYLE.Other)[0];
+    setTitle('Flag saved');
+    m.innerHTML = '<div class="step"><div class="fl-card" style="--fc:' + c + '"><div class="fl-type">' + esc(f.type) + '</div>' +
+      '<div class="fl-name">' + esc(titleCase(f.name)) + '</div><div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) + ' &middot; ' + f.age + '</div>' +
+      '<div class="fl-by">' + esc(fl.savedMsg || 'Flag saved. Any gate or Guest Services scanning this ticket or ID will see it.') + '</div></div>' +
+      '<button class="big dark" id="next">Scan next ticket</button></div>';
+    $('#next').onclick = flagStart;
+    clearTimeout(renderFlag.t);
+    renderFlag.t = setTimeout(() => { if (mode === 'flag' && fl && fl.step === 'saved') flagStart(); }, 5000);
+  }
+}
+
+/** A ticket or an ID was read by the camera. */
+function onFlagCode(code) {
+  const now = Date.now();
+  if (code === lastCode && now - lastCodeAt < 6000) return;
+  lastCode = code; lastCodeAt = now;
+  if (fl.step === 'ticket') {
+    busy = true;
+    fl = { step: 'checking', code: code, via: 'ticket' }; render();
+    call('api_flagCheck', AUTH.token, { code: code }).then(r => {
+      busy = false;
+      if (!r.ok) { toast(r.msg || 'Could not check.'); flagStart(); return; }
+      if (r.flags.length) { fl = { step: 'found', code: code, via: 'ticket', flags: r.flags }; beepBad(); if (navigator.vibrate) navigator.vibrate([120, 80, 120]); }
+      else { fl = { step: 'clear', code: code, via: 'ticket' }; beepOk(); }
+      render();
+    }).catch(() => { busy = false; toast('No connection. Scan again.'); flagStart(); });
+  } else if (fl.step === 'id') {
+    const p = parseAAMVA(code);
+    if (!p) { toast('That barcode is not an ID we can read. Try again, or type name + DOB.'); return; }
+    if (navigator.vibrate) navigator.vibrate(60);
+    gotPerson(p);
+  }
+}
+
+/** Name + DOB from the ID (scanned or typed): check for a flag on the same person, else go to the form. */
+function gotPerson(p) {
+  if (fl.fixing) { fl.fixing = false; fl.person = p; fl.step = 'form'; render(); return; }
+  const code = fl.code || '';
+  busy = true;
+  fl = Object.assign(fl, { step: 'checking', person: p }); render();
+  call('api_flagCheck', AUTH.token, { name: p.name, dob: p.dob }).then(r => {
+    busy = false;
+    if (!r.ok) { toast(r.msg || 'Could not check.'); fl.step = 'form'; render(); return; }
+    if (r.flags.length) { fl = { step: 'found', code: code, via: 'id', flags: r.flags, person: p }; beepBad(); if (navigator.vibrate) navigator.vibrate([120, 80, 120]); }
+    else fl = { step: 'form', code: code, person: p, type: '', note: '' };
+    render();
+  }).catch(() => { busy = false; toast('No connection. Try again.'); fl.step = 'form'; render(); });
+}
+
+function saveFlag(op, btn, msg) {
+  if (btn) btn.disabled = true;
+  call('api_flagSave', AUTH.token, { n: op.n || 0, type: op.type, name: op.name, dob: op.dob, note: op.note || '', code: op.code || '' }).then(r => {
+    if (!r.ok) { toast(r.msg || 'Not saved.'); if (btn) btn.disabled = false; return; }
+    fl = { step: 'saved', saved: r.flag, savedMsg: msg || '' };
+    beepOk(); render();
+  }).catch(() => { toast('No connection. Try again.'); if (btn) btn.disabled = false; });
+}
+
+function removeFlag(f) {
+  promptBox('Remove this flag?', titleCase(f.name) + ' · ' + f.type + '. It stays on the sheet as Removed. Reason (optional):', '', 'text', 'Remove flag', v => {
+    call('api_flagRemove', AUTH.token, f.n, v).then(r => { toast(r.ok ? 'Flag removed.' : (r.msg || 'Not removed.')); if (r.ok) flagStart(); })
+      .catch(() => toast('No connection. Try again.'));
+  }, 'red');
+}
 
 /* ============ tickets sold ============ */
 function stateOf(t) {
@@ -828,15 +1125,22 @@ function openSettings() {
     $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
       '<button class="close" id="mx">' + I.x + '</button><div class="mname">Settings</div><div class="msub">Factory Town OnSite</div>' +
       '<div class="setrow"><span>Signed in as</span><b>' + esc(AUTH ? AUTH.name : 'Nobody') + '</b></div>' +
+      '<div class="setrow"><span>Event</span><b>' + esc(info ? (info.event || 'Not set') : '…') + '</b></div>' +
       '<div class="setrow"><span>Tonight</span><b>' + esc(info ? info.night : (S ? S.nightLabel : '…')) + '</b></div>' +
       '<div class="setrow"><span>Emails left today</span><b style="' + (info && info.emailsLeft < 15 ? 'color:var(--red)' : '') + '">' + (info ? info.emailsLeft : '…') + '</b></div>' +
       '<div class="setrow"><span>Version</span><b>App ' + esc(APP_VERSION) + (info ? ' &middot; Server ' + esc(info.build) : '') + '</b></div>' +
+      (AUTH ? '<button class="bigset" id="sEvent">Refresh Event</button><div class="msub" style="margin:8px 4px 0;font-size:15px">Reads the current event from the Master Timesheet. A new event gets its own flags page; flags from past events stay active.</div>' : '') +
       (mode !== 'home' ? '<button class="bigset" id="sHome">Back to Home</button>' : '') +
       (AUTH ? '<button class="bigset red" id="sOut">Sign out</button>' : '') +
       '</div></div>';
     $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
     $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
     const h = $('#sHome'); if (h) h.onclick = () => { $('#modal').innerHTML = ''; goHome(); };
+    const ev = $('#sEvent'); if (ev) ev.onclick = () => {
+      ev.disabled = true; ev.textContent = 'Reading the Master Timesheet…';
+      call('api_refreshEvent', AUTH.token).then(r => { toast(r.msg || (r.ok ? 'Done' : 'Could not refresh'), 5000); return call('api_info', AUTH.token); })
+        .then(r => { if (r && r.ok && $('#mx')) draw(r); }).catch(() => { toast('No connection. Try again.'); if ($('#sEvent')) draw(null); });
+    };
     const o = $('#sOut'); if (o) o.onclick = () => confirmBox('Sign out ' + AUTH.name + '?', 'This device will ask for a code next time.', 'Sign out', 'red', () => {
       call('api_logout', AUTH.token).catch(() => {});
       AUTH = null; store.set('auth', null); goHome(); toast('Signed out');
@@ -868,7 +1172,7 @@ function poll(force) {
 setInterval(() => { if (!document.hidden) poll(false); }, 4000);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopCamera();
-  else if (mode === 'scan' && tab === 'scan') startCamera();
+  else if (camActive()) startCamera();
 });
 
 /* ============ updates (GitHub copy) ============
