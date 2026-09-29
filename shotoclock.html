@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Shot O'clock</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OnSite">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#ffffff; --soft:#f7f7f9; --line:#e6e6eb; --ink:#111118; --muted:#6b6b76;
+  --pink:#ec4899; --pink-t:#fdf2f8;
+  --blue:#2563eb; --blue-t:#eff6ff;
+  --purple:#7c3aed; --purple-t:#f5f3ff;
+  --teal:#0d9488; --teal-t:#f0fdfa;
+  --red:#dc2626; --red-t:#fef2f2;
+  --green:#16a34a; --green-t:#f0fdf4;
+  --r:22px;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding-top:var(--hdrFull,104px);padding-bottom:calc(72px + var(--safe-b) * .5);overscroll-behavior-y:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select{font:inherit}
+.hidden{display:none!important}
+/* text wraps only between whole words; shrinks only if one word is wider than its box (see fitText) */
+.fit{display:block;white-space:normal;overflow-wrap:normal;word-break:normal;hyphens:none;overflow:hidden;min-width:0;max-width:100%}
+
+/* header */
+/* fixed so it can collapse without moving the page; on Placements the title folds away once you scroll */
+header{position:fixed;left:0;right:0;top:0;z-index:20;transition:padding .2s ease;background:rgba(255,255,255,.94);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line);padding:calc(14px + var(--safe-t)) 20px 14px;display:flex;align-items:center;gap:14px}
+.hwrap{flex:1;min-width:0}
+.brand{font-size:13px;font-weight:800;letter-spacing:.14em;color:var(--pink);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.sync{width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block}
+.sync.off{background:var(--red)} .sync.busy{background:#f59e0b}
+h1{margin:2px 0 0;font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;max-height:80px;transition:max-height .2s ease,opacity .15s ease,margin .2s ease}
+.hsub{font-size:14px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:24px;transition:max-height .2s ease,opacity .15s ease,margin .2s ease}
+header.compact{padding-top:calc(8px + var(--safe-t));padding-bottom:8px}
+header.compact h1,header.compact .hsub{max-height:0;opacity:0;margin:0}
+header.compact .iconbtn{width:40px;height:40px;border-radius:12px}
+.iconbtn{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--soft);border:1px solid var(--line);flex:none;transition:width .2s,height .2s}
+.iconbtn svg{width:26px;height:26px}
+.iconbtn:active{transform:scale(.96)}
+
+main{padding:18px 20px 30px;max-width:1400px;margin:0 auto}
+
+/* bottom nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding:6px 10px calc(4px + var(--safe-b) * .5)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border-radius:13px;font-size:12px;font-weight:700;color:var(--muted)}
+nav button svg{width:22px;height:22px}
+nav button.on{color:var(--pink);background:var(--pink-t)}
+nav button.on.place{color:var(--blue);background:var(--blue-t)}
+nav button.on.radio{color:var(--purple);background:var(--purple-t)}
+nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
+
+/* toolbar */
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.search{flex:1 1 260px;display:flex;align-items:center;gap:10px;background:var(--soft);border:1px solid var(--line);border-radius:18px;padding:0 16px;height:56px}
+.search svg{width:22px;height:22px;color:var(--muted);flex:none}
+.search input{border:0;background:transparent;outline:0;font-size:20px;width:100%;color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);font-size:16px;font-weight:700;color:var(--muted);background:#fff}
+.fchip b{font-weight:800;color:var(--ink);margin-left:4px}
+.fchip.on{border-color:var(--ink);color:var(--ink)}
+
+/* people grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.pill{position:relative;text-align:left;min-height:104px;border-radius:var(--r);border:2px solid var(--line);background:#fff;padding:18px 20px 16px 26px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:transform .08s}
+.pill:active{transform:scale(.98)}
+.pill::before{content:"";position:absolute;left:10px;top:18px;bottom:18px;width:6px;border-radius:6px;background:var(--line)}
+.pill .nm{font-size:23px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.pill .st{font-size:16px;font-weight:600;color:var(--muted)}
+.pill.in{background:var(--blue-t);border-color:#bfdbfe}.pill.in::before{background:var(--blue)}.pill.in .st{color:var(--blue)}
+.pill.in .st.ret{color:var(--green);font-weight:800}   /* back from break: done with it */
+.pill.break{background:var(--purple-t);border-color:#ddd6fe}.pill.break::before{background:var(--purple)}.pill.break .st{color:var(--purple)}
+.pill.late{background:var(--red-t);border-color:#fecaca}.pill.late::before{background:var(--red)}.pill.late .st{color:var(--red);font-weight:800}
+.pill.out{background:var(--green-t);border-color:#bbf7d0}.pill.out::before{background:var(--green)}.pill.out .st{color:var(--green)}
+.pill.late{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(220,38,38,.12)}}
+/* on break: a purple ring empties over the 30 minutes; past due it turns solid red */
+.pill.bring::after{content:"";position:absolute;inset:-6px;border-radius:26px;padding:4px;pointer-events:none;
+  background:conic-gradient(var(--purple) var(--rp,360deg), rgba(124,58,237,.12) 0);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.pill.bring.over::after{background:var(--red)}
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;color:var(--muted);font-size:19px;line-height:1.5}
+.empty b{color:var(--ink)}
+
+/* modal */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(17,17,24,.35);display:flex;align-items:center;justify-content:center;padding:20px}
+.sheet{background:#fff;width:100%;max-width:640px;max-height:calc(100vh - 40px);overflow:auto;border-radius:30px;padding:28px 28px 30px;box-shadow:0 30px 80px rgba(0,0,0,.25);position:relative}
+.close{position:absolute;right:16px;top:16px;width:48px;height:48px;border-radius:50%;background:var(--soft);display:grid;place-items:center}
+.close svg{width:24px;height:24px}
+.mname{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:6px 56px 4px 0;line-height:1.1}
+.msub{font-size:18px;color:var(--muted);margin-bottom:22px}
+.big{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;min-height:104px;border-radius:26px;font-size:30px;font-weight:800;color:#fff;margin-top:14px;letter-spacing:-.01em}
+.big svg{width:34px;height:34px}
+.big:active{transform:scale(.985)}
+.big.blue{background:var(--blue)} .big.purple{background:var(--purple)} .big.green{background:var(--green)} .big.pink{background:var(--pink)} .big.red{background:var(--red)}
+.big.ghost{background:#fff;color:var(--ink);border:2px solid var(--line)}
+.row2{display:flex;gap:14px}.row2 .big{flex:1}
+.linkbtn{display:block;margin:22px auto 0;font-size:17px;font-weight:700;color:var(--muted);text-decoration:underline;text-underline-offset:4px;padding:8px}
+/* TCP status pill: bottom right of each punch pop-up. Tap to cycle Match > Incorrect > Inactive. */
+.tcpfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
+.tcpfoot .linkbtn{margin:0;padding:8px 0}
+.tcp{height:46px;padding:0 16px;border-radius:999px;font-size:16px;font-weight:900;display:inline-flex;align-items:center;gap:7px;border:2px solid;white-space:nowrap;flex:none;margin-left:auto}
+.tcp svg{width:18px;height:18px}
+.tcp.ok{background:var(--green-t);color:var(--green);border-color:#86efac}
+.tcp.wrong{background:#fefce8;color:#a16207;border-color:#fde047}
+.tcp.none{background:var(--red-t);color:var(--red);border-color:#fca5a5}
+.tcp.sm{height:34px;padding:0 10px;font-size:13px;gap:4px;margin-left:8px}
+.tcp.sm svg{width:14px;height:14px}
+.bigset.red{background:var(--red)} .bigset.purple{background:var(--purple)} .bigset.dark{background:#27272a}
+.seg.days{flex-wrap:wrap}
+.seg.days button{height:auto;min-height:56px;padding:8px 6px;line-height:1.25;flex:1 1 140px}
+.seg.days small{font-size:12px;font-weight:800;opacity:.7}
+.earlynote{margin-top:14px;border-radius:20px;background:var(--blue-t);border:2px solid #bfdbfe;color:#1e40af;padding:14px 16px;font-size:18px;font-weight:600;text-align:center;line-height:1.35}
+.backby{border-radius:24px;background:var(--purple-t);border:2px solid #ddd6fe;padding:20px;text-align:center}
+.backby .l{font-size:18px;font-weight:700;color:var(--purple)}
+.backby .t{font-size:52px;font-weight:900;color:var(--purple);letter-spacing:-.02em;line-height:1.1}
+.warn{border-radius:24px;background:var(--red);color:#fff;padding:22px;text-align:center;margin-top:14px}
+.warn .l{font-size:22px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.warn .t{font-size:24px;font-weight:700;margin-top:6px;line-height:1.3}
+.times{border:2px solid var(--line);border-radius:24px;overflow:hidden}
+.times .tr{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;font-size:20px;border-top:1px solid var(--line)}
+.times .tr:first-child{border-top:0}
+.times .tr span{color:var(--muted);font-weight:600}
+.times .tr b{font-weight:800}
+.times .tr.tot{background:var(--soft)}
+.q{font-size:24px;font-weight:800;text-align:center;margin:24px 0 4px}
+
+/* done */
+.done{text-align:center;padding:14px 0 4px}
+.badge{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;color:#fff}
+.badge svg{width:64px;height:64px}
+.done h2{font-size:38px;margin:0;font-weight:900;letter-spacing:-.02em}
+.done .dt{font-size:22px;color:var(--muted);margin-top:8px;font-weight:600}
+.done .dtime{font-size:56px;font-weight:900;letter-spacing:-.02em;margin-top:6px}
+.count{margin-top:24px;font-size:17px;color:var(--muted);font-weight:600}
+
+/* keypad */
+.dots{display:flex;justify-content:center;gap:18px;margin:6px 0 24px}
+.dots i{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--ink)}
+.dots i.f{background:var(--ink)}
+.dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:380px;margin:0 auto}
+.pad button{height:84px;border-radius:24px;background:var(--soft);border:1.5px solid var(--line);font-size:34px;font-weight:700}
+.pad button:active{background:var(--line)}
+.pad .nil{visibility:hidden}
+
+/* editor */
+.ed{display:flex;flex-direction:column;gap:10px}
+.ed label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border:2px solid var(--line);border-radius:18px;font-size:19px;font-weight:700}
+.ed input{font-size:22px;font-weight:700;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;min-width:150px;background:#fff;color:var(--ink)}
+.ed .clr{font-size:14px;color:var(--muted);text-decoration:underline;margin-left:6px}
+.err{color:var(--red);font-weight:800;font-size:18px;margin-top:12px;text-align:center}
+
+/* placements */
+.ptool{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ptool .lbl{font-size:15px;color:var(--muted);font-weight:600;flex:1;min-width:180px}
+.ptool .lbl b{color:var(--ink)}
+.pbtn{height:52px;padding:0 20px;border-radius:16px;border:1.5px solid var(--line);background:#fff;font-size:17px;font-weight:800;display:inline-flex;align-items:center;gap:10px}
+.pbtn svg{width:22px;height:22px}
+.pbtn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.tray{position:sticky;top:var(--hdr,96px);z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:2px solid var(--line);border-radius:24px;padding:14px;margin-bottom:16px;max-height:34vh;overflow:auto}
+.tray .th{font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 4px 10px;display:flex;justify-content:space-between}
+.tray .tb{display:flex;flex-wrap:wrap;gap:10px;min-height:56px}
+.tray.hot{border-color:var(--blue);background:var(--blue-t)}
+.chip{touch-action:pan-x pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;transition:transform .15s,box-shadow .15s;display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:8px 16px 8px 8px;border-radius:999px;background:#fff;border:2px solid #bfdbfe;font-size:17px;font-weight:800;color:var(--ink);box-shadow:0 2px 6px rgba(37,99,235,.10);cursor:grab;max-width:100%}
+.chip .n{min-width:36px;height:36px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:16px;flex:none;padding:0 6px}
+.chip .x{min-width:0;flex:1}
+.chip.lead{border-color:#fbcfe8;box-shadow:0 2px 6px rgba(236,72,153,.12)}
+.chip.lead .n{background:var(--pink)}
+.chip.sel{outline:4px solid var(--ink);outline-offset:2px}
+.chip{position:relative}
+.chip.dragging{opacity:.3}
+/* on break: back in Available, greyed out, can't be dragged */
+.chip.grey{background:#f4f4f5;border-color:#d4d4d8;border-style:dashed;color:#71717a;box-shadow:none;cursor:not-allowed}
+.chip.grey .n{background:#a1a1aa}
+.chip .bk{font-size:13px;font-weight:900;color:var(--purple);white-space:nowrap;flex:none;font-variant-numeric:tabular-nums}
+.chip .bk.late{color:var(--red)}
+/* break coming up: a ring fills over the last 5 minutes (yellow, orange, red), then stays solid red */
+.chip.ring::after{content:"";position:absolute;inset:-6px;border-radius:inherit;padding:4px;pointer-events:none;
+  background:conic-gradient(var(--rc) var(--rp), rgba(0,0,0,.07) 0);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.chip.ringdue::after{background:var(--red);animation:ringdue 1.2s ease-in-out infinite}
+@keyframes ringdue{50%{opacity:.55}}
+/* touch press-and-hold: grows over the 0.3 second hold, then lifts */
+.chip.holding{transform:scale(1.12);box-shadow:0 10px 24px rgba(37,99,235,.28);transition:transform .3s ease-out,box-shadow .3s ease-out}
+.chip.lifted{transform:scale(1.16);box-shadow:0 16px 34px rgba(0,0,0,.28);transition:transform .12s ease-out;z-index:5;position:relative}
+.dragghost{position:fixed;z-index:100;pointer-events:none;transform:translate(-50%,-50%) scale(1.08);box-shadow:0 18px 40px rgba(0,0,0,.25)}
+
+.map{border:2px solid var(--line);border-radius:28px;overflow:hidden;background:#fff}
+.rail{background:repeating-linear-gradient(90deg,#d4d4d8 0 14px,transparent 14px 26px) bottom/100% 4px no-repeat,var(--soft);text-align:center;font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--muted);padding:10px 8px 14px;text-transform:uppercase;position:relative}
+.compass{position:absolute;right:14px;top:6px;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:900;color:var(--ink);letter-spacing:0}
+.compass svg{width:26px;height:26px}
+.venue{padding:14px;display:flex;flex-direction:column;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.zone{position:relative;min-width:0;border-radius:22px;border:2px dashed;padding:12px 12px 14px;min-height:150px;display:flex;flex-direction:column;gap:10px;transition:background .12s,border-color .12s}
+.zone .zh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.zone .zh>div{min-width:0;flex:1}
+.zone .zt{font-size:19px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
+.zone .zs{font-size:13px;font-weight:700;opacity:.75;margin-top:2px}
+.zone .zc{font-size:14px;font-weight:900;min-width:30px;height:30px;border-radius:15px;display:grid;place-items:center;color:#fff;padding:0 8px}
+.zone .zb{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;flex:1}
+.zone.stage{border-color:#c4b5fd;background:#faf8ff;color:#5b21b6}.zone.stage .zc{background:var(--purple)}
+.zone.gallery{border-color:#f9a8d4;background:#fff7fb;color:#9d174d}.zone.gallery .zc{background:var(--pink)}
+.zone.roam{border-color:#86efac;background:#f5fef8;color:#166534;min-height:120px}.zone.roam .zc{background:var(--green)}
+.zone.gs{border-color:#f9a8d4;background:#fdf2f8;color:#9d174d;min-height:130px;border-style:solid}.zone.gs .zc{background:var(--pink)}
+.zone.gate{border-color:#93c5fd;background:#f5f9ff;color:#1e40af;min-height:190px;border-style:solid}.zone.gate .zc{background:var(--blue)}
+.zone.dir{border-color:#93c5fd;background:#fff;color:#1e40af;min-height:170px}.zone.dir .zc{background:var(--blue)}
+.zone.hot{background:var(--blue-t)!important;border-color:var(--blue)!important;border-style:solid}
+.zone.armed{cursor:pointer}
+.zone.armed::after{content:"Tap to place";position:absolute;right:12px;bottom:10px;font-size:12px;font-weight:800;opacity:.6}
+.wall{height:10px;background:repeating-linear-gradient(45deg,#e4e4e7 0 8px,#f4f4f5 8px 16px);margin:0 14px;border-radius:5px;position:relative}
+.street{padding:14px;background:#fafafa}
+.ave{background:#27272a;color:#fafafa;text-align:center;font-size:14px;font-weight:900;letter-spacing:.2em;padding:12px;text-transform:uppercase}
+.maplegend{font-size:13px;color:var(--muted);margin:10px 0 80px;text-align:center}
+/* Edit Partners: every person is their own bubble, partners sit side by side in a dashed group, and everything jiggles */
+.efab{position:fixed;right:16px;bottom:calc(84px + var(--safe-b) * .5);z-index:35;height:56px;padding:0 22px;border-radius:28px;font-size:17px;font-weight:900;color:#fff;background:var(--blue);box-shadow:0 10px 26px rgba(37,99,235,.35);display:flex;align-items:center;gap:8px}
+.efab svg{width:20px;height:20px}
+.efab.save{background:var(--green);box-shadow:0 10px 26px rgba(22,163,74,.35)}
+.ebanner{background:#fefce8;border:2px solid #fde68a;color:#854d0e;border-radius:18px;padding:12px 14px;font-size:15px;font-weight:700;line-height:1.35;margin-bottom:14px}
+.ebanner b{color:#713f12}
+.pgrp{display:inline-flex;align-items:center;gap:6px;padding:4px;border-radius:999px;border:2px dashed #93c5fd;background:rgba(239,246,255,.7);max-width:100%;min-width:0}
+.zone .pgrp{width:100%;flex-wrap:wrap;border-radius:18px}
+.zone .pgrp .chip{flex:1 1 0;min-width:0}
+@keyframes jig{0%{transform:rotate(-1.8deg)}50%{transform:rotate(1.8deg)}100%{transform:rotate(-1.8deg)}}
+.editing .chip.pp{animation:jig .3s ease-in-out infinite;cursor:grab}
+.editing .chip.pp:nth-child(2n){animation-delay:-.15s;animation-duration:.34s}
+.editing .chip.pp.holding,.editing .chip.pp.lifted,.editing .chip.pp.dragging,.editing .chip.pp.hot{animation:none}
+.editing .chip.pp.hot{outline:4px solid var(--green);outline-offset:3px;background:var(--green-t)}
+.editing .chip.pp.hot::before{content:"Partner up";position:absolute;left:50%;top:-30px;transform:translateX(-50%);background:var(--green);color:#fff;font-size:12px;font-weight:900;padding:3px 9px;border-radius:9px;white-space:nowrap}
+.editing .chip.fixed{opacity:.45}
+.chip.pp.pop{animation:pop .5s ease-out 1, jig .3s ease-in-out .5s infinite}
+@keyframes pop{0%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+/* settings */
+.set{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.card{border:2px solid var(--line);border-radius:24px;padding:20px}
+.card h3{margin:0 0 4px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.card .v{font-size:24px;font-weight:800;margin-top:6px}
+.card .d{font-size:16px;color:var(--muted);margin-top:4px;line-height:1.45}
+.bigset{display:flex;align-items:center;gap:16px;width:100%;text-align:left;border-radius:24px;padding:20px;color:#fff;min-height:100px}
+.bigset svg{width:36px;height:36px;flex:none}
+.bigset .a{font-size:24px;font-weight:900}
+.bigset .b{font-size:15px;opacity:.9;margin-top:3px;font-weight:600;line-height:1.35}
+.bigset.pink{background:var(--pink)} .bigset.blue{background:var(--blue)}
+.seg{display:flex;background:var(--soft);border:1.5px solid var(--line);border-radius:16px;padding:4px;gap:4px;margin-top:12px}
+.seg button{flex:1;height:48px;border-radius:12px;font-size:17px;font-weight:800;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.sel2{width:100%;height:54px;border-radius:14px;border:1.5px solid var(--line);font-size:18px;padding:0 12px;margin-top:12px;background:#fff;color:var(--ink)}
+.links{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.links a{font-size:17px;font-weight:800;color:var(--blue);text-decoration:none;padding:12px 16px;border:1.5px solid var(--line);border-radius:14px}
+.demo{background:#fffbeb;border:2px solid #fde68a;color:#92400e;border-radius:18px;padding:12px 16px;font-size:15px;font-weight:600;margin-bottom:14px}
+
+/* busy + toast */
+.busy{position:fixed;inset:0;z-index:80;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-size:20px;font-weight:700;text-align:center;padding:30px}
+.spin{width:56px;height:56px;border-radius:50%;border:6px solid var(--line);border-top-color:var(--pink);animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:calc(88px + var(--safe-b) * .5);transform:translateX(-50%);z-index:90;background:var(--ink);color:#fff;padding:16px 22px;border-radius:18px;font-size:17px;font-weight:700;max-width:calc(100vw - 32px);box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:center}
+.toast.red{background:var(--red)}
+
+/* radios page: 25 cards on the left, the staff pool pinned on the right */
+.rwrap{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+.rcard{position:relative;border:2px dashed #d4d4d8;border-radius:18px;padding:10px 10px 8px;min-height:104px;display:flex;flex-direction:column;gap:6px;background:#fff;min-width:0;transition:background .12s,border-color .12s}
+.rcard.held{border-style:solid;border-color:#c4b5fd;background:var(--purple-t)}
+.rcard.hot{background:var(--purple-t)!important;border-color:var(--purple)!important;border-style:solid}
+.rcard.armed{cursor:pointer}
+.rhead{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0}
+.rn{font-size:17px;font-weight:900;color:var(--purple);letter-spacing:-.01em;line-height:1.15;flex:1}
+.rx{width:30px;height:30px;border-radius:50%;background:#fff;border:1.5px solid #ddd6fe;display:grid;place-items:center;flex:none;color:var(--purple)}
+.rx svg{width:16px;height:16px}
+.rcard .base{font-size:16px;font-weight:800;color:var(--muted);padding:8px 2px}
+.rcard .since{font-size:12px;font-weight:700;color:var(--muted);margin-top:auto}
+.rcard .chip{width:100%;border-radius:14px}
+.rpool{position:sticky;top:calc(var(--hdr,96px) + 8px);max-height:calc(100vh - var(--hdr,96px) - 110px);overflow:auto;border:2px solid var(--line);border-radius:22px;padding:12px;background:#fff}
+.rpool.hot{border-color:var(--purple);background:var(--purple-t)}
+.rpool .th{font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 4px 10px;display:flex;justify-content:space-between;gap:8px}
+.rpool .tb{display:flex;flex-wrap:wrap;gap:8px}
+.rsearch{height:46px;margin-bottom:10px;border-radius:14px}
+.rsearch input{font-size:17px}
+.pchip.dim{opacity:.55}
+.rtag{font-size:11px;font-weight:800;background:var(--purple);color:#fff;border-radius:8px;padding:3px 7px;white-space:nowrap;flex:none}
+.rempty{color:var(--muted);font-weight:600;padding:10px}
+/* v28: person cards take the devices; device chips sit At Base on the right */
+.rcard.pcard{min-height:72px}
+.rcard.dim{opacity:.55}
+.rcard.pcard .rn{color:var(--ink)}
+.pb{min-width:26px;height:26px;border-radius:13px;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:900;flex:none;padding:0 5px}
+.pb.lead{background:var(--pink)}
+.pcount{min-width:24px;height:24px;border-radius:12px;background:var(--purple);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:900;flex:none}
+.hold{display:flex;align-items:center;gap:6px;min-width:0}
+.hold .chip{flex:1;min-width:0;width:auto}
+.hold + .since{margin-top:-3px}
+.chip.dchip{border-color:#ddd6fe;min-height:44px;padding:5px 12px 5px 5px;font-size:15px}
+.chip.dchip .n{background:var(--purple);min-width:32px;height:32px}
+.chip.dchip .n svg{width:18px;height:18px}
+.ptool .kq{flex:1 1 220px;height:48px;margin:0;border-radius:14px}
+.ptool .kq input{font-size:17px}
+/* scanners page: same layout as radios, in teal */
+.kit-scanner .pcount,.kit-scanner .chip.dchip .n{background:var(--teal)}
+.kit-scanner .chip.dchip{border-color:#99f6e4}
+.kit-scanner .rcard.held{border-color:#5eead4;background:var(--teal-t)}
+.kit-scanner .rcard.hot{background:var(--teal-t)!important;border-color:var(--teal)!important}
+.kit-scanner .rn{color:var(--teal)}
+.kit-scanner .rx{border-color:#99f6e4;color:var(--teal)}
+.kit-scanner .rpool.hot{border-color:var(--teal);background:var(--teal-t)}
+@media (max-width:640px){
+  .rwrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .rgrid{grid-template-columns:minmax(0,1fr);gap:8px}
+  .rcard{min-height:84px;padding:8px 8px 6px;border-radius:14px}
+  .rn{font-size:15px}
+  .rpool{padding:8px;border-radius:16px}
+  .rpool .tb{gap:6px}
+  .rpool .chip{width:100%;border-radius:14px}
+  .rpool .th{font-size:11px;letter-spacing:.06em}
+  .rpool .pchip{flex-wrap:wrap;row-gap:4px}
+  .rpool .rtag{flex-basis:100%;white-space:normal;text-align:center}
+  header{padding-left:16px;padding-right:16px}
+  main{padding:14px 16px 24px}
+  h1{font-size:23px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .pill{min-height:92px;padding:14px 12px 12px 22px}
+  .pill::before{left:8px}
+  .pill .nm{font-size:19px}
+  .pill .st{font-size:14px}
+  .overlay{padding:0;align-items:flex-end}
+  .sheet{border-radius:28px 28px 0 0;max-height:100vh;padding:24px 18px calc(24px + var(--safe-b))}
+  .mname{font-size:28px}
+  .big{min-height:92px;font-size:26px}
+  .row2{flex-direction:column;gap:0}
+  .g3{gap:8px}
+  .venue,.street{padding:10px}
+  .zone{padding:8px;min-height:120px;border-radius:16px}
+  .zone .zt{font-size:14px}.zone .zs{font-size:11px}
+  .zone{padding:6px 6px 8px}
+  .zone .zc{position:absolute;top:-9px;right:-7px;min-width:22px;height:22px;font-size:12px;border:2px solid #fff;padding:0 5px}
+  .zone .chip{padding:4px 6px 4px 4px;gap:5px;min-height:36px}
+  .zone .chip .n{min-width:22px;height:22px;font-size:12px;padding:0 4px}
+  .tray{max-height:24vh;padding:10px}
+  .map{border-radius:20px}
+  .zone.gate{min-height:150px}.zone.dir{min-height:130px}
+  .chip{font-size:14px;min-height:42px;padding:5px 10px 5px 5px;gap:6px}
+  .chip .n{min-width:30px;height:30px;font-size:14px}
+  .zone .chip{width:100%;border-radius:14px}
+  .zone .pgrp{flex-direction:column;align-items:stretch;gap:4px;padding:3px;border-radius:14px}
+  .zone .pgrp .chip{flex:none;width:100%;padding-left:8px}
+  .zone .pgrp .chip .n{display:none}
+  .efab{height:50px;padding:0 18px;font-size:16px;right:12px}
+  .ebanner{font-size:14px;padding:10px 12px}
+  .done .dtime,.backby .t{font-size:44px}
+}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hwrap">
+    <div class="brand"><span class="sync" id="syncDot"></span>Shot O'clock</div>
+    <h1 id="evName" class="fit">Loading…</h1>
+    <div class="hsub" id="evSub"></div>
+  </div>
+  <button class="iconbtn" id="gearBtn" aria-label="Settings"></button>
+</header>
+
+<main>
+  <div id="dayNote" class="demo hidden"></div>
+  <div id="demoNote" class="demo hidden">Demo mode: this preview runs on sample data saved in this browser. The deployed app syncs to the Google Sheet.</div>
+  <section id="timeView"></section>
+  <section id="placeView" class="hidden"></section>
+  <section id="radioView" class="hidden"></section>
+  <section id="scannerView" class="hidden kit-scanner"></section>
+  <section id="setView" class="hidden"></section>
+</main>
+
+<nav>
+  <button id="tabTime" class="on"></button>
+  <button id="tabPlace" class="place"></button>
+  <button id="tabRadio" class="radio"></button>
+  <button id="tabScanner" class="scanner"></button>
+</nav>
+
+<div id="modalRoot"></div>
+<div id="busy" class="busy hidden"><div class="spin"></div><div id="busyText">Working…</div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* ============ icons ============ */
+const I = {
+  radio:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="7" width="12" height="15" rx="2"/><path d="M9 7V2"/><path d="M9 11h6"/><circle cx="12" cy="17" r="1.6"/></svg>',
+  scan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  cup:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3v3M12 3v3"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  inIcon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5M15 12H3"/></svg>',
+  outIcon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>',
+  pair:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2a5 5 0 0 1 6 4.8"/></svg>',
+  north:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12 4 4l4 8-4 8z"/></svg>',
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+
+/* ============ shared time logic ============ */
+const TIME_COLS = ['in','b1o','b1i','b2o','b2i','out'];
+const LABELS = {in:'Clock In',b1o:'Break Out',b1i:'Break In',b2o:'Break 2 Out',b2i:'Break 2 In',out:'Clock Out'};
+function statusOf(t) {
+  if (t.out) return 'out';
+  if ((t.b1o && !t.b1i) || (t.b2o && !t.b2i)) return 'break';
+  if (t.in) return 'in';
+  return 'none';
+}
+const breaksTaken = t => (t.b1o ? 1 : 0) + (t.b2o ? 1 : 0);
+const openBreak = t => (t.b2o && !t.b2i) ? t.b2o : (t.b1o && !t.b1i) ? t.b1o : '';
+const breakMs = () => (V().breakMinutes || 30) * 60000;
+const graceMin = () => V().lateGrace || 3;
+function dueAt(t) { const o = openBreak(t); return o ? new Date(new Date(o).getTime() + breakMs()) : null; }
+function lateMinutes(t, now) { const d = dueAt(t); return d ? Math.floor((now - d) / 60000) : 0; }
+const fmtT = iso => iso ? new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
+function fmtDur(ms) { if (!(ms > 0)) return '0m'; const m = Math.round(ms / 60000); return (m >= 60 ? Math.floor(m / 60) + 'h ' : '') + (m % 60) + 'm'; }
+const blankT = () => ({ in:'', b1o:'', b1i:'', b2o:'', b2i:'', out:'' });
+const pad2 = n => String(n).padStart(2, '0');
+/** Shift night (yyyy-mm-dd): anything before noon belongs to the previous night. */
+function nightOf(ts) {
+  const d = new Date(new Date(ts).getTime() - ((S.server && S.server.nightCutoffHour) || 12) * 3600e3);
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+const openShift = p => p.shifts.filter(s => s.t.in && !s.t.out).sort((a, b) => b.t.in.localeCompare(a.t.in))[0];
+/** The shift a name pill shows: an open shift, else tonight's shift, else a blank one. */
+function curShift(p, now) {
+  return openShift(p) || p.shifts.find(s => s.night === nightOf(now)) || { night: '', t: blankT() };
+}
+const fmtDT = iso => iso ? new Date(iso).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' }) : '';
+
+/* Early clock-in, same rule as callAt_ / callExempt_ in Code.gs: staff (not leads or supervisors) can clock in
+ * up to earlyMax minutes before their call time from the roster, and the clock-in is recorded AT the call time. */
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const callExempt = p => /lead/i.test(p.group || '') || /lead|supervisor/i.test(p.position || '');
+/** Tonight's call time (ms) for this person, or 0 when there is none or they are exempt. */
+function callAt(st, p, ts) {
+  if (!p || callExempt(p)) return 0;
+  const times = (st.callTimes || {})[p.id || p.name]; if (!times) return 0;   // keyed by the name as typed on the roster
+  const [y, mo, d] = nightOf(ts).split('-').map(Number);
+  const s = times[DAYS[new Date(y, mo - 1, d).getDay()]] || times['*']; if (!s) return 0;
+  const m = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i); if (!m) return 0;
+  const h = Number(m[1]) % 12 + (/pm/i.test(m[3]) ? 12 : 0);
+  return new Date(y, mo - 1, d + (/am/i.test(m[3]) ? 1 : 0), h, Number(m[2])).getTime();
+}
+const earlyMs = st => ((st && st.earlyMax) || 30) * 60000;
+/* TCP status per punch, same as Code.gs: ok = matches TCP, wrong = in TCP with the wrong time, none = not in TCP. */
+const TCP_NEXT = { ok: 'wrong', wrong: 'none', none: 'ok' };
+const TCP_TEXT = { ok: 'TCP Match', wrong: 'TCP Incorrect', none: 'TCP Inactive' };
+/** Inactive for the rest of the day if the clock-in could not go into TCP; otherwise a match. */
+const tcpDefault = tcp => (tcp && tcp.in === 'none') ? 'none' : 'ok';
+const tcpPill = (v, attrs, sm) => `<button class="tcp ${v} ${sm ? 'sm' : ''}" ${attrs}>${v === 'ok' ? I.check : v === 'none' ? I.x : I.alert}${TCP_TEXT[v]}</button>`;
+function totals(t) {
+  let br = 0;
+  [['b1o','b1i'],['b2o','b2i']].forEach(([o,i]) => { if (t[o] && t[i]) br += new Date(t[i]) - new Date(t[o]); });
+  const shift = t.in && t.out ? new Date(t.out) - new Date(t.in) : 0;
+  return { shift, br, worked: shift - br };
+}
+
+/* ============ backend bridge (inside OnSite, Apps Script, or demo mode) ============ */
+// Shot O'clock lives inside Factory Town OnSite (GitHub Pages, shotoclock.html). OnSite's build.js turns IN_ONSITE on;
+// the screens then call this script's doPost with {fn, args} as text/plain (no CORS preflight), like OnSite does.
+const IN_ONSITE = true;
+const BUILT_VERSION = '5';
+const SOC_API_URL = 'https://script.google.com/macros/s/AKfycbwvfBwTmUmu_XVi-N2_qqiqzMBEEYcHy02hwQJVqPO75AraRrwOHez_pIbBThNh3Ivg/exec';
+const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
+const HAS_GAS = !!(window.google && google.script && google.script.run);
+const postJson = (url, fn, args) => fetch(url, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow' })
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(r => { if (r && r.error) throw new Error(r.error); return r; });
+function call(fn, ...args) {
+  if (IN_ONSITE) return postJson(SOC_API_URL, fn, args);
+  if (!HAS_GAS) return Mock.run(fn, args);
+  return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+}
+
+// The 25 radios, same list and order as RADIOS in Code.gs.
+const RADIO_NAMES = ['Tanjila', 'Daniel', 'Base', 'Dispatch - Roamers', 'Dispatch - Medical', 'Zone Lead',
+  'South Lead', 'VIP Lead', 'North Lead', 'GS Container', 'Box Office Lead', 'Box 2', 'Box - Dice',
+  'GS 1', 'GS 2', 'GS 3', 'GS 4', 'GS 5', 'GS 6', 'GS 7', 'GS 8', 'GS 9', 'GS 10', 'GS 11', 'GS 12'];
+const blankRadios = () => RADIO_NAMES.map(n => ({ name: n, person: '', since: '' }));
+// The 25 scanners, same list and order as SCANNERS in Code.gs.
+const SCANNER_NAMES = ['Tanjila', 'Daniel', 'GS Container', 'Box Office 1', 'Box Office 2', 'Box Office 3',
+  'North God', 'North VIP', 'North 1', 'North 2', 'North 3', 'North 4', 'North 5',
+  'South God', 'South VIP', 'South 1', 'South 2', 'South 3', 'South 4', 'South 5',
+  'VIP God', 'VIP 1', 'VIP 2', 'VIP 3', 'Backup'];
+const blankScanners = () => SCANNER_NAMES.map(n => ({ name: n, person: '', since: '' }));
+// A name ending in "(2)" is a set one person carries together, counted as 2 radios.
+const radioCount = n => Number((String(n).match(/\((\d+)\)\s*$/) || [0, 1])[1]);
+
+/** Display only: "JOHN SMITH" or "john smith" shows as "John Smith". The sheets keep the names as typed. */
+const cap = s => String(s ?? '').toLowerCase().replace(/(^|[\s\-('’/&.])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+/** Team badge: numbers as is; a named column like "GS Container" shows "GS". */
+function badge(num) {
+  const s = String(num || '').trim();
+  if (!s || /^\d{1,3}$/.test(s)) return s;
+  if (/\bgs\b|guest/i.test(s)) return 'GS';
+  return s.split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
+}
+
+const Mock = (() => {
+  const FIRST = ['Alex','Brianna','Carlos','Dani','Elena','Frankie','Gabi','Hector','Isa','Jordan','Kayla','Luis','Maya','Nico','Olivia','Pablo','Quinn','Rosa','Sam','Tatiana','Uriel','Vale','Will','Ximena','Yara','Zoe','Andre','Bella','Chris','Diego'];
+  const LAST = ['Rivera','Lopez','Smith','Garcia','Perez','Nguyen','Diaz','Brown','Cruz','Reyes'];
+  function seed() {
+    const people = FIRST.map((f, i) => ({ id: f + ' ' + LAST[i % 10], name: f + ' ' + LAST[i % 10], first: f,
+      group: i < 6 ? 'Leads' : i < 26 ? 'Gates' : 'Box Office', position: i < 6 ? 'Lead' : 'Ticket Scan', shifts: [] }));
+    const pairs = [];
+    const d = new Date(), nowMin = ((d.getHours() * 60 + d.getMinutes()) - 720 + 1440) % 1440;
+    for (let i = 0; i < 10; i++) {
+      const a = 6 + i * 2, b = 7 + i * 2;
+      pairs.push({ key:'team:' + (i+1), label: FIRST[a] + ' & ' + FIRST[b], kind:'team', num:String(i+1), zone:'', parent:'',
+        members: [{ n: FIRST[a], id: people[a].id, tag:'A' }, { n: FIRST[b], id: people[b].id, tag:'B' }],
+        breaks: { A: [nowMin + 1 + i * 2], B: [nowMin + 4 + i * 2] } });
+    }
+    ['Alex','Brianna','Carlos','Dani'].forEach(n => pairs.push({ key:'lead:' + n, label:n, kind:'lead', num:'', zone:'' }));
+    return { version: String(Date.now()), event: { name:'Demo Night 🐠', tab:'Sample Roster 9/25', scheduleTab:'Staff Schedule' },
+      settings: { scheduleTabs:['Staff Schedule','Saturday Staff Schedule'], scheduleTabOverride:'', maxBreaksOverride:'' },
+      days: mockDays(), activeDay: mockDays()[1].key, dayBlocked: '', closedOut: false,
+      maxBreaks: 1, breakMinutes: 30, lateGrace: 3, people, pairs, radios: blankRadios(), scanners: blankScanners(), callTimes: {}, earlyMax: 30, unmatched: ['Camilia'], dataUrl:'#', masterUrl:'#' };
+  }
+  function mockDays() {
+    const k = off => { const d = new Date(Date.now() - 12 * 3600e3 + off * 86400e3); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+    const lbl = (key, name) => { const d = new Date(key + 'T12:00'); return (name ? name + ' · ' : '') + d.toLocaleDateString([], { weekday: 'short' }) + ' ' + (d.getMonth() + 1) + '/' + d.getDate(); };
+    return [{ key: k(-1), name: 'Eli Brown', label: lbl(k(-1), 'Eli Brown') }, { key: k(0), name: 'Fisher', label: lbl(k(0), 'Fisher') }];
+  }
+  let db = LS.get('shotMockDb3', null) || seed();
+  const save = () => { db.version = String(Date.now()); LS.set('shotMockDb3', db); };
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const rej = msg => ({ ok:false, msg, state: clone(db) });
+  const api = {
+    api_getState(v) { db = LS.get('shotMockDb3', db); return v === db.version ? { same:true } : clone(db); },
+    api_punch(op) {
+      const p = db.people.find(x => x.id === op.id); if (!p) return rej('Not found');
+      const t = curShift(p, new Date(op.ts)).t, st = statusOf(t);
+      const max = Number(db.settings.maxBreaksOverride) || db.maxBreaks;
+      if (op.action === 'in' && st !== 'none') return rej(p.name + (st === 'out' ? ' already clocked out tonight.' : ' is already clocked in.'));
+      if (op.action === 'in') { const c = callAt(db, p, op.ts); if (c && c - Date.parse(op.ts) > earlyMs(db)) return rej('Too early to clock in.'); }
+      if (op.action === 'break' && (st !== 'in' || breaksTaken(t) >= max)) return rej('No break available.');
+      if (op.action === 'return' && st !== 'break') return rej('Not on break.');
+      if (op.action === 'out' && st !== 'in') return rej('Must be clocked in.');
+      applyOp(db, op); save(); return { ok:true, state: clone(db) };
+    },
+    api_editTimes(op) { if (op.token !== 'demo') return rej('Manager code expired.'); applyOp(db, op); save(); return { ok:true, state: clone(db) }; },
+    api_checkPin(pin) { return pin === '123456' ? { ok:true, name:'Daniel', token:'demo' } : { ok:false, msg:'Wrong code. (Demo code is 123456.)' }; },
+    api_place(op) { applyOp(db, { type:'place', key: op.key, zone: op.zone || '' }); save(); return { ok:true, state: clone(db) }; },
+    api_clearPlacements() { db.pairs.forEach(p => p.zone = ''); save(); return { ok:true, state: clone(db) }; },
+    api_refreshRoster() { const keep = db.people; db = Object.assign(seed(), { pairs: db.pairs }); db.people.forEach(p => { const k = keep.find(x => x.id === p.id); if (k) p.shifts = k.shifts || []; }); save(); return { ok:true, state: clone(db), msg:'Roster updated: ' + db.event.name + ' (' + db.people.length + ' staff)' }; },
+    api_refreshSchedule() { const z = {}; db.pairs.forEach(p => z[p.key] = p.zone); db.pairs = seed().pairs.map(p => Object.assign(p, { zone: z[p.key] || '' })).concat(db.pairs.filter(p => p.kind === 'solo')); save(); return { ok:true, state: clone(db), msg:'Loaded 12 teams from "Staff Schedule"' }; },
+    api_bridgeStatus() { return { lastSeen: '' }; },
+    api_switchDay(key) { if ((db.radios || []).concat(db.scanners || []).some(r => r.person)) return rej('Return all radios and scanners to base before switching days.'); db.activeDay = key; save(); return { ok:true, state: clone(db), msg: 'Now on ' + (db.days.find(d => d.key === key) || {}).label }; },
+    api_sendSignOut() { return { ok:true, state: clone(db), msg: 'Demo: sign out sheet would be emailed to Aria and Gabriel.' }; },
+    api_closeOut() { db.closedOut = true; save(); return { ok:true, state: clone(db), msg: 'Closed out.' }; },
+    api_radio(op) { if (!db.radios) db.radios = blankRadios(); applyOp(db, { type:'radio', radio: op.radio, person: op.person, ts: op.ts }); save(); return { ok:true, state: clone(db) }; },
+    api_radiosToBase() { db.radios = blankRadios(); save(); return { ok:true, state: clone(db), msg:'All 25 radios are At Base.' }; },
+    api_scanner(op) { applyOp(db, { type:'scanner', scanner: op.scanner, person: op.person, ts: op.ts }); save(); return { ok:true, state: clone(db) }; },
+    api_scannersToBase() { db.scanners = blankScanners(); save(); return { ok:true, state: clone(db), msg:'All 25 scanners are At Base.' }; },
+    api_setPartners(op) { applyOp(db, Object.assign({}, op, { type:'partners' })); (op.cols || []).forEach(w => console.log('[demo] schedule column', w.key, '->', w.names.join(' / '))); save(); return { ok:true, state: clone(db) }; },
+    api_saveSettings(s) { if ('scheduleTab' in s) db.settings.scheduleTabOverride = s.scheduleTab; if ('maxBreaks' in s) { db.settings.maxBreaksOverride = s.maxBreaks ? String(s.maxBreaks) : ''; } db.maxBreaks = Number(db.settings.maxBreaksOverride) || 1; save(); return { ok:true, state: clone(db) }; },
+  };
+  return { run(fn, args) { return new Promise(res => setTimeout(() => res(api[fn](...args)), 250)); } };
+})();
+
+/* ============ state + offline queue ============ */
+const S = {
+  server: LS.get('shotServer', null),
+  pending: LS.get('shotPending', []),
+  view: LS.get('shotView', 'time'),
+  settingsOpen: false,
+  filter: 'all', q: '',
+  modal: null, selKey: null,
+  online: true, flushing: false, polling: false,
+};
+function setServer(st) {
+  if (!st || st.same) return;
+  S.server = st; LS.set('shotServer', st);
+}
+/** Server state + unsynced local changes. Each person gets .t/.night for the shift on screen now. */
+function V(raw) {
+  const base = S.server || { people:[], pairs:[], event:{}, settings:{}, maxBreaks:1, breakMinutes:30, lateGrace:3 };
+  const st = JSON.parse(JSON.stringify(base));
+  S.pending.forEach(op => applyOp(st, op));
+  const now = Date.now();
+  st.people.forEach(p => { p.shifts = p.shifts || []; const c = curShift(p, now); p.t = c.t; p.night = c.night; p.tcp = c.tcp || {}; });
+  if (raw) return st;   // names exactly as on the sheets (Edit Partners writes these back)
+  st.people.forEach(p => { p.name = cap(p.name); p.first = cap(p.first); });
+  (st.pairs || []).forEach(p => { p.label = cap(p.label); (p.members || []).forEach(m => { m.n = cap(m.n); }); });
+  st.unmatched = (st.unmatched || []).map(cap);
+  return st;
+}
+function applyOp(st, op) {
+  if (op.type === 'punch') {
+    const p = st.people.find(x => x.id === op.id); if (!p) return;
+    p.shifts = p.shifts || [];
+    const open = openShift(p);
+    if (op.action === 'in') {
+      if (open) return;
+      const call = callAt(st, p, op.ts);   // early: recorded at the call time
+      const at = call && call > Date.parse(op.ts) ? new Date(call).toISOString() : op.ts;
+      p.shifts.push({ night: nightOf(op.ts), t: Object.assign(blankT(), { in: at }), tcp: { in: op.tcp || 'ok' } });
+      return;
+    }
+    if (!open) return;
+    const t = open.t;
+    let col = '';
+    if (op.action === 'break') col = !t.b1o ? 'b1o' : !t.b2o ? 'b2o' : '';
+    else if (op.action === 'return') col = t.b1o && !t.b1i ? 'b1i' : t.b2o && !t.b2i ? 'b2i' : '';
+    else if (op.action === 'out') col = 'out';
+    if (col) { t[col] = op.ts; open.tcp = open.tcp || {}; open.tcp[col] = op.tcp || tcpDefault(open.tcp); }
+    if (op.action === 'break' || op.action === 'return') reconcile(st.pairs || [], op.id, id => personStatus(st, id));
+  } else if (op.type === 'edit') {
+    const p = st.people.find(x => x.id === op.id); if (!p) return;
+    p.shifts = p.shifts || [];
+    let s = op.night && p.shifts.find(x => x.night === op.night);
+    if (!s) { s = { night: '', t: blankT() }; p.shifts.push(s); }
+    s.t = Object.assign(blankT(), op.times);
+    s.night = op.times.in ? nightOf(op.times.in) : '';
+    if (op.tcp) s.tcp = Object.assign({}, op.tcp);
+    reconcile(st.pairs || [], op.id, id => personStatus(st, id));
+  } else if (op.type === 'place') {
+    const it = st.pairs.find(x => x.key === op.key); if (it) { it.zone = op.zone; rejoinOnPlace(st.pairs, it); }
+  } else if (op.type === 'radio' || op.type === 'scanner') {
+    // Same as kitHand_ in Code.gs: the device goes to that person (or back to base). A person can hold several.
+    const k = op.type === 'radio' ? { st: 'radios', blank: blankRadios } : { st: 'scanners', blank: blankScanners };
+    if (!st[k.st] || !st[k.st].length) st[k.st] = k.blank();
+    const r = st[k.st].find(x => x.name === op[op.type]); if (!r || r.person === (op.person || '')) return;
+    r.person = op.person || ''; r.since = op.ts;
+  } else if (op.type === 'partners') {
+    // Same patch as api_setPartners in Code.gs.
+    const gone = {}; (op.remove || []).forEach(k => { gone[k] = 1; });
+    st.pairs = (st.pairs || []).filter(p => !gone[p.key] && !(p.parent && gone[p.parent])).concat(JSON.parse(JSON.stringify(op.add || [])));
+  }
+}
+function personStatus(st, id) {
+  const p = st.people.find(x => x.id === id); if (!p) return 'none';
+  const o = openShift(p || { shifts: [] });
+  return o ? statusOf(o.t) : 'none';
+}
+
+/* Break rules for placements. Same as reconcile_ / rejoinOnPlace_ in Code.gs, so a punch shows here before it syncs.
+ * A team bubble only holds partners with the same break state: whoever goes on break (or comes back) alone splits off;
+ * anyone on break leaves their zone for Available; partners waiting in Available with the same state rejoin. */
+function reconcile(pairs, actor, statusFn) {
+  const team = pairs.find(p => p.kind === 'team' && (p.members || []).some(m => m.id === actor));
+  if (!team) return;
+  const onB = m => !!m.id && statusFn(m.id) === 'break';
+  const solos = () => pairs.filter(p => p.kind === 'solo' && p.parent === team.key);
+  const splits = () => pairs.filter(p => p.kind === 'split' && p.parent === team.key);   // Edit Partners: never rejoin on their own
+  const attached = () => { const ids = solos().concat(splits()).map(s => s.members[0].id); return team.members.filter(m => !(m.id && ids.indexOf(m.id) >= 0)); };
+  const detach = m => pairs.push({ key: 'solo:' + m.id, label: m.n, kind: 'solo', num: team.num, zone: '', members: [m], breaks: {}, parent: team.key });
+  let att = attached();
+  const brk = att.filter(onB), act = att.filter(m => !onB(m));
+  if (brk.length && act.length) {
+    const leave = att.some(m => m.id === actor) ? (brk.some(m => m.id === actor) ? brk : act) : brk;
+    leave.filter(m => m.id).forEach(detach);
+  }
+  att = attached();
+  if (att.length && att.every(onB)) team.zone = '';
+  solos().concat(splits()).forEach(s => { if (onB(s.members[0])) s.zone = ''; });
+  if (!team.zone) {
+    att = attached();
+    let teamBrk = att.length ? att.every(onB) : null;
+    solos().forEach(s => {
+      if (s.zone) return;
+      const sb = onB(s.members[0]);
+      if (teamBrk === null) teamBrk = sb;
+      if (sb === teamBrk) pairs.splice(pairs.indexOf(s), 1);
+    });
+  }
+}
+function rejoinOnPlace(pairs, it) {
+  if (!it.zone) return;
+  const teamKey = it.kind === 'solo' ? it.parent : it.kind === 'team' ? it.key : '';
+  const team = pairs.find(p => p.kind === 'team' && p.key === teamKey);
+  if (!team || team.zone !== it.zone) return;
+  for (let i = pairs.length - 1; i >= 0; i--) {
+    const p = pairs[i];
+    if (p.kind === 'solo' && p.parent === team.key && p.zone === team.zone) pairs.splice(i, 1);
+  }
+}
+function queue(op) {
+  op.opId = uid();
+  S.pending.push(op); LS.set('shotPending', S.pending);
+  flush();
+}
+const FN = { punch:'api_punch', edit:'api_editTimes', place:'api_place', radio:'api_radio', scanner:'api_scanner', partners:'api_setPartners' };
+async function flush() {
+  if (S.flushing || !S.pending.length) return;
+  S.flushing = true; syncDot();
+  while (S.pending.length) {
+    const op = S.pending[0];
+    try {
+      const res = await call(FN[op.type], op);
+      S.online = true;
+      if (res && res.ok === false) toast(res.msg || 'That punch was not saved.', true);
+      S.pending.shift(); LS.set('shotPending', S.pending);
+      if (res && res.state) setServer(res.state);
+    } catch (e) {
+      S.online = false; syncDot();
+      S.flushing = false;
+      setTimeout(flush, 5000);
+      renderAll();
+      return;
+    }
+  }
+  S.flushing = false; syncDot(); renderAll();
+}
+async function poll() {
+  if (S.polling || S.flushing || S.pending.length || document.hidden || drag || S.edit) return;
+  S.polling = true;
+  try {
+    const res = await call('api_getState', S.server ? S.server.version : '');
+    S.online = true;
+    if (res && !res.same) { setServer(res); renderAll(); }
+  } catch (e) { S.online = false; }
+  S.polling = false; syncDot();
+}
+function syncDot() {
+  const d = $('#syncDot');
+  d.className = 'sync' + (!S.online ? ' off' : (S.pending.length || S.flushing) ? ' busy' : '');
+  d.title = !S.online ? 'Offline: punches are saved on this device and will sync' : S.pending.length ? 'Syncing…' : 'Synced';
+}
+
+/* ============ render: shell ============ */
+function renderAll() {
+  if (drag) return;
+  const st = V();
+  $('#evName').textContent = st.event && st.event.name ? st.event.name : 'No event loaded';
+  const today = (st.days || []).find(d => d.key === st.activeDay);
+  $('#evSub').textContent = (S.settingsOpen ? 'Settings' : S.view === 'time' ? 'Time Tracking' : S.view === 'radio' ? 'Radios' : S.view === 'scanner' ? 'Scanners' : 'Staff Placements') + (today ? ' · ' + today.label : '');
+  $('#dayNote').textContent = st.dayBlocked || '';
+  $('#dayNote').classList.toggle('hidden', !st.dayBlocked || S.settingsOpen);
+  $('#gearBtn').innerHTML = S.settingsOpen ? I.back : I.gear;
+  $('#gearBtn').setAttribute('aria-label', S.settingsOpen ? 'Back' : 'Settings');
+  $('#tabTime').className = (!S.settingsOpen && S.view === 'time') ? 'on' : '';
+  $('#tabPlace').className = 'place' + ((!S.settingsOpen && S.view === 'place') ? ' on' : '');
+  $('#tabRadio').className = 'radio' + ((!S.settingsOpen && S.view === 'radio') ? ' on' : '');
+  $('#tabScanner').className = 'scanner' + ((!S.settingsOpen && S.view === 'scanner') ? ' on' : '');
+  $('#timeView').classList.toggle('hidden', S.settingsOpen || S.view !== 'time');
+  $('#placeView').classList.toggle('hidden', S.settingsOpen || S.view !== 'place');
+  $('#radioView').classList.toggle('hidden', S.settingsOpen || S.view !== 'radio');
+  $('#scannerView').classList.toggle('hidden', S.settingsOpen || S.view !== 'scanner');
+  $('#setView').classList.toggle('hidden', !S.settingsOpen);
+  if (S.settingsOpen) renderSettings(st);
+  else if (S.view === 'time') renderTime(st);
+  else if (kitView()) renderKit(st, kitView());
+  else renderPlace(st);
+  if (S.modal) renderModal();
+  syncDot();
+  fitText();
+  onScrollHdr(); measureHdr();
+}
+
+/* ============ render: time tracking ============ */
+let timeBuilt = false;
+function renderTime(st) {
+  const root = $('#timeView');
+  if (!timeBuilt) {
+    root.innerHTML = `
+      <div class="toolbar">
+        <label class="search">${I.search}<input id="q" type="search" placeholder="Find your name" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+        <div class="chips" id="fchips"></div>
+      </div>
+      <div id="pgrid"></div>`;
+    $('#q').addEventListener('input', e => { S.q = e.target.value; renderTime(V()); fitText(); });
+    timeBuilt = true;
+  }
+  const now = Date.now();
+  const people = st.people.slice().sort((a, b) => (a.first || a.name).localeCompare(b.first || b.name) || a.name.localeCompare(b.name));
+  const cls = p => { const s = statusOf(p.t); return s === 'break' && lateMinutes(p.t, now) >= graceMin() ? 'late' : s; };
+  const counts = { all: people.length, none: 0, in: 0, break: 0, out: 0 };
+  people.forEach(p => { const s = statusOf(p.t); counts[s]++; });
+  const F = [['all','All'],['none','Not In'],['in','In'],['break','Break'],['out','Out']];
+  $('#fchips').innerHTML = F.map(([k, l]) => `<button class="fchip ${S.filter === k ? 'on' : ''}" data-f="${k}">${l}<b>${counts[k]}</b></button>`).join('');
+  const q = S.q.trim().toLowerCase();
+  const list = people.filter(p => (S.filter === 'all' || statusOf(p.t) === S.filter) && (!q || p.name.toLowerCase().includes(q)));
+  const g = $('#pgrid');
+  if (!st.people.length) {
+    g.innerHTML = `<div class="empty"><b>No roster loaded yet.</b><br>Tap the gear at the top right, then <b>Refresh Roster</b>.</div>`;
+    return;
+  }
+  if (!list.length) { g.innerHTML = `<div class="empty">No one matches.</div>`; return; }
+  g.className = 'grid';
+  g.innerHTML = list.map(p => {
+    const s = statusOf(p.t), c = cls(p);
+    let sub = 'Tap to clock in';
+    let ret = false;
+    if (s === 'in') { const back = p.t.b2i || p.t.b1i; ret = !!back; sub = back ? 'Returned · ' + fmtT(back) : 'In · ' + fmtT(p.t.in); }   // after a break, the return time is what matters
+    if (s === 'break') sub = breakSub(p.t, now);
+    if (s === 'out') sub = 'Out · ' + fmtT(p.t.out);
+    const ring = s === 'break' ? ` bring" data-bd="${+dueAt(p.t)}` : '';
+    return `<button class="pill ${c === 'none' ? '' : c}${ring}" data-id="${esc(p.id)}"><span class="nm fit">${esc(p.name)}</span><span class="st fit${ret ? ' ret' : ''}">${esc(sub)}</span></button>`;
+  }).join('');
+  updatePillRings();
+}
+function breakSub(t, now) {
+  const lm = lateMinutes(t, now);
+  const left = dueAt(t) - now;
+  return lm >= graceMin() ? 'Late by ' + lm + ' min' : left > 0 ? mmss(left) + ' left' : 'Back now';
+}
+/** Ticks every second: ring shrinks as the break runs out, red once it's past due, "Late by X min" once late. */
+function updatePillRings() {
+  const now = Date.now();
+  document.querySelectorAll('.pill[data-bd]').forEach(el => {
+    const due = Number(el.dataset.bd), left = due - now, lm = Math.floor(-left / 60000);
+    el.style.setProperty('--rp', (Math.max(0, Math.min(1, left / breakMs())) * 360).toFixed(1) + 'deg');
+    el.classList.toggle('over', left <= 0);
+    const late = lm >= graceMin();
+    if (late !== el.classList.contains('late')) { el.classList.toggle('late', late); el.classList.toggle('break', !late); }
+    const st = el.querySelector('.st');
+    const txt = late ? 'Late by ' + lm + ' min' : left > 0 ? mmss(left) + ' left' : 'Back now';
+    if (st && st.textContent !== txt) st.textContent = txt;
+  });
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest('.fchip'); if (f) { S.filter = f.dataset.f; renderTime(V()); return; }
+  const p = e.target.closest('.pill'); if (p) openPerson(p.dataset.id);
+});
+
+/* ============ modal flows ============ */
+let modalTimer = null, idleTimer = null;
+function person(id) { return V().people.find(p => p.id === id); }
+function openPerson(id) {
+  const p = person(id);
+  S.modal = { id, step: 'actions', tcp: p && statusOf(p.t) !== 'none' ? tcpDefault(p.tcp) : 'ok' };
+  renderModal();
+}
+function closeModal() { S.modal = null; clearInterval(modalTimer); clearTimeout(idleTimer); $('#modalRoot').innerHTML = ''; renderAll(); }
+function go(step, extra) { S.modal = Object.assign({}, S.modal, { step }, extra || {}); renderModal(); }
+function armIdle(ms) { clearTimeout(idleTimer); idleTimer = setTimeout(closeModal, ms); }
+
+function renderModal() {
+  const m = S.modal; if (!m) return;
+  const p = person(m.id); if (!p) { closeModal(); return; }
+  clearInterval(modalTimer);
+  const t = p.t, s = statusOf(t), now = Date.now(), max = V().maxBreaks || 1;
+  let body = '';
+  const close = `<button class="close" data-act="close" aria-label="Close">${I.x}</button>`;
+  const head = sub => `<div class="mname fit">${esc(p.name)}</div><div class="msub">${sub}</div>`;
+
+  if (m.step === 'actions') {
+    armIdle(45000);
+    if (s === 'none') {
+      const st0 = V(), call = callAt(st0, p, now), early = call - now;
+      if (call && early > earlyMs(st0)) {
+        m.noTcp = true;
+        body = head('Not clocked in') + `<div class="warn"><div class="l">Too early to clock in</div><div class="t">Your call time is ${fmtT(new Date(call).toISOString())}. You can clock in starting at ${fmtT(new Date(call - earlyMs(st0)).toISOString())}.</div></div>`;
+        modalTimer = setInterval(() => { if (S.modal && S.modal.step === 'actions' && callAt(V(), p, Date.now()) - Date.now() <= earlyMs(V())) renderModal(); }, 5000);
+      } else {
+        body = head('Not clocked in') + `<button class="big blue" data-act="in">${I.inIcon}Clock In</button>`
+          + (call && early > 0 ? `<div class="earlynote">You're early. Your clock-in will be recorded at your call time, <b>${fmtT(new Date(call).toISOString())}</b>.</div>` : '');
+      }
+    } else if (s === 'in') {
+      const left = max - breaksTaken(t);
+      body = head('Clocked in at ' + fmtT(t.in) + (breaksTaken(t) ? ' · back from break at ' + fmtT(t.b2i || t.b1i) : ''))
+        + (left > 0 ? `<button class="big purple" data-act="break">${I.cup}Leave on Break</button>` : '')
+        + `<button class="big pink" data-act="outReview">${I.outIcon}Clock Out</button>`;
+    } else if (s === 'break') {
+      const lm = lateMinutes(t, now);
+      body = head('On break since ' + fmtT(openBreak(t)))
+        + `<div class="backby"><div class="l">Please be back by</div><div class="t">${fmtT(dueAt(t).toISOString())}</div></div>`
+        + (lm >= graceMin() ? `<div class="warn"><div class="l">⚠ Late from break</div><div class="t">You are ${lm} minutes late.</div></div>` : '')
+        + `<button class="big green" data-act="return">${I.check}Return from Break</button>`;
+      modalTimer = setInterval(() => { if (S.modal && S.modal.step === 'actions' && lateMinutes(person(m.id).t, Date.now()) >= graceMin() && !document.querySelector('.warn')) renderModal(); }, 5000);
+    } else {
+      const tt = totals(t);
+      m.noTcp = true;
+      body = head('Shift complete') + timesTable(t, null) + `<div class="q" style="font-size:20px">Worked ${fmtDur(tt.worked)}</div>`;
+    }
+    const link = `<button class="linkbtn" data-act="editStart">Edit times (manager)</button>`;
+    body += m.noTcp ? link : `<div class="tcpfoot">${link}${tcpPill(m.tcp || 'ok', 'data-act="tcp" aria-label="TCP status, tap to change"')}</div>`;
+    m.noTcp = false;
+  }
+
+  else if (m.step === 'review') {
+    armIdle(90000);
+    body = head('Review your times') + timesTable(t, m.outTs)
+      + `<div class="q">Are these times accurate?</div>`
+      + `<button class="big ghost" data-act="editStart">Edit Times</button>`
+      + `<button class="big green" data-act="outConfirm">${I.check}Yes, Clock Me Out</button>`
+      + `<div class="tcpfoot">${tcpPill(m.tcp || 'ok', 'data-act="tcp" aria-label="TCP status, tap to change"')}</div>`;
+  }
+
+  else if (m.step === 'pin') {
+    armIdle(60000);
+    const n = (m.pin || '').length;
+    body = head(m.checking ? 'Checking your code…' : 'Manager code to edit times')
+      + `<div class="msub" style="margin-top:-12px">Gabriel, Aria, Daniel or Tanjila: your 6-digit code.</div>`
+      + `<div class="dots ${m.shake ? 'shake' : ''}">${[0,1,2,3,4,5].map(i => `<i class="${i < n ? 'f' : ''}"></i>`).join('')}</div>`
+      + (m.err ? `<div class="err" style="margin:-12px 0 16px">${esc(m.err)}</div>` : '')
+      + `<div class="pad">${[1,2,3,4,5,6,7,8,9].map(d => `<button data-key="${d}">${d}</button>`).join('')}<button class="nil"></button><button data-key="0">0</button><button data-key="del" aria-label="Delete">⌫</button></div>`;
+  }
+
+  else if (m.step === 'edit') {
+    armIdle(180000);
+    const draft = m.draft;
+    const keys = TIME_COLS.filter(k => {
+      if (k === 'b2o' || k === 'b2i') return max >= 2 || draft.b2o || draft.b2i;
+      if (k === 'out') return m.clockingOut || draft.out || s === 'out';
+      return true;
+    });
+    body = head((m.clockingOut ? 'Fix any times, then clock out' : 'Edit times') + (m.mgr ? ' · editing as ' + esc(m.mgr) : ''))
+      + `<div class="ed">${keys.map(k => `<label>${LABELS[k]}<span><input type="time" step="60" data-k="${k}" value="${toHM(draft[k])}"><button class="clr" data-clr="${k}">clear</button>${draft[k] ? tcpPill(m.dtcp[k] || tcpDefault(m.dtcp), `data-tcpk="${k}"`, true) : ''}</span></label>`).join('')}</div>`
+      + (m.err ? `<div class="err">${esc(m.err)}</div>` : '')
+      + `<div class="row2"><button class="big ${m.clockingOut ? 'pink' : 'blue'}" data-act="saveEdit">${I.check}${m.clockingOut ? 'Save & Clock Out' : 'Save Times'}</button><button class="big ghost" data-act="close">Cancel</button></div>`;
+  }
+
+  else if (m.step === 'done') {
+    const d = m.done;
+    let secs = 3;
+    body = `<div class="done">${d.html}<div class="count" id="cnt">Returning home in ${secs}</div></div>`;
+    clearTimeout(idleTimer);
+    modalTimer = setInterval(() => { secs--; const c = $('#cnt'); if (c) c.textContent = 'Returning home in ' + secs; if (secs <= 0) closeModal(); }, 1000);
+  }
+
+  $('#modalRoot').innerHTML = `<div class="overlay" data-act="bg"><div class="sheet">${close}${body}</div></div>`;
+  fitText(document.getElementById('modalRoot'));
+}
+
+function timesTable(t, outTs) {
+  const tt = Object.assign({}, t); if (outTs) tt.out = outTs;
+  const rows = TIME_COLS.filter(k => tt[k]).map(k => `<div class="tr"><span>${LABELS[k]}</span><b>${fmtDT(tt[k])}</b></div>`);
+  const tot = totals(tt);
+  if (tt.out) rows.push(`<div class="tr tot"><span>Total worked</span><b>${fmtDur(tot.worked)}${tot.br ? ' <span style="font-weight:600">(' + fmtDur(tot.br) + ' break)</span>' : ''}</b></div>`);
+  return `<div class="times">${rows.join('')}</div>`;
+}
+const toHM = iso => { if (!iso) return ''; const d = new Date(iso); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
+
+/** Turns HH:MM inputs back into full date-times, rolling past midnight so overnight shifts stay in order. */
+function timesFromInputs(vals, orig) {
+  const out = {}; let prev = null;
+  const anchor = orig.in ? new Date(orig.in) : new Date();
+  for (const k of TIME_COLS) {
+    if (!vals[k]) { out[k] = ''; continue; }
+    const [h, mi] = vals[k].split(':').map(Number);
+    const base = orig[k] ? new Date(orig[k]) : prev ? new Date(prev) : new Date(anchor);
+    const d = new Date(base); d.setHours(h, mi, 0, 0);
+    if (d - base > 12 * 3600e3) d.setDate(d.getDate() - 1);
+    else if (base - d > 12 * 3600e3) d.setDate(d.getDate() + 1);
+    if (prev && d < prev) d.setDate(d.getDate() + 1);
+    out[k] = d.toISOString(); prev = d;
+  }
+  return out;
+}
+
+function punch(action) {
+  const m = S.modal, p = person(m.id), ts = new Date().toISOString();
+  const s = statusOf(p.t);
+  const ok = { in: s === 'none', break: s === 'in', return: s === 'break', out: s === 'in' }[action];
+  if (!ok) { toast('That punch no longer applies. Try again.', true); closeModal(); return; }
+  if (action === 'in') {
+    const call = callAt(V(), p, ts);
+    if (call && call - Date.parse(ts) > earlyMs(V())) { renderModal(); return; }   // too early: the screen says so
+  }
+  const lateBy = action === 'return' ? lateMinutes(p.t, new Date(ts)) : 0;
+  const ts2 = action === 'out' ? m.outTs : ts;
+  queue({ type: 'punch', id: p.id, action, ts: ts2, tcp: m.tcp || 'ok' });
+  showDone(action, ts2, lateBy, p);
+}
+function showDone(action, ts, lateBy, p) {
+  let html = '';
+  const badge = (c, ic) => `<div class="badge" style="background:var(--${c})">${ic}</div>`;
+  if (action === 'in') {
+    const call = callAt(V(), p, ts), early = call && call > Date.parse(ts);
+    html = badge('blue', I.check) + `<h2>You're clocked in</h2><div class="dtime">${fmtT(early ? new Date(call).toISOString() : ts)}</div>`
+      + (early ? `<div class="dt">You tapped in at ${fmtT(ts)}. Your time starts at your call time, ${fmtT(new Date(call).toISOString())}.</div>` : `<div class="dt">Have a great shift, ${esc(p.first || p.name)}!</div>`);
+  }
+  if (action === 'break') {
+    const due = new Date(new Date(ts).getTime() + breakMs()).toISOString();
+    html = badge('purple', I.cup) + `<h2>Enjoy your break</h2><div class="dt">Please be back by</div><div class="dtime" style="color:var(--purple)">${fmtT(due)}</div>`;
+  }
+  if (action === 'return') {
+    html = lateBy >= graceMin()
+      ? badge('red', I.alert) + `<h2 style="color:var(--red)">Late from break</h2><div class="warn"><div class="l">⚠ ${lateBy} minutes late</div><div class="t">Your break was due back at ${fmtT(new Date(new Date(ts).getTime() - lateBy * 60000).toISOString())}. This has been recorded.</div></div>`
+      : badge('green', I.check) + `<h2>Welcome back</h2><div class="dtime">${fmtT(ts)}</div><div class="dt">Back from break on time.</div>`;
+  }
+  if (action === 'out' || action === 'editOut') html = badge('green', I.check) + `<h2>You're clocked out</h2><div class="dtime">${fmtT(ts)}</div><div class="dt">Thanks for tonight, ${esc(p.first || p.name)}!</div>`;
+  if (action === 'saved') html = badge('green', I.check) + `<h2>Times saved</h2><div class="dt">${esc(p.name)}</div>`;
+  go('done', { done: { html } });
+}
+
+document.addEventListener('click', e => {
+  if (!S.modal) return;
+  const m = S.modal;
+  const bg = e.target.closest('[data-act="bg"]');
+  if (bg && e.target === bg) { if (m.step === 'done') closeModal(); else closeModal(); return; }
+  if (m.step === 'done' && e.target.closest('.sheet')) { closeModal(); return; }
+  const k = e.target.closest('[data-key]');
+  if (k && m.step === 'pin') {
+    if (m.checking) return;
+    let pin = m.pin || '';
+    if (k.dataset.key === 'del') pin = pin.slice(0, -1); else if (pin.length < 6) pin += k.dataset.key;
+    if (pin.length === 6) checkManagerCode(pin);
+    else go('pin', { pin, shake: false });
+    return;
+  }
+  const clr = e.target.closest('[data-clr]');
+  if (clr) { e.preventDefault(); readDraft(); m.draft[clr.dataset.clr] = ''; renderModal(); return; }
+  const tk = e.target.closest('[data-tcpk]');
+  if (tk) { e.preventDefault(); readDraft(); const k = tk.dataset.tcpk; m.dtcp[k] = TCP_NEXT[m.dtcp[k] || tcpDefault(m.dtcp)]; renderModal(); return; }
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  const act = a.dataset.act;
+  if (act === 'tcp') { m.tcp = TCP_NEXT[m.tcp || 'ok']; renderModal(); return; }
+  if (act === 'close') closeModal();
+  else if (act === 'in' || act === 'break' || act === 'return') punch(act);
+  else if (act === 'outReview') go('review', { outTs: new Date().toISOString() });
+  else if (act === 'outConfirm') punch('out');
+  else if (act === 'editStart') go('pin', { pin: '', clockingOut: m.step === 'review', outTs: m.outTs });
+  else if (act === 'saveEdit') saveEdit();
+});
+document.addEventListener('keydown', e => {
+  if (!S.modal) return;
+  if (S.modal.step === 'pin' && /^[0-9]$/.test(e.key)) { const b = document.querySelector(`[data-key="${e.key}"]`); if (b) b.click(); }
+  if (S.modal.step === 'pin' && e.key === 'Backspace') { const b = document.querySelector('[data-key="del"]'); if (b) b.click(); }
+  if (e.key === 'Escape') closeModal();
+});
+/** The server checks the 6-digit code (codes never reach this page) and returns a token for the edit. */
+async function checkManagerCode(pin) {
+  go('pin', { pin, checking: true, err: '' });
+  let res;
+  try { res = await call('api_checkPin', pin); }
+  catch (e) { res = { ok: false, msg: 'Needs internet to check the code. Try again when the dot is green.' }; }
+  const m = S.modal; if (!m || m.step !== 'pin') return;
+  if (res && res.ok) {
+    const p = person(m.id);
+    const draft = Object.assign({}, p.t);
+    const dtcp = Object.assign({}, p.tcp);
+    if (m.clockingOut && !draft.out) { draft.out = m.outTs; dtcp.out = m.tcp || tcpDefault(dtcp); }
+    go('edit', { pin: '', checking: false, token: res.token, mgr: res.name, draft, dtcp, err: '' });
+  } else {
+    go('pin', { pin: '', checking: false, shake: true, err: (res && res.msg) || 'Wrong code.' });
+    setTimeout(() => { if (S.modal) S.modal.shake = false; }, 400);
+  }
+}
+function readDraft() {
+  const m = S.modal; const vals = {};
+  TIME_COLS.forEach(k => { const el = document.querySelector(`.ed input[data-k="${k}"]`); vals[k] = el ? el.value : toHM(m.draft[k]); });
+  const p = person(m.id);
+  m.draft = timesFromInputs(vals, Object.assign({}, p.t, m.clockingOut && !p.t.out ? { out: m.outTs } : {}));
+}
+function saveEdit() {
+  const m = S.modal; readDraft();
+  const d = m.draft;
+  let err = '';
+  if (!d.in && TIME_COLS.some(k => d[k])) err = 'Clock In is required.';
+  else if ((d.b1i && !d.b1o) || (d.b2i && !d.b2o)) err = 'Every Break In needs a Break Out.';
+  else if (d.out && ((d.b1o && !d.b1i) || (d.b2o && !d.b2i))) err = 'Add the Break In time before clocking out.';
+  else if (d.b2o && !d.b1o) err = 'Use Break 1 before Break 2.';
+  else if (m.clockingOut && !d.out) err = 'Clock Out time is required.';
+  if (err) { m.err = err; renderModal(); return; }
+  const p = person(m.id);
+  const tcp = {}; TIME_COLS.forEach(k => { if (d[k]) tcp[k] = m.dtcp[k] || tcpDefault(m.dtcp); });
+  queue({ type: 'edit', id: p.id, night: p.night, times: d, tcp, token: m.token });
+  showDone(m.clockingOut ? 'editOut' : 'saved', d.out || new Date().toISOString(), 0, p);
+}
+
+/* ============ render: placements ============ */
+const ZONES = {
+  top: [['Stage 3','Cypress End','stage'],['Stage 5','The Warehouse','stage'],['Stage 1','Infinity Room','stage']],
+  mid: [['Stage 4','The Park','stage'],['Stage 2','Chain Room','stage'],['Gallery','Z3TE1','gallery']],
+  roam: ['General Roaming','Anywhere inside the venue','roam'],
+  gs: ['Guest Services Container','GS container','gs'],
+  gates: [['South Gate','Gate 6','gate'],['VIP Gate','Gate 4','gate'],['North Gate','Gate 2','gate']],
+  dirs: [['South Directional','Sidewalk outside South','dir'],['VIP Directional','Sidewalk outside VIP','dir'],['North Directional','Sidewalk outside North','dir']],
+};
+const ALL_ZONES = [].concat(ZONES.top, ZONES.mid, [ZONES.roam], [ZONES.gs], ZONES.gates, ZONES.dirs).map(z => z[0]);
+function chipHtml(it) {
+  const bl = it.grey ? backLabel(it.back, Date.now()) : null;
+  const back = bl ? `<span class="bk ${bl.late ? 'late' : ''}">${esc(bl.txt)}</span>` : '';
+  return `<div class="chip ${it.kind === 'lead' ? 'lead' : ''} ${it.grey ? 'grey' : ''} ${S.selKey === it.key ? 'sel' : ''}" data-chip="${esc(it.key)}"${it.grey ? ' data-grey="1"' : ''}${it.due ? ` data-due="${it.due}"` : ''}${it.grey && it.back ? ` data-back="${it.back}"` : ''}><span class="n">${it.kind === 'lead' ? 'L' : esc(badge(it.num) || '•')}</span><span class="x fit">${esc(it.label)}</span>${back}</div>`;
+}
+
+/** Countdown for someone on break: "12:34" left, "back now" once due, "late X min" at 3+ minutes over. */
+const mmss = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + pad2(t % 60); };
+function backLabel(back, now) {
+  if (!back) return { txt: 'on break', late: false };
+  const left = back - now, lm = Math.floor(-left / 60000);
+  if (left > 0) return { txt: mmss(left), late: false };
+  return lm >= graceMin() ? { txt: 'late ' + lm + ' min', late: true } : { txt: 'back now', late: true };
+}
+
+/** Scheduled time of this person's next break (ms), from the team's Break (A)/(B) slots. 0 = none. */
+function breakDue(m, team, per) {
+  const b = (team && team.breaks) || {};
+  const list = b[m.tag] || b.X || b.A || [];
+  const mins = list[breaksTaken(per.t)];
+  if (mins == null) return 0;
+  const [y, mo, d] = (per.night || nightOf(Date.now())).split('-').map(Number);
+  return new Date(y, mo - 1, d, 12, 0, 0).getTime() + mins * 60000;
+}
+
+/**
+ * What the board shows: one bubble per team (only partners still with it), split-off partners,
+ * and leads. Anyone on break is greyed out in Available. Bubbles get the soonest break due time of
+ * the clocked-in partners in them, for the ring.
+ */
+function placeItems(st) {
+  const byId = {}; st.people.forEach(p => { byId[p.id] = p; });
+  const stat = id => (id && byId[id]) ? statusOf(byId[id].t) : 'none';
+  const pairs = (st.pairs || []).filter(p => !NEVER_PLACE.test(p.label));
+  const teams = {}, soloIds = {};
+  pairs.forEach(p => {
+    if (p.kind === 'team') teams[p.key] = p;
+    if ((p.kind === 'solo' || p.kind === 'split') && p.members && p.members[0]) soloIds[p.members[0].id || p.parent + '|' + p.members[0].n] = 1;
+  });
+  const make = (p, key, members, grey, team) => {
+    const it = { key, kind: p.kind === 'lead' ? 'lead' : 'team', num: p.num, zone: grey ? '' : p.zone, grey,
+      label: members.length ? members.map(m => m.n).join(' & ') : p.label, due: 0, back: 0,
+      mem: members, col: team ? team.key : '' };
+    members.forEach(m => {
+      const per = m.id && byId[m.id]; if (!per) return;
+      if (grey) { const d = dueAt(per.t); if (d && +d > it.back) it.back = +d; }
+      else if (statusOf(per.t) === 'in') { const d = breakDue(m, team, per); if (d && (!it.due || d < it.due)) it.due = d; }
+    });
+    return it;
+  };
+  const out = [];
+  pairs.forEach(p => {
+    if (p.kind === 'lead' || !(p.members || []).length) { out.push(make(p, p.key, [], false, null)); return; }
+    const sep = p.kind === 'solo' || p.kind === 'split';
+    const team = sep ? teams[p.parent] : p;
+    const ms = sep ? p.members : p.members.filter(m => !soloIds[m.id || p.key + '|' + m.n]);
+    if (!ms.length) return;
+    const onB = ms.filter(m => stat(m.id) === 'break'), act = ms.filter(m => stat(m.id) !== 'break');
+    if (act.length) out.push(make(p, p.key, act, false, team));
+    if (onB.length) {
+      if (!act.length) out.push(make(p, p.key, onB, true, team));
+      else onB.forEach(m => out.push(make(p, 'solo:' + m.id, [m], true, team)));   // not synced yet
+    }
+  });
+  return out;
+}
+
+/* ring: fills over the 5 minutes before a scheduled break, yellow > orange > red, then solid red until they go */
+const RING_MS = 5 * 60000;
+function ringState(due, now) {
+  if (!due) return null;
+  const left = due - now;
+  if (left > RING_MS) return null;
+  if (left <= 0) return { due: true };
+  return { c: left > RING_MS * 2 / 3 ? '#facc15' : left > RING_MS / 3 ? '#f97316' : '#dc2626', p: 1 - left / RING_MS };
+}
+function updateRings() {
+  const now = Date.now();
+  document.querySelectorAll('[data-due]').forEach(el => {
+    const r = ringState(Number(el.dataset.due), now);
+    el.classList.toggle('ring', !!r);
+    el.classList.toggle('ringdue', !!(r && r.due));
+    if (r && !r.due) { el.style.setProperty('--rc', r.c); el.style.setProperty('--rp', (r.p * 360).toFixed(1) + 'deg'); }
+  });
+  // On break (greyed): purple ring empties over the 30 minutes with a timer; past due it goes solid red.
+  document.querySelectorAll('[data-back]').forEach(el => {
+    const back = Number(el.dataset.back), left = back - now;
+    el.classList.add('ring');
+    el.classList.toggle('ringdue', left <= 0);
+    el.style.setProperty('--rc', 'var(--purple)');
+    el.style.setProperty('--rp', (Math.max(0, Math.min(1, left / breakMs())) * 360).toFixed(1) + 'deg');
+    const bl = backLabel(back, now), bk = el.querySelector('.bk');
+    if (bk && bk.textContent !== bl.txt) { bk.textContent = bl.txt; bk.classList.toggle('late', bl.late); }
+  });
+}
+function zoneHtml([name, sub, cls], items, html) {
+  const here = items.filter(i => i.zone === name);
+  return `<div class="zone ${cls} ${S.selKey ? 'armed' : ''}" data-drop="${esc(name)}"><div class="zh"><div><div class="zt fit">${esc(name)}</div><div class="zs fit">${esc(sub)}</div></div>${here.length ? `<span class="zc">${here.length}</span>` : ''}</div><div class="zb">${here.map(html || chipHtml).join('')}</div></div>`;
+}
+// Department heads float and are never placed.
+const NEVER_PLACE = /\b(daniel|tanjila)\b/i;
+const efab = () => `<button class="efab ${S.edit ? 'save' : ''}" id="efab">${S.edit ? I.check + 'Save' : I.pair + 'Edit Partners'}</button>`;
+function mapHtml(items, html) {
+  const z = zz => zoneHtml(zz, items, html);
+  return `<div class="map">
+      <div class="rail">Seaboard Airline Railroad<span class="compass">${I.north}N</span></div>
+      <div class="venue">
+        <div class="g3">${ZONES.top.map(z).join('')}</div>
+        <div class="g3">${ZONES.mid.map(z).join('')}</div>
+        ${z(ZONES.roam)}
+        ${z(ZONES.gs)}
+        <div class="g3">${ZONES.gates.map(z).join('')}</div>
+      </div>
+      <div class="wall"></div>
+      <div class="street"><div class="g3">${ZONES.dirs.map(z).join('')}</div></div>
+      <div class="ave">NW 37th Ave</div>
+    </div>
+    <div class="maplegend">Map is rotated 90° clockwise from the site plan. North is to the right.</div>${efab()}`;
+}
+
+/* ============ Edit Partners ============
+ * Tap Edit Partners: every bubble splits into one bubble per person and everything jiggles.
+ * Drop a person on someone: they partner up. That person's old partner is booted and stays where they were, solo.
+ * Drop a person on the map or Available: they go solo there (their partner stays put, solo too).
+ * Tap an empty spot or Save to finish. A swap (new partner) is written to the Master Timesheet schedule;
+ * a pair that was only split apart stays together on the schedule and works apart in the app.
+ */
+const pidOf = (col, m) => m.id || '?' + col + '|' + m.n;
+const normKey = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();   // same as norm_ in Code.gs
+const sigOf = units => { const o = {}; units.forEach(u => { const k = u.pids.slice().sort().join(',') + '@' + (u.zone || ''); u.pids.forEach(p => { o[p] = k; }); }); return o; };
+function startEdit() {
+  const st = V(true);   // names as on the schedule
+  const items = placeItems(st).filter(i => i.kind !== 'lead' && i.mem && i.mem.length);
+  const E = { names: {}, nums: {}, col: {}, pop: '', units: [] };
+  items.forEach(it => {
+    const pids = it.mem.map(m => pidOf(it.col, m));
+    it.mem.forEach((m, i) => { E.names[pids[i]] = cap(m.n); E.nums[pids[i]] = it.num; E.col[pids[i]] = it.col; });
+    E.units.push({ uid: uid(), zone: it.zone && ALL_ZONES.indexOf(it.zone) >= 0 ? it.zone : '', grey: it.grey, pids, anchor: '' });
+  });
+  if (!E.units.length) { toast('No teams yet. Tap Refresh Partners in Settings first.', true); return; }
+  E.before = sigOf(E.units);
+  S.edit = E; S.selKey = null;
+  if (navigator.vibrate) navigator.vibrate(15);
+  renderAll();
+}
+function unitHtml(u) {
+  const E = S.edit;
+  const chips = u.pids.map(p => `<div class="chip pp ${u.grey ? 'grey' : ''} ${S.selKey === 'm:' + p ? 'sel' : ''} ${E.pop === p ? 'pop' : ''}" data-chip="m:${esc(p)}" data-drop="m:${esc(p)}"><span class="n">${esc(badge(E.nums[p]) || '•')}</span><span class="x fit">${esc(E.names[p])}</span></div>`).join('');
+  return u.pids.length > 1 ? `<div class="pgrp">${chips}</div>` : chips;
+}
+function renderEdit(st) {
+  const E = S.edit;
+  const units = E.units.map(u => Object.assign({}, u, { zone: u.zone && ALL_ZONES.indexOf(u.zone) >= 0 ? u.zone : '' }));
+  const free = units.filter(u => !u.zone);
+  const leads = placeItems(st).filter(i => i.kind === 'lead' && !i.zone);
+  $('#placeView').innerHTML = `
+    <div class="ebanner"><b>Editing partners.</b> Drag a person onto someone to partner them up; their old partner goes solo right where they are. Drag a person onto the map to send them solo. Tap an empty spot or <b>Save</b> when you're done.</div>
+    <div class="tray" data-drop="">
+      <div class="th"><span>Available · ${free.length}</span><span>${units.length - free.length} placed</span></div>
+      <div class="tb">${free.map(unitHtml).join('') + leads.map(l => `<div class="chip lead fixed"><span class="n">L</span><span class="x fit">${esc(l.label)}</span></div>`).join('') || '<span style="color:var(--muted);font-weight:600;padding:12px">Everyone is placed.</span>'}</div>
+    </div>
+    ${mapHtml(units, unitHtml)}`;
+  if (E.pop) setTimeout(() => { if (S.edit) S.edit.pop = ''; }, 600);
+}
+function editDrop(key, drop) {
+  const E = S.edit, pid = key.slice(2), nm = p => E.names[p] || 'They';
+  S.selKey = null;
+  const from = E.units.find(u => u.pids.indexOf(pid) >= 0);
+  if (!from) { renderAll(); return; }
+  if (drop && drop.indexOf('m:') === 0) {
+    const tid = drop.slice(2), to = E.units.find(u => u.pids.indexOf(tid) >= 0);
+    if (!to || to === from) { renderAll(); return; }
+    from.pids = from.pids.filter(x => x !== pid);
+    const booted = to.pids.filter(x => x !== tid);
+    booted.forEach(x => E.units.push({ uid: uid(), zone: to.zone, grey: to.grey, pids: [x], anchor: '' }));
+    to.pids = [tid, pid]; to.anchor = E.col[tid]; to.grey = to.grey && from.grey;
+    E.pop = booted[0] || '';
+    toast(nm(pid) + ' and ' + nm(tid) + ' are partners.' + booted.concat(from.pids).map(x => ' ' + nm(x) + ' is solo.').join(''));
+  } else {
+    const zone = drop || '';
+    if (from.pids.length === 1) { if ((from.zone || '') === zone) { renderAll(); return; } from.zone = zone; }
+    else {
+      from.pids = from.pids.filter(x => x !== pid);
+      E.units.push({ uid: uid(), zone, grey: from.grey, pids: [pid], anchor: '' });
+      toast(nm(pid) + ' is working solo' + (zone ? ' at ' + zone : '') + '. ' + from.pids.map(nm).join(' & ') + ' stays put. Same column on the schedule.');
+    }
+  }
+  E.units = E.units.filter(u => u.pids.length);
+  renderAll();
+}
+/**
+ * Turns the edited bubbles into a patch for api_setPartners: which schedule column each person lands in,
+ * which team bubbles get rebuilt, and which columns get new names on the Master Timesheet.
+ * - A pair keeps its column. A new pair takes the column of the person it was dropped on (or a free one).
+ * - Everyone else stays in their own column if there is room; a booted partner with no room fills the
+ *   seat the other person left, so everyone keeps a column and a break time.
+ * - Top name = Break (A), second = Break (B), same as the schedule.
+ */
+function planPartners(st, E) {
+  const pairs = st.pairs || [];
+  const teams = pairs.filter(p => p.kind === 'team');
+  const home = {}, cols = {}, claimed = {};
+  teams.forEach(t => {
+    (t.members || []).forEach((m, i) => { home[pidOf(t.key, m)] = { col: t.key, slot: i, m }; });
+    cols[t.key] = new Array(Math.max(1, (t.members || []).length)).fill(null);
+  });
+  const us = E.units.map(u => ({ zone: u.zone || '', anchor: u.anchor, pids: u.pids.filter(p => home[p]) })).filter(u => u.pids.length);
+  const unitOf = {}; us.forEach((u, i) => u.pids.forEach(p => { unitOf[p] = i; }));
+  const put = (col, p) => {
+    const a = cols[col], h = home[p];
+    const i = h.col === col && a[h.slot] == null ? h.slot : a.indexOf(null);
+    if (i < 0) a.push(p); else a[i] = p;
+  };
+  const room = col => cols[col].indexOf(null) >= 0;
+  const same = u => u.pids.every(p => home[p].col === home[u.pids[0]].col);
+  const claimBy = {};
+  us.filter(u => u.pids.length > 1).sort((a, b) => same(b) - same(a)).forEach(u => {
+    const cands = (same(u) ? [home[u.pids[0]].col] : [u.anchor]).concat(u.pids.map(p => home[p].col)).filter(c => c && cols[c]);
+    const col = cands.find(c => !claimed[c]) || Object.keys(cols).find(c => !claimed[c] && cols[c].length >= u.pids.length) || cands[0];
+    claimed[col] = true; claimBy[col] = us.indexOf(u);
+    u.pids.slice().sort((a, b) => (home[b].col === col) - (home[a].col === col)).forEach(p => put(col, p));
+  });
+  const orphans = [];
+  Object.keys(home).filter(p => !(unitOf[p] >= 0 && us[unitOf[p]].pids.length > 1)).forEach(p => {
+    if (room(home[p].col)) put(home[p].col, p); else orphans.push(p);
+  });
+  orphans.forEach(p => put(Object.keys(cols).find(c => !claimed[c] && room(c)) || Object.keys(cols).find(room) || home[p].col, p));
+
+  const after = sigOf(us), remove = [], add = [], colsW = [];
+  teams.forEach(t => {
+    const oldP = (t.members || []).map(m => pidOf(t.key, m)), newP = cols[t.key].filter(Boolean);
+    if (oldP.join('\n') === newP.join('\n') && newP.every(p => after[p] === E.before[p])) return;
+    remove.push(t.key);
+    pairs.forEach(p => { if (p.parent === t.key) remove.push(p.key); });
+    const members = newP.map((p, i) => ({ n: home[p].m.n, id: home[p].m.id || '', tag: i === 0 ? 'A' : i === 1 ? 'B' : 'X' }));
+    const oldNames = (t.members || []).map(m => m.n), newNames = members.map(m => m.n);
+    if (oldNames.join('\n') !== newNames.join('\n')) colsW.push({ key: t.key, names: newNames });
+    if (!members.length) return;
+    const label = newNames.join(' & '), key = 'team:' + (t.num || '') + ':' + normKey(label);
+    const primary = claimBy[t.key] != null ? claimBy[t.key] : unitOf[newP[0]];
+    const inPrimary = p => unitOf[p] === primary || unitOf[p] == null;
+    add.push({ key, label, kind: 'team', num: t.num, zone: primary != null && us[primary] ? us[primary].zone : '', members, breaks: t.breaks || {}, parent: '' });
+    newP.forEach((p, i) => {
+      if (inPrimary(p)) return;
+      add.push({ key: 'split:' + p, label: members[i].n, kind: 'split', num: t.num, zone: us[unitOf[p]].zone, members: [members[i]], breaks: {}, parent: key });
+    });
+  });
+  return remove.length ? { remove, add, cols: colsW } : null;
+}
+function savePartners() {
+  const E = S.edit; if (!E) return;
+  S.edit = null; S.selKey = null;
+  const plan = planPartners(V(true), E);
+  if (!plan) { toast('No partner changes.'); renderAll(); return; }
+  queue({ type: 'partners', remove: plan.remove, add: plan.add, cols: plan.cols });
+  toast(plan.cols.length ? 'Partners saved. Updating the schedule on the Master Timesheet.' : 'Partners saved.');
+  renderAll();
+}
+function renderPlace(st) {
+  $('#placeView').classList.toggle('editing', !!S.edit);
+  if (S.edit) { renderEdit(st); return; }
+  const items = placeItems(st);
+  const unplaced = items.filter(i => !i.zone || ALL_ZONES.indexOf(i.zone) < 0);
+  const byNum = (a, b) => (Number(a.num) || 99) - (Number(b.num) || 99);
+  const teams = unplaced.filter(i => i.kind !== 'lead' && !i.grey).sort(byNum), leads = unplaced.filter(i => i.kind === 'lead');
+  const resting = unplaced.filter(i => i.grey).sort(byNum);
+  $('#placeView').innerHTML = `
+    <div class="ptool">
+      <div class="lbl">Schedule: <b>${esc(st.event.scheduleTab || 'not loaded')}</b><br>Drag a team onto the map, or tap a team, then tap a spot.</div>
+    </div>
+    <div class="tray" data-drop="">
+      <div class="th"><span>Available · ${unplaced.length - resting.length}</span><span>${items.length - unplaced.length} placed${resting.length ? ' · ' + resting.length + ' on break' : ''}</span></div>
+      <div class="tb">${items.length ? teams.map(chipHtml).join('') + leads.map(chipHtml).join('') + resting.map(chipHtml).join('') || '<span style="color:var(--muted);font-weight:600;padding:12px">Everyone is placed.</span>' : '<span style="color:var(--muted);font-weight:600;padding:12px">No teams yet. Go to Settings (gear, top right) and tap Refresh Placements.</span>'}</div>
+    </div>
+    ${mapHtml(items)}`;
+  updateRings();
+}
+function place(key, zone) {
+  const it = placeItems(V()).find(x => x.key === key);
+  if (!it || it.grey || (it.zone || '') === (zone || '')) { S.selKey = null; renderAll(); return; }
+  S.selKey = null;
+  queue({ type: 'place', key, zone: zone || '' });
+  renderAll();
+}
+
+/* drag and drop (touch + mouse via pointer events) + tap-to-place */
+const dropOn = (key, drop) => kitView() ? kitDrop(key, drop) : S.edit ? editDrop(key, drop) : place(key, drop);
+// Touch screens need a 0.3 second press (the bubble grows, then lifts) before it can be dragged,
+// so a normal swipe that starts on a bubble still scrolls the page. Mouse drags start right away.
+const HOLD_MS = 300;
+let drag = null, raf = 0;
+function cancelHold() {
+  if (!drag) return;
+  clearTimeout(drag.holdT);
+  drag.chip.classList.remove('holding', 'lifted');
+  drag = null;
+}
+document.addEventListener('pointerdown', e => {
+  const chip = e.target.closest('[data-chip]'); if (!chip || chip.dataset.grey || (S.view !== 'place' && !kitView()) || S.settingsOpen) return;
+  const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+  drag = { key: chip.dataset.chip, chip, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, started: false, ghost: null, hot: null, touch, lifted: !touch, holdT: 0 };
+  if (touch) {
+    chip.classList.add('holding');
+    drag.holdT = setTimeout(() => {
+      if (!drag || drag.chip !== chip) return;
+      drag.lifted = true;
+      chip.classList.remove('holding'); chip.classList.add('lifted');
+      if (navigator.vibrate) navigator.vibrate(15);
+    }, HOLD_MS);
+  }
+});
+// Once a bubble has lifted, stop the page from scrolling under the finger.
+document.addEventListener('touchmove', e => { if (drag && drag.touch && drag.lifted) e.preventDefault(); }, { passive: false });
+document.addEventListener('contextmenu', e => { if (e.target.closest('[data-chip]')) e.preventDefault(); });
+document.addEventListener('pointermove', e => {
+  if (!drag) return;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (!drag.started) {
+    const moved = Math.hypot(drag.x - drag.x0, drag.y - drag.y0) >= (drag.touch ? 10 : 8);
+    if (drag.touch && !drag.lifted) { if (moved) cancelHold(); return; }   // moved before the hold finished: it's a scroll
+    if (!moved) return;
+    drag.chip.classList.remove('holding', 'lifted');
+    drag.started = true;
+    drag.ghost = drag.chip.cloneNode(true);
+    drag.ghost.classList.add('dragghost'); drag.ghost.classList.remove('sel');
+    document.body.appendChild(drag.ghost);
+    drag.chip.classList.add('dragging');
+    raf = requestAnimationFrame(autoScroll);
+  }
+  e.preventDefault();
+  drag.ghost.style.left = drag.x + 'px'; drag.ghost.style.top = drag.y + 'px';
+  const el = document.elementFromPoint(drag.x, drag.y);
+  const hot = el && el.closest('[data-drop]');
+  if (hot !== drag.hot) { if (drag.hot) drag.hot.classList.remove('hot'); if (hot) hot.classList.add('hot'); drag.hot = hot; }
+}, { passive: false });
+function endDrag(e, cancel) {
+  if (!drag) return;
+  const d = drag; drag = null; cancelAnimationFrame(raf);
+  clearTimeout(d.holdT);
+  d.chip.classList.remove('holding', 'lifted');
+  if (d.ghost) d.ghost.remove();
+  if (d.hot) d.hot.classList.remove('hot');
+  d.chip.classList.remove('dragging');
+  if (cancel) { renderAll(); return; }
+  if (d.started) { if (d.hot) dropOn(d.key, d.hot.dataset.drop); else renderAll(); }
+  else if (S.edit && S.selKey && S.selKey !== d.key) editDrop(S.selKey, d.key);   // tap a person, then tap who to partner with
+  else { S.selKey = S.selKey === d.key ? null : d.key; renderAll(); }
+  suppressClick = true; setTimeout(() => suppressClick = false, 50);
+}
+let suppressClick = false;
+document.addEventListener('pointerup', e => endDrag(e, false));
+document.addEventListener('pointercancel', e => endDrag(e, true));
+function autoScroll() {
+  if (!drag) return;
+  const edge = 110, top = $('#hdr').offsetHeight;
+  if (drag.y < top + edge) window.scrollBy(0, -14);
+  else if (drag.y > innerHeight - edge - 64) window.scrollBy(0, 14);
+  raf = requestAnimationFrame(autoScroll);
+}
+document.addEventListener('click', e => {
+  if (suppressClick || (S.view !== 'place' && !kitView()) || S.settingsOpen) return;
+  if (S.view === 'place' && e.target.closest('#efab')) { if (S.edit) savePartners(); else startEdit(); return; }
+  if (S.selKey && !e.target.closest('[data-chip]') && !e.target.closest('.rsearch')) {
+    const z = e.target.closest('[data-drop]');
+    if (z) dropOn(S.selKey, z.dataset.drop); else { S.selKey = null; renderAll(); }
+    return;
+  }
+  // Editing partners: a tap on any empty spot (not a person) saves and ends it.
+  if (S.edit && S.view === 'place' && !e.target.closest('[data-chip], .ebanner, button, a, input, select')) savePartners();
+});
+
+/* ============ radios and scanners ============
+ * Two tabs that work the same way (same as the kits in Code.gs). Since v28 devices are dragged onto people:
+ * one card per person on the left (anyone holding something at the top, then everyone else, each group A to Z),
+ * and every device that is At Base as a chip on the right. Drag a device onto a person (or tap the device, then
+ * the person) to hand it out; a person can hold several. Drag it to another person to hand it over, back to the
+ * At Base panel (or tap its X) to return it.
+ */
+const KIT = {
+  radio: { key: 'radio', names: RADIO_NAMES, st: 'radios', one: 'radio', many: 'radios', q: 'rq', root: '#radioView', icon: 'radio' },
+  scanner: { key: 'scanner', names: SCANNER_NAMES, st: 'scanners', one: 'scanner', many: 'scanners', q: 'sq', root: '#scannerView', icon: 'scan' },
+};
+const kitView = () => KIT[S.view] || null;
+function kitList(st, k) {
+  const have = {}; (st[k.st] || []).forEach(r => { have[r.name] = r; });
+  return k.names.map(n => have[n] || { name: n, person: '', since: '' });
+}
+const radioList = st => kitList(st, KIT.radio);
+/** A device chip: drag it onto a person, or back to the At Base panel. */
+function devChip(k, r) {
+  const key = 'd:' + r.name;
+  return `<div class="chip dchip ${S.selKey === key ? 'sel' : ''}" data-chip="${esc(key)}"><span class="n">${I[k.icon]}</span><span class="x fit">${esc(r.name)}</span></div>`;
+}
+function renderKit(st, k) {
+  const items = kitList(st, k);
+  const teamNum = {};
+  (st.pairs || []).forEach(p => { if (p.kind === 'team') (p.members || []).forEach(m => { if (m.id && p.num) teamNum[m.id] = p.num; }); });
+  const held = {}; items.forEach(r => { if (r.person) (held[r.person] = held[r.person] || []).push(r); });
+  const total = items.reduce((a, r) => a + radioCount(r.name), 0);
+  const out = items.filter(r => r.person).reduce((a, r) => a + radioCount(r.name), 0);
+  const q = (S[k.q] || '').trim().toLowerCase();
+  const az = (a, b) => (a.first || a.name).localeCompare(b.first || b.name) || a.name.localeCompare(b.name);
+  const people = st.people.slice();
+  // Someone off the roster can still be holding a device (kept visible so it can be returned).
+  Object.keys(held).forEach(id => { if (!people.some(p => p.id === id)) people.push({ id, name: cap(id), first: cap(id), group: '', t: {} }); });
+  const holders = people.filter(p => held[p.id]).sort(az), rest = people.filter(p => !held[p.id]).sort(az);
+  const shown = holders.concat(rest).filter(p => !q || p.name.toLowerCase().includes(q));
+  const clockedIn = p => { const s = statusOf(p.t || {}); return s === 'in' || s === 'break'; };
+  const cards = shown.map(p => {
+    const mine = held[p.id] || [];
+    const num = teamNum[p.id], lead = /lead/i.test(p.group || '');
+    const b = num ? esc(badge(num)) : lead ? 'L' : '•';
+    return `<div class="rcard pcard ${mine.length ? 'held' : ''} ${!mine.length && !clockedIn(p) ? 'dim' : ''} ${S.selKey ? 'armed' : ''}" data-drop="person:${esc(p.id)}">
+      <div class="rhead"><span class="pb ${lead && !num ? 'lead' : ''}">${b}</span><span class="rn fit">${esc(p.name)}</span>${mine.length > 1 ? `<span class="pcount">${mine.length}</span>` : ''}</div>
+      ${mine.map(r => `<div class="hold">${devChip(k, r)}<button class="rx" data-rret="${esc(r.name)}" aria-label="Return ${esc(r.name)} to base">${I.x}</button></div>
+        <div class="since">Out since ${r.since ? fmtT(r.since) : ''}</div>`).join('')}
+    </div>`;
+  }).join('') || `<span class="rempty">${st.people.length ? 'No one matches.' : 'No roster yet. Go to Settings and tap Refresh Roster.'}</span>`;
+  const base = items.filter(r => !r.person);
+  const pool = base.map(r => devChip(k, r)).join('') || `<span class="rempty">Every ${k.one} is out.</span>`;
+  const root = $(k.root);
+  const keepFocus = document.activeElement && document.activeElement.id === k.q;
+  const pos = keepFocus ? document.activeElement.selectionStart : 0;
+  // Live updates redraw this page; keep both lists where they were scrolled instead of jumping to the top.
+  const oldPool = root.querySelector('.rpool'), poolTop = oldPool ? oldPool.scrollTop : 0;
+  root.innerHTML = `
+    <div class="ptool"><div class="lbl"><b>${out}</b> of ${total} ${k.many} out · <b>${total - out}</b> At Base<br>Drag a ${k.one} onto a person, or tap a ${k.one}, then tap a person. One person can hold several. Tap X to return it to base.</div>
+      <label class="search rsearch kq">${I.search}<input id="${k.q}" type="search" placeholder="Find a name" value="${esc(S[k.q] || '')}" autocomplete="off" autocorrect="off" spellcheck="false"></label></div>
+    <div class="rwrap">
+      <div class="rgrid">${cards}</div>
+      <div class="rpool" data-drop="">
+        <div class="th"><span>At Base · ${base.length}</span><span>${holders.length} ${holders.length === 1 ? 'person has' : 'people have'} one</span></div>
+        <div class="tb">${pool}</div>
+      </div>
+    </div>`;
+  if (poolTop) root.querySelector('.rpool').scrollTop = poolTop;
+  if (keepFocus) { const i = $('#' + k.q); i.focus({ preventScroll: true }); try { i.setSelectionRange(pos, pos); } catch (e) {} }
+}
+document.addEventListener('input', e => {
+  const k = Object.values(KIT).find(x => x.q === e.target.id); if (!k) return;
+  S[k.q] = e.target.value; renderKit(V(), k); fitText($(k.root));
+});
+function giveKit(k, item, person) {
+  const r = kitList(V(), k).find(x => x.name === item);
+  S.selKey = null;
+  if (!r || r.person === (person || '')) { renderAll(); return; }
+  queue({ type: k.key, [k.key]: item, person: person || '', ts: new Date().toISOString() });
+  renderAll();
+}
+/** Drop target on the Radios and Scanners pages: a person card gets the device, the At Base panel takes it back. */
+function kitDrop(key, drop) {
+  const k = kitView();
+  if (key.indexOf('d:') !== 0) { S.selKey = null; renderAll(); return; }
+  const item = key.slice(2);
+  if (drop.indexOf('person:') === 0) return giveKit(k, item, drop.slice(7));
+  giveKit(k, item, '');
+}
+document.addEventListener('click', e => {
+  const x = e.target.closest('[data-rret]'), k = kitView(); if (!x || !k || S.settingsOpen) return;
+  e.stopPropagation();
+  const r = kitList(V(), k).find(y => y.name === x.dataset.rret);
+  if (r && r.person && confirm('Return ' + r.name + ' to base? ' + cap(r.person) + ' no longer has it.')) giveKit(k, r.name, '');
+}, true);
+
+/* ============ settings ============ */
+let bridgeSeen = '', bridgeAsked = 0;
+function tcpCard(tcp) {
+  if (!tcp || tcp.off) return '';   // bridge switched off in Code.gs: show nothing
+  if (!tcp || !tcp.enabled) return `<div class="card"><h3>TCP Bridge</h3><div class="d">Not set up yet. Run setupBridge in the script editor and install the Chrome extension on the base laptop.</div></div>`;
+  if (Date.now() - bridgeAsked > 10000) { bridgeAsked = Date.now(); call('api_bridgeStatus').then(r => { const was = bridgeSeen; bridgeSeen = (r && r.lastSeen) || ''; if (was !== bridgeSeen && S.settingsOpen) renderSettings(V()); }).catch(() => {}); }
+  const live = bridgeSeen && Date.now() - new Date(bridgeSeen) < 30000;
+  const probs = (tcp.problems || []).map(p => `<div class="tr"><span>${esc(p.name)} · ${esc(p.button)} · ${fmtDT(p.time)}<br><small>${esc(p.detail)}</small></span><b style="color:var(--red)">${esc(p.status)}</b></div>`).join('');
+  return `<div class="card"><h3>TCP Bridge</h3>
+    <div class="v" style="color:var(--${live ? 'green' : 'red'})">${live ? 'Connected' : 'Not connected'}</div>
+    <div class="d">${live ? 'The base laptop is sending punches to TCP.' : 'Open the TCP webclock tab on the base laptop with the extension on.'} Last seen ${bridgeSeen ? fmtDT(bridgeSeen) : 'never'}.<br>Waiting: ${tcp.pending + tcp.sending} · Sent: ${tcp.done} · Need attention: ${(tcp.problems || []).length}</div>
+    ${probs ? `<div class="times" style="margin-top:12px">${probs}</div><div class="d" style="margin-top:8px">Fix these in TCP by hand. They will not be resent.</div>` : ''}</div>`;
+}
+/** Show days: which day the app is on. Switching hides the other day's sheets (radios and scanners must be at base). */
+function daysCard(st) {
+  const days = st.days || [];
+  if (!days.length) return '';
+  return `<div class="card"><h3>Show day</h3><div class="d">The app follows the date (before noon counts as the night before). Switching day hides the other days' sheets. Every radio and scanner has to be back at base first.</div>
+    <div class="seg days">${days.map((d, i) => `<button class="${d.key === st.activeDay ? 'on' : ''}" data-day="${esc(d.key)}"><small>Day ${i + 1}</small><br>${esc(d.label)}</button>`).join('')}</div>
+    ${st.dayBlocked ? `<div class="err" style="text-align:left">${esc(st.dayBlocked)}</div>` : ''}</div>`;
+}
+/** Close Out: only on the last day of the show. */
+function closeOutBtn(st) {
+  const days = st.days || [];
+  if (st.closedOut) return `<div class="card"><h3>Closed out</h3><div class="d">This show is closed out. Only its day timesheets are showing in the Shot O'clock sheet. Tap Refresh Roster when the next show is on the Master Timesheet.</div></div>`;
+  if (!days.length || st.activeDay !== days[days.length - 1].key) return '';
+  return `<button class="bigset dark" data-sact="closeout">${I.check}<div><div class="a">Close Out ${esc((st.event || {}).name || 'show')}</div><div class="b">Last day of the show. Hides every sheet except the day timesheets (${days.map(d => esc(d.label)).join(', ')}). Radios and scanners must be back at base.</div></div></button>`;
+}
+function renderSettings(st) {
+  const ev = st.event || {}, set = st.settings || {};
+  const mb = set.maxBreaksOverride || '';
+  const tabs = set.scheduleTabs || [];
+  const when = iso => iso ? new Date(iso).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : 'never';
+  $('#setView').innerHTML = `<div class="set">
+    ${IN_ONSITE ? `<button class="bigset dark" data-sact="onsite">${I.back}<div><div class="a">Return to OnSite</div><div class="b">Back to the OnSite home screen (Sell, Scan, Flag). Everything here keeps syncing to the Shot O'clock sheet.</div></div></button>` : ''}
+    <div class="card"><h3>Current event</h3><div class="v">${esc(ev.name || 'None loaded')}</div>
+      <div class="d">Roster tab: ${esc(ev.tab || '-')} · ${st.people.length} staff<br>Schedule tab: ${esc(ev.scheduleTab || '-')} · ${st.pairs.filter(p => p.kind !== 'lead').length} teams<br>Roster refreshed ${when(ev.rosterRefreshedAt)}</div></div>
+    ${daysCard(st)}
+    <button class="bigset blue" data-sact="schedule">${I.map}<div><div class="a">Refresh Partners</div><div class="b">Re-reads who is partnered with who from the Master Timesheet schedule. Use it whenever partners change during the night. Teams that did not change stay where they are; any team with a new partner goes back to Available.</div></div></button>
+    <button class="bigset purple" data-sact="signout">${I.outIcon}<div><div class="a">Send Sign Out Sheet</div><div class="b">Makes tonight's sign out sheet (Excel: times, durations and a signature line for everyone who clocked in) and emails it to Aria and Gabriel to print.</div></div></button>
+    ${closeOutBtn(st)}
+    <div class="card"><h3>Breaks per shift</h3><div class="d">Auto reads the schedule: two sets of Break A/B means 2 breaks. Currently ${st.maxBreaks}.</div>
+      <div class="seg">${[['','Auto'],['1','1 break'],['2','2 breaks']].map(([v, l]) => `<button class="${mb === v ? 'on' : ''}" data-mb="${v}">${l}</button>`).join('')}</div></div>
+    <div class="card"><h3>Schedule tab</h3><div class="d">Auto picks the visible tab for tonight (after midnight counts as the night before).</div>
+      <select class="sel2" id="schedSel"><option value="">Auto</option>${tabs.map(t => `<option ${set.scheduleTabOverride === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+    ${(st.unmatched || []).length ? `<div class="card"><h3>Break rings</h3><div class="d">These schedule names don't match exactly one person on the roster, so they get no break ring and don't move to Available on break: <b>${st.unmatched.map(esc).join(', ')}</b>.<br>Fix: in the schedule, use the roster's first name, or add a last initial (like "Chance B"), then Refresh Placements.</div></div>` : ''}
+    ${tcpCard(st.tcp)}
+    <div class="card"><h3>Sync</h3><div class="d">${S.online ? 'Online.' : 'Offline. Punches are saved on this device and sync automatically.'} ${S.pending.length ? S.pending.length + ' change(s) waiting to sync.' : 'Everything is synced.'}</div>
+      <div class="links"><a href="${esc(st.dataUrl || '#')}" target="_blank" rel="noopener">Open Shot O'clock sheet</a><a href="${esc(st.masterUrl || '#')}" target="_blank" rel="noopener">Open Master Timesheet</a></div></div>
+    <button class="pbtn" style="align-self:center" data-sact="clear">Clear all placements</button>
+    <button class="pbtn" style="align-self:center" data-sact="radiobase">${I.radio}Return all radios to base</button>
+    <button class="pbtn" style="align-self:center" data-sact="scannerbase">${I.scan}Return all scanners to base</button>
+    <button class="bigset red" data-sact="roster">${I.refresh}<div><div class="a">Refresh Roster</div><div class="b">Re-pulls the latest show roster from the Master Timesheet. If a newer show is there, the app switches over to it and hides the old show's sheets.</div></div></button>
+  </div>`;
+}
+document.addEventListener('click', async e => {
+  if (!S.settingsOpen) return;
+  const a = e.target.closest('[data-sact]');
+  if (a) {
+    if (a.dataset.sact === 'onsite') return returnToOnsite();
+    if (a.dataset.sact === 'roster' && confirm('Are you sure?\n\nThis re-pulls the latest show roster from the Master Timesheet. If there is a more current event, the app will switch over to that event and hide the current show\'s sheets.'))
+      runRefresh('api_refreshRoster', 'Pulling the roster from the Master Timesheet…');
+    if (a.dataset.sact === 'signout' && confirm('Are you ready to print out your Sign Out sheet for the night?\n\nIt will be emailed to Aria and Gabriel as an Excel file.'))
+      runRefresh('api_sendSignOut', 'Making the sign out sheet and emailing it…');
+    if (a.dataset.sact === 'closeout') {
+      const st = V(), days = st.days || [];
+      if (confirm('Close out ' + ((st.event || {}).name || 'this show') + '?\n\nThis hides every sheet in the Shot O\'clock file except the day timesheets (' + days.map(d => d.label).join(', ') + '). Placements, radio and scanner sheets are hidden.'))
+        runRefresh('api_closeOut', 'Closing out the show…');
+    }
+    if (a.dataset.sact === 'schedule') runRefresh('api_refreshSchedule', 'Refreshing partners from the Master Timesheet…');
+    if (a.dataset.sact === 'clear' && confirm('Move every team back to Available?')) runRefresh('api_clearPlacements', 'Clearing placements…');
+    if (a.dataset.sact === 'radiobase' && confirm('Return all 25 radios to base? Use this at the start or end of the night.')) runRefresh('api_radiosToBase', 'Returning radios…');
+    if (a.dataset.sact === 'scannerbase' && confirm('Return all ' + SCANNER_NAMES.length + ' scanners to base? Use this at the start or end of the night.')) runRefresh('api_scannersToBase', 'Returning scanners…');
+    return;
+  }
+  const mb = e.target.closest('[data-mb]');
+  if (mb) runRefresh('api_saveSettings', 'Saving…', { maxBreaks: mb.dataset.mb });
+  const dy = e.target.closest('[data-day]');
+  if (dy) {
+    const st = V(), d = (st.days || []).find(x => x.key === dy.dataset.day);
+    if (!d || d.key === st.activeDay) return;
+    const r = kitList(st, KIT.radio).filter(x => x.person).length, s = kitList(st, KIT.scanner).filter(x => x.person).length;
+    if (r || s) {
+      const parts = [r ? r + ' radio' + (r > 1 ? 's' : '') : '', s ? s + ' scanner' + (s > 1 ? 's' : '') : ''].filter(Boolean);
+      toast(parts.join(' and ') + (r + s > 1 ? ' are' : ' is') + ' still out. Return everything to base before switching days.', true); return;
+    }
+    if (confirm('Switch to ' + d.label + '?\n\nThe other days\' sheets will be hidden, and ' + d.label + ' gets its own timesheet, placements, radios and scanners.'))
+      runRefresh('api_switchDay', 'Switching to ' + d.label + '…', d.key);
+  }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'schedSel') runRefresh('api_saveSettings', 'Saving…', { scheduleTab: e.target.value }).then(() => runRefresh('api_refreshSchedule', 'Pulling partner pairs…'));
+});
+async function runRefresh(fn, text, arg) {
+  if (S.pending.length) await flush();
+  $('#busyText').textContent = text; $('#busy').classList.remove('hidden');
+  try {
+    const res = arg === undefined ? await call(fn) : await call(fn, arg);
+    S.online = true;
+    if (res && res.state) setServer(res.state);
+    if (res && res.ok === false) toast(res.msg, true); else if (res && res.msg) toast(res.msg);
+  } catch (e) {
+    toast('Could not reach Google. Check the connection and try again.', true);
+  }
+  $('#busy').classList.add('hidden');
+  renderAll();
+}
+
+/** Shrinks a .fit element only when its longest word does not fit on a line. */
+function fitText(root) {
+  (root || document).querySelectorAll('.fit').forEach(el => {
+    el.style.fontSize = '';
+    if (el.scrollWidth <= el.clientWidth + 1) return;
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth + 1 && size > 9) { size -= 0.5; el.style.fontSize = size + 'px'; }
+  });
+}
+let fitT = 0;
+addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(() => fitText(), 120); });
+
+/* ============ header: title folds away while scrolling Placements ============ */
+let compact = false, hdrSettle = 0;
+function measureHdr() {
+  const h = $('#hdr').offsetHeight, root = document.documentElement.style;
+  root.setProperty('--hdr', h + 'px');
+  if (!compact && Date.now() > hdrSettle) root.setProperty('--hdrFull', h + 'px');   // page space reserved for the full header
+}
+function setCompact(on) {
+  if (on === compact) return;
+  compact = on;
+  $('#hdr').classList.toggle('compact', on);
+  if (!on) { hdrSettle = Date.now() + 260; setTimeout(measureHdr, 280); }
+}
+function onScrollHdr() {
+  const place = S.view === 'place' && !S.settingsOpen;
+  setCompact(place && (compact ? scrollY > 4 : scrollY > 40));
+}
+addEventListener('scroll', onScrollHdr, { passive: true });
+if (window.ResizeObserver) new ResizeObserver(measureHdr).observe($('#hdr'));
+setInterval(() => { if (S.settingsOpen) return; if (S.view === 'place') updateRings(); else updatePillRings(); }, 1000);
+
+/* ============ toast, nav, boot ============ */
+let toastT = 0;
+function toast(msg, red) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast' + (red ? ' red' : '');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 4200);
+}
+$('#tabTime').innerHTML = I.clock + 'Time Tracking';
+$('#tabPlace').innerHTML = I.map + 'Staff Placements';
+$('#tabRadio').innerHTML = I.radio + 'Radios';
+$('#tabScanner').innerHTML = I.scan + 'Scanners';
+$('#tabScanner').onclick = () => { if (S.edit) savePartners(); S.view = 'scanner'; S.settingsOpen = false; LS.set('shotView', 'scanner'); scrollTo(0, 0); renderAll(); };
+$('#tabTime').onclick = () => { if (S.edit) savePartners(); S.view = 'time'; S.settingsOpen = false; LS.set('shotView', 'time'); scrollTo(0, 0); renderAll(); };
+$('#tabPlace').onclick = () => { if (S.edit) savePartners(); S.view = 'place'; S.settingsOpen = false; LS.set('shotView', 'place'); scrollTo(0, 0); renderAll(); };
+$('#tabRadio').onclick = () => { if (S.edit) savePartners(); S.view = 'radio'; S.settingsOpen = false; LS.set('shotView', 'radio'); scrollTo(0, 0); renderAll(); };
+$('#gearBtn').onclick = () => { if (S.edit) savePartners(); S.settingsOpen = !S.settingsOpen; scrollTo(0, 0); renderAll(); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { flush(); poll(); } });
+addEventListener('online', () => { S.online = true; flush(); poll(); });
+addEventListener('offline', () => { S.online = false; syncDot(); });
+if (!HAS_GAS && !IN_ONSITE) $('#demoNote').classList.remove('hidden');
+
+/* ============ inside OnSite: lead code gate, Return to OnSite, updates ============ */
+// Opening Shot O'clock needs a device signed in to OnSite with a lead or manager code (ftos.auth, same origin).
+// Leaving only happens from Settings > Return to OnSite; reopening the app starts on the OnSite home (start_url).
+function onsiteAuth() { try { return JSON.parse(localStorage.getItem('ftos.auth') || 'null'); } catch (e) { return null; } }
+function returnToOnsite() { if (S.edit) savePartners(); location.replace('./'); }
+if (IN_ONSITE) {
+  const a = onsiteAuth();
+  if (!a || !a.token) location.replace('./');
+  else postJson(ONSITE_API_URL, 'api_info', [a.token]).then(r => {
+    if (r && r.auth === false) { try { localStorage.removeItem('ftos.auth'); } catch (e) {} location.replace('./'); }
+  }).catch(() => {});
+  // A new OnSite build reloads this page when nothing is open (never mid-punch, mid-drag or in Settings).
+  setInterval(() => {
+    if (document.hidden || S.modal || drag || S.settingsOpen || S.edit) return;
+    fetch('version.txt?ts=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
+      v = String(v || '').trim();
+      if (v && BUILT_VERSION && v !== BUILT_VERSION) location.reload();
+    }).catch(() => {});
+  }, 60000);
+}
+
+renderAll();
+flush(); poll();
+setInterval(poll, 3000);
+setInterval(() => { if (!S.modal && !drag && !S.settingsOpen && S.view === 'time') { renderTime(V()); fitText(); } }, 15000);
+</script>
+</body>
+</html>
