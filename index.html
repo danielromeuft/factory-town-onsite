@@ -244,6 +244,8 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .fl-note{margin-top:12px;background:rgba(255,255,255,.18);border-radius:14px;padding:10px 14px;font-size:18px;font-weight:600;line-height:1.35}
 .fl-by{margin-top:12px;font-size:15px;font-weight:600;opacity:.85;line-height:1.4}
 .fl-card .row2{margin-top:6px}
+.fl-match{float:right;font-size:13px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;background:rgba(0,0,0,.25);border-radius:999px;padding:6px 12px}
+.fl-alt svg{width:18px;height:18px;vertical-align:-3px;margin-right:6px}
 .fl-card .bigset{background:rgba(255,255,255,.95);color:#111;border-color:transparent}
 .fl-card .bigset.red{background:#111;color:#fff}
 .fl-types{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -313,7 +315,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '3';
+const APP_VERSION = '4';
 
 /* ============ icons ============ */
 const I = {
@@ -828,28 +830,32 @@ function renderFlag() {
     setTitle('Flag · Scan ticket');
     m.innerHTML = '<div class="step"><div class="q">Scan their ticket</div><p class="qs">Any ticket QR: DICE or ours. If it was flagged, it shows right away.</p></div>' +
       '<div class="cam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
-      '<div class="scanfoot"><button class="fl-alt" id="noTk">No ticket? Check or flag by ID</button></div>';
+      '<div class="scanfoot"><button class="fl-alt" id="noTk">No ticket? Check or flag by ID</button><button class="fl-alt" id="srch">' + I.search + 'Search by name or DOB</button></div>';
     $('#noTk').onclick = () => { fl = { step: 'id', code: '' }; render(); };
+    $('#srch').onclick = () => { fl = { step: 'manual', manMode: 'search', man: { name: '', dob: '' }, code: '' }; render(); };
     startCamera();
   } else if (fl.step === 'id') {
     setTitle('Flag · Scan ID');
     m.innerHTML = '<div class="step"><div class="q">Scan the back of their ID</div><p class="qs">Hold the long barcode flat and inside the frame. Only their name and date of birth are kept.</p></div>' +
       '<div class="cam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
-      '<div class="scanfoot"><button class="fl-alt" id="manual">Type name + DOB instead</button><button class="fl-alt" id="bk">Back</button></div>';
-    $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.step = 'manual'; render(); };
+      '<div class="scanfoot"><button class="fl-alt" id="manual">Type name or DOB instead</button><button class="fl-alt" id="bk">Back</button></div>';
+    $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.manMode = 'search'; fl.step = 'manual'; render(); };
     $('#bk').onclick = () => { flagStart(); };
-    if (!idDetector) loadZXing().catch(() => toast('The ID reader did not load. Type name + DOB instead.', 4500));
+    if (!idDetector) loadZXing().catch(() => toast('The ID reader did not load. Type name or DOB instead.', 4500));
     startCamera();
   } else if (fl.step === 'manual') {
-    setTitle('Flag · Name + DOB');
+    // search: part of a name and/or a DOB, either is enough. flag: saving a flag needs the full name AND the DOB.
+    const search = fl.manMode === 'search';
+    setTitle(search ? 'Flag · Search' : 'Flag · Name + DOB');
     const d = fl.man.dob;
     const box = i => '<i class="' + (i < d.length ? 'on' : '') + '">' + esc(d[i] || '') + '</i>';
-    m.innerHTML = '<div class="step"><div class="q">Name and date of birth</div><p class="qs">Type them exactly as on their ID.</p>' +
-      '<label class="field" style="margin-top:0"><span>Full name</span><input id="mn" autocomplete="off" autocapitalize="words" value="' + esc(fl.man.name) + '"></label>' +
-      '<div class="field"><span>Date of birth (month, day, year)</span></div>' +
+    m.innerHTML = '<div class="step"><div class="q">' + (search ? 'Search by name or date of birth' : 'Name and date of birth') + '</div>' +
+      '<p class="qs">' + (search ? 'Part of a name, a date of birth, or both. Either one is enough.' : 'Both are needed to save a flag. Type them as on their ID.') + '</p>' +
+      '<label class="field" style="margin-top:0"><span>' + (search ? 'Name (or part of it)' : 'Full name') + '</span><input id="mn" autocomplete="off" autocapitalize="words" value="' + esc(fl.man.name) + '"></label>' +
+      '<div class="field"><span>Date of birth (month, day, year)' + (search ? ', optional' : '') + '</span></div>' +
       '<div class="digits dob">' + [0, 1].map(box).join('') + '<b>/</b>' + [2, 3].map(box).join('') + '<b>/</b>' + [4, 5, 6, 7].map(box).join('') + '</div>' +
       padHtml() + '<div class="perr" id="merr"></div>' +
-      '<div class="row2" style="max-width:420px;margin:8px auto 0"><button class="big ghost" id="bk">' + I.back + 'Back</button><button class="big dark" id="nx">Next</button></div></div>';
+      '<div class="row2" style="max-width:420px;margin:8px auto 0"><button class="big ghost" id="bk">' + I.back + 'Back</button><button class="big dark" id="nx">' + (search ? I.search + 'Search' : 'Next') + '</button></div></div>';
     const mn = $('#mn');
     mn.oninput = () => { fl.man.name = mn.value; };
     bindPad(k => {
@@ -857,12 +863,17 @@ function renderFlag() {
       if (k === 'del') fl.man.dob = fl.man.dob.slice(0, -1); else if (fl.man.dob.length < 8) fl.man.dob += k;
       render();
     });
-    $('#bk').onclick = () => { fl.step = 'id'; render(); };
+    $('#bk').onclick = () => { if (fl.back === 'results') { fl.step = 'results'; render(); } else if (fl.fixing) { fl.fixing = false; fl.step = 'form'; render(); } else flagStart(); };
     $('#nx').onclick = () => {
       const name = mn.value.replace(/\s+/g, ' ').trim(), x = fl.man.dob;
       const dob = x.length === 8 ? x.slice(4) + '-' + x.slice(0, 2) + '-' + x.slice(2, 4) : '';
-      if (!name) return ($('#merr').textContent = 'Enter their name.');
-      if (!validDob(dob)) return ($('#merr').textContent = 'Check the date of birth (MM / DD / YYYY).');
+      if (x.length && !validDob(dob)) return ($('#merr').textContent = 'Finish or clear the date of birth (MM / DD / YYYY).');
+      if (search) {
+        if (name.length < 2 && !dob) return ($('#merr').textContent = 'Type part of a name or a date of birth.');
+        return searchFlags(name, dob);
+      }
+      if (!name) return ($('#merr').textContent = 'Enter their full name.');
+      if (!dob) return ($('#merr').textContent = 'Enter their date of birth.');
       gotPerson({ name: titleCase(name), dob });
     };
   } else if (fl.step === 'checking') {
@@ -876,25 +887,36 @@ function renderFlag() {
       '<button class="big ghost" id="next">Scan next ticket</button></div>';
     $('#flagIt').onclick = () => { fl.step = 'id'; render(); };
     $('#next').onclick = flagStart;
+  } else if (fl.step === 'results') {
+    const q = fl.query, n = fl.flags.length;
+    setTitle('Flag · Search');
+    const what = [q.name ? '"' + q.name + '"' : '', q.dob ? 'DOB ' + fmtDob(q.dob) : ''].filter(Boolean).join(' + ');
+    const full = q.name.split(' ').filter(Boolean).length >= 2 && q.dob;
+    m.innerHTML = '<div class="step">' +
+      (n ? '<div class="fl-head">' + I.alert + (n === 1 ? '1 flag found' : n + ' flags found') + '<span>Search: ' + esc(what) + '</span></div>'
+        : '<div class="fl-clear">' + I.check + '<div><b>No flags found</b><span>Search: ' + esc(what) + '</span></div></div>') +
+      fl.flags.map((f, i) => flagCard(f, i, { match: true, link: !!fl.code })).join('') +
+      '<button class="big red" id="flagNew">' + I.alert + 'Flag this person' + (n ? ' (not listed)' : '') + '</button>' +
+      '<div class="row2"><button class="bigset" id="again">' + I.search + 'New search</button><button class="bigset" id="next">Scan next ticket</button></div></div>';
+    bindCards(m);
+    $('#flagNew').onclick = () => {
+      if (full) return gotPerson({ name: titleCase(q.name), dob: q.dob });
+      const [y, mo, d] = (q.dob || '--').split('-');
+      fl.man = { name: titleCase(q.name), dob: q.dob ? mo + d + y : '' }; fl.manMode = 'flag'; fl.back = 'results'; fl.step = 'manual'; render();
+      toast('Saving a flag needs their full name and date of birth.');
+    };
+    $('#again').onclick = () => { fl.man = { name: q.name, dob: '' }; fl.manMode = 'search'; fl.back = ''; fl.step = 'manual'; render(); };
+    $('#next').onclick = flagStart;
   } else if (fl.step === 'found') {
     setTitle('Flag · Flagged');
-    const cards = fl.flags.map((f, i) => {
-      const c = (FLAG_STYLE[f.type] || FLAG_STYLE.Other)[0];
-      return '<div class="fl-card" style="--fc:' + c + '"><div class="fl-type">' + esc(f.type) + '</div>' +
-        '<div class="fl-name">' + esc(titleCase(f.name)) + '</div>' +
-        '<div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) + (f.age != null ? ' &middot; <b>' + f.age + ' now</b>' : '') + '</div>' +
-        (f.note ? '<div class="fl-note">' + esc(f.note) + '</div>' : '') +
-        '<div class="fl-by">Flagged by ' + esc(f.by) + ' &middot; ' + esc(fmtWhenMs(f.at)) + (f.event ? ' &middot; ' + esc(f.event) : '') + '</div>' +
-        '<div class="row2"><button class="bigset" data-edit="' + i + '">Edit</button><button class="bigset red" data-rm="' + i + '">Remove</button></div></div>';
-    }).join('');
     const link = fl.via === 'id' && fl.code;
     m.innerHTML = '<div class="step"><div class="fl-head">' + I.alert + (fl.flags.length > 1 ? fl.flags.length + ' flags' : 'Flagged') +
-      '<span>' + (fl.via === 'id' ? 'Matched by name + date of birth' : 'This ticket was flagged') + '</span></div>' + cards +
+      '<span>' + (fl.via === 'id' ? 'Matched by name + date of birth' : 'This ticket was flagged') + '</span></div>' +
+      fl.flags.map((f, i) => flagCard(f, i, {})).join('') +
       (link ? '<button class="big dark" id="link">Add this ticket to the flag</button>' : '') +
       (fl.via === 'id' && fl.person ? '<button class="bigset" id="newOne">Different person: flag them separately</button>' : '') +
       '<button class="big ghost" id="next">Scan next ticket</button></div>';
-    m.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => { const f = fl.flags[+b.dataset.edit]; fl.edit = f; fl.person = { name: f.name, dob: f.dob }; fl.type = f.type; fl.note = f.note; fl.step = 'form'; render(); }; });
-    m.querySelectorAll('[data-rm]').forEach(b => { b.onclick = () => removeFlag(fl.flags[+b.dataset.rm]); });
+    bindCards(m);
     if ($('#link')) $('#link').onclick = e => saveFlag(Object.assign({}, fl.flags[0], { code: fl.code }), e.target, 'Ticket added to the flag.');
     if ($('#newOne')) $('#newOne').onclick = () => { fl.edit = null; fl.type = ''; fl.note = ''; fl.step = 'form'; render(); };
     $('#next').onclick = flagStart;
@@ -919,7 +941,7 @@ function renderFlag() {
     const note = $('#fnote');
     note.oninput = () => { fl.note = note.value; };
     m.querySelectorAll('.fl-t').forEach(b => { b.onclick = () => { fl.note = note.value; fl.type = b.dataset.t; render(); }; });
-    $('#fix').onclick = () => { fl.note = note.value; const [y, mo, d] = p.dob.split('-'); fl.man = { name: p.name, dob: mo + d + y }; fl.fixing = true; fl.step = 'manual'; render(); };
+    $('#fix').onclick = () => { fl.note = note.value; const [y, mo, d] = p.dob.split('-'); fl.man = { name: p.name, dob: mo + d + y }; fl.manMode = 'flag'; fl.back = ''; fl.fixing = true; fl.step = 'manual'; render(); };
     $('#cx').onclick = flagStart;
     $('#save').onclick = e => {
       fl.note = note.value.trim();
@@ -937,6 +959,44 @@ function renderFlag() {
     clearTimeout(renderFlag.t);
     renderFlag.t = setTimeout(() => { if (mode === 'flag' && fl && fl.step === 'saved') flagStart(); }, 5000);
   }
+}
+
+/** One flag as a colored card. opts.match: show how a search matched; opts.link: offer to add the scanned ticket. */
+const MATCH_TEXT = { both: 'Name + DOB match', name: 'Name match', dob: 'DOB match' };
+function flagCard(f, i, opts) {
+  const c = (FLAG_STYLE[f.type] || FLAG_STYLE.Other)[0];
+  return '<div class="fl-card" style="--fc:' + c + '">' +
+    (opts.match && f.match ? '<div class="fl-match">' + esc(MATCH_TEXT[f.match] || '') + '</div>' : '') +
+    '<div class="fl-type">' + esc(f.type) + '</div>' +
+    '<div class="fl-name">' + esc(titleCase(f.name)) + '</div>' +
+    '<div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) + (f.age != null ? ' &middot; <b>' + f.age + ' now</b>' : '') + '</div>' +
+    (f.note ? '<div class="fl-note">' + esc(f.note) + '</div>' : '') +
+    '<div class="fl-by">Flagged by ' + esc(f.by) + ' &middot; ' + esc(fmtWhenMs(f.at)) + (f.event ? ' &middot; ' + esc(f.event) : '') + '</div>' +
+    (opts.link ? '<button class="bigset" data-link="' + i + '">Add the scanned ticket to this flag</button>' : '') +
+    '<div class="row2"><button class="bigset" data-edit="' + i + '">Edit</button><button class="bigset red" data-rm="' + i + '">Remove</button></div></div>';
+}
+function bindCards(m) {
+  m.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => { const f = fl.flags[+b.dataset.edit]; fl.edit = f; fl.person = { name: f.name, dob: f.dob }; fl.type = f.type; fl.note = f.note; fl.step = 'form'; render(); }; });
+  m.querySelectorAll('[data-rm]').forEach(b => { b.onclick = () => removeFlag(fl.flags[+b.dataset.rm]); });
+  m.querySelectorAll('[data-link]').forEach(b => { b.onclick = e => saveFlag(Object.assign({}, fl.flags[+b.dataset.link], { code: fl.code }), e.target, 'Ticket added to the flag.'); });
+}
+
+/** Search > part of a name and/or a DOB. */
+function searchFlags(name, dob) {
+  const code = fl.code || '', fromClear = !!code;
+  busy = true;
+  fl = Object.assign(fl, { step: 'checking' }); render();
+  call('api_flagSearch', AUTH.token, { name: name, dob: dob }).then(r => {
+    busy = false;
+    if (!r.ok) { toast(r.msg || 'Could not search.'); fl.step = 'manual'; render(); return; }
+    // Came here to flag a scanned ticket, typed the full name + DOB, and nothing matched: go straight to the form.
+    if (!r.flags.length && fromClear && dob && name.split(' ').filter(Boolean).length >= 2) {
+      fl = { step: 'form', code: code, person: { name: titleCase(name), dob: dob }, type: '', note: '' }; render(); return;
+    }
+    fl = { step: 'results', code: code, flags: r.flags, query: { name: name, dob: dob } };
+    if (r.flags.length) { beepBad(); if (navigator.vibrate) navigator.vibrate([120, 80, 120]); }
+    render();
+  }).catch(() => { busy = false; toast('No connection. Try again.'); fl.step = 'manual'; render(); });
 }
 
 /** A ticket or an ID was read by the camera. */
