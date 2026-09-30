@@ -479,18 +479,18 @@ function totals(t) {
 }
 
 /* ============ backend bridge (inside OnSite, Apps Script, or demo mode) ============ */
-// Shot O'clock lives inside Factory Town OnSite (GitHub Pages, shotoclock.html). OnSite's build.js turns IN_ONSITE on;
-// the screens then call this script's doPost with {fn, args} as text/plain (no CORS preflight), like OnSite does.
+// Shot O'clock lives inside Factory Town OnSite (GitHub Pages, shotoclock.html). OnSite's build turns IN_ONSITE on;
+// the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
+// Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '5';
-const SOC_API_URL = 'https://script.google.com/macros/s/AKfycbwvfBwTmUmu_XVi-N2_qqiqzMBEEYcHy02hwQJVqPO75AraRrwOHez_pIbBThNh3Ivg/exec';
+const BUILT_VERSION = '6';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 const postJson = (url, fn, args) => fetch(url, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow' })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(r => { if (r && r.error) throw new Error(r.error); return r; });
 function call(fn, ...args) {
-  if (IN_ONSITE) return postJson(SOC_API_URL, fn, args);
+  if (IN_ONSITE) return postJson(ONSITE_API_URL, 'soc.' + fn, args);
   if (!HAS_GAS) return Mock.run(fn, args);
   return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
 }
