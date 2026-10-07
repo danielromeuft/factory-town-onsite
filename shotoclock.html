@@ -250,7 +250,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .bigset svg{width:36px;height:36px;flex:none}
 .bigset .a{font-size:24px;font-weight:900}
 .bigset .b{font-size:15px;opacity:.9;margin-top:3px;font-weight:600;line-height:1.35}
-.bigset.pink{background:var(--pink)} .bigset.blue{background:var(--blue)}
+.bigset.pink{background:var(--pink)} .bigset.blue{background:var(--blue)} .bigset.green{background:var(--green)}
 .seg{display:flex;background:var(--soft);border:1.5px solid var(--line);border-radius:16px;padding:4px;gap:4px;margin-top:12px}
 .seg button{flex:1;height:48px;border-radius:12px;font-size:17px;font-weight:800;color:var(--muted)}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.1)}
@@ -451,7 +451,8 @@ function curShift(p, now) {
 const fmtDT = iso => iso ? new Date(iso).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' }) : '';
 
 /* Early clock-in, same rule as callAt_ / callExempt_ in Code.gs: staff (not leads or supervisors) can clock in
- * up to earlyMax minutes before their call time from the roster, and the clock-in is recorded AT the call time. */
+ * up to earlyMax minutes before their call time from the roster, and the clock-in is recorded AT the call time.
+ * Up to callGrace minutes late (waiting in line) is also recorded at the call time; later = the real time. */
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const callExempt = p => /lead/i.test(p.group || '') || /lead|supervisor/i.test(p.position || '');
 /** Tonight's call time (ms) for this person, or 0 when there is none or they are exempt. */
@@ -465,6 +466,9 @@ function callAt(st, p, ts) {
   return new Date(y, mo - 1, d + (/am/i.test(m[3]) ? 1 : 0), h, Number(m[2])).getTime();
 }
 const earlyMs = st => ((st && st.earlyMax) || 30) * 60000;
+/** Clock-in time to record: the call time when early or up to callGrace minutes late (the line), else the tap. */
+const callGraceMin = st => (st && st.callGrace) || 10;
+const recordedIn = (st, call, tsMs) => call && Math.floor((tsMs - call) / 60000) <= callGraceMin(st) ? call : tsMs;
 /* TCP status per punch, same as Code.gs: ok = matches TCP, wrong = in TCP with the wrong time, none = not in TCP. */
 const TCP_NEXT = { ok: 'wrong', wrong: 'none', none: 'ok' };
 const TCP_TEXT = { ok: 'TCP Match', wrong: 'TCP Incorrect', none: 'TCP Inactive' };
@@ -483,10 +487,11 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '6';
+const BUILT_VERSION = '7';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
-const postJson = (url, fn, args) => fetch(url, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow' })
+// Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
+const postJson = (url, fn, args) => fetch(url, { method: 'POST', body: JSON.stringify({ fn: fn, args: args, token: ((typeof onsiteAuth === 'function' && onsiteAuth()) || {}).token || '' }), redirect: 'follow' })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(r => { if (r && r.error) throw new Error(r.error); return r; });
 function call(fn, ...args) {
@@ -570,7 +575,8 @@ const Mock = (() => {
     api_bridgeStatus() { return { lastSeen: '' }; },
     api_switchDay(key) { if ((db.radios || []).concat(db.scanners || []).some(r => r.person)) return rej('Return all radios and scanners to base before switching days.'); db.activeDay = key; save(); return { ok:true, state: clone(db), msg: 'Now on ' + (db.days.find(d => d.key === key) || {}).label }; },
     api_sendSignOut() { return { ok:true, state: clone(db), msg: 'Demo: sign out sheet would be emailed to Aria and Gabriel.' }; },
-    api_closeOut() { db.closedOut = true; save(); return { ok:true, state: clone(db), msg: 'Closed out.' }; },
+    api_closeOut() { db.closedOut = true; save(); return { ok:true, state: clone(db), msg: 'Demo: punches synced to the Master Timesheet. Closed out.' }; },
+    api_syncTimesheet() { return { ok:true, state: clone(db), msg: 'Demo: punches would be written to the Master Timesheet.' }; },
     api_radio(op) { if (!db.radios) db.radios = blankRadios(); applyOp(db, { type:'radio', radio: op.radio, person: op.person, ts: op.ts }); save(); return { ok:true, state: clone(db) }; },
     api_radiosToBase() { db.radios = blankRadios(); save(); return { ok:true, state: clone(db), msg:'All 25 radios are At Base.' }; },
     api_scanner(op) { applyOp(db, { type:'scanner', scanner: op.scanner, person: op.person, ts: op.ts }); save(); return { ok:true, state: clone(db) }; },
@@ -615,8 +621,9 @@ function applyOp(st, op) {
     const open = openShift(p);
     if (op.action === 'in') {
       if (open) return;
-      const call = callAt(st, p, op.ts);   // early: recorded at the call time
-      const at = call && call > Date.parse(op.ts) ? new Date(call).toISOString() : op.ts;
+      const call = callAt(st, p, op.ts);   // early or up to 10 min late: recorded at the call time
+      const rec = recordedIn(st, call, Date.parse(op.ts));
+      const at = rec === Date.parse(op.ts) ? op.ts : new Date(rec).toISOString();
       p.shifts.push({ night: nightOf(op.ts), t: Object.assign(blankT(), { in: at }), tcp: { in: op.tcp || 'ok' } });
       return;
     }
@@ -981,9 +988,9 @@ function showDone(action, ts, lateBy, p) {
   let html = '';
   const badge = (c, ic) => `<div class="badge" style="background:var(--${c})">${ic}</div>`;
   if (action === 'in') {
-    const call = callAt(V(), p, ts), early = call && call > Date.parse(ts);
-    html = badge('blue', I.check) + `<h2>You're clocked in</h2><div class="dtime">${fmtT(early ? new Date(call).toISOString() : ts)}</div>`
-      + (early ? `<div class="dt">You tapped in at ${fmtT(ts)}. Your time starts at your call time, ${fmtT(new Date(call).toISOString())}.</div>` : `<div class="dt">Have a great shift, ${esc(p.first || p.name)}!</div>`);
+    const call = callAt(V(), p, ts), atCall = call && call !== Date.parse(ts) && recordedIn(V(), call, Date.parse(ts)) !== Date.parse(ts);
+    html = badge('blue', I.check) + `<h2>You're clocked in</h2><div class="dtime">${fmtT(atCall ? new Date(call).toISOString() : ts)}</div>`
+      + (atCall ? `<div class="dt">You tapped in at ${fmtT(ts)}. Your time starts at your call time, ${fmtT(new Date(call).toISOString())}.</div>` : `<div class="dt">Have a great shift, ${esc(p.first || p.name)}!</div>`);
   }
   if (action === 'break') {
     const due = new Date(new Date(ts).getTime() + breakMs()).toISOString();
@@ -1574,7 +1581,7 @@ function closeOutBtn(st) {
   const days = st.days || [];
   if (st.closedOut) return `<div class="card"><h3>Closed out</h3><div class="d">This show is closed out. Only its day timesheets are showing in the Shot O'clock sheet. Tap Refresh Roster when the next show is on the Master Timesheet.</div></div>`;
   if (!days.length || st.activeDay !== days[days.length - 1].key) return '';
-  return `<button class="bigset dark" data-sact="closeout">${I.check}<div><div class="a">Close Out ${esc((st.event || {}).name || 'show')}</div><div class="b">Last day of the show. Hides every sheet except the day timesheets (${days.map(d => esc(d.label)).join(', ')}). Radios and scanners must be back at base.</div></div></button>`;
+  return `<button class="bigset dark" data-sact="closeout">${I.check}<div><div class="a">Close Out ${esc((st.event || {}).name || 'show')}</div><div class="b">Last day of the show. Syncs every punch to the Master Timesheet as the final stamp, then hides every sheet except the day timesheets (${days.map(d => esc(d.label)).join(', ')}). Radios and scanners must be back at base.</div></div></button>`;
 }
 function renderSettings(st) {
   const ev = st.event || {}, set = st.settings || {};
@@ -1588,6 +1595,7 @@ function renderSettings(st) {
     ${daysCard(st)}
     <button class="bigset blue" data-sact="schedule">${I.map}<div><div class="a">Refresh Partners</div><div class="b">Re-reads who is partnered with who from the Master Timesheet schedule. Use it whenever partners change during the night. Teams that did not change stay where they are; any team with a new partner goes back to Available.</div></div></button>
     <button class="bigset purple" data-sact="signout">${I.outIcon}<div><div class="a">Send Sign Out Sheet</div><div class="b">Makes tonight's sign out sheet (Excel: times, durations and a signature line for everyone who clocked in) and emails it to Aria and Gabriel to print.</div></div></button>
+    <button class="bigset green" data-sact="synctime">${I.check}<div><div class="a">Sync with Timesheet</div><div class="b">Writes every punch of this show onto the roster tab of the FT Master Timesheet (right person, right day), with TCP colors. Anything it overwrites is kept as a note on that cell.</div></div></button>
     ${closeOutBtn(st)}
     <div class="card"><h3>Breaks per shift</h3><div class="d">Auto reads the schedule: two sets of Break A/B means 2 breaks. Currently ${st.maxBreaks}.</div>
       <div class="seg">${[['','Auto'],['1','1 break'],['2','2 breaks']].map(([v, l]) => `<button class="${mb === v ? 'on' : ''}" data-mb="${v}">${l}</button>`).join('')}</div></div>
@@ -1612,9 +1620,11 @@ document.addEventListener('click', async e => {
       runRefresh('api_refreshRoster', 'Pulling the roster from the Master Timesheet…');
     if (a.dataset.sact === 'signout' && confirm('Are you ready to print out your Sign Out sheet for the night?\n\nIt will be emailed to Aria and Gabriel as an Excel file.'))
       runRefresh('api_sendSignOut', 'Making the sign out sheet and emailing it…');
+    if (a.dataset.sact === 'synctime' && confirm('Sync with Timesheet?\n\nEvery punch of this show is written onto the roster tab of the FT Master Timesheet. Cells that already say something different are overwritten, and the old value is kept as a note on the cell.'))
+      runRefresh('api_syncTimesheet', 'Writing punches to the Master Timesheet…');
     if (a.dataset.sact === 'closeout') {
       const st = V(), days = st.days || [];
-      if (confirm('Close out ' + ((st.event || {}).name || 'this show') + '?\n\nThis hides every sheet in the Shot O\'clock file except the day timesheets (' + days.map(d => d.label).join(', ') + '). Placements, radio and scanner sheets are hidden.'))
+      if (confirm('Close out ' + ((st.event || {}).name || 'this show') + '?\n\nThis hides every sheet in the Shot O\'clock file except the day timesheets (' + days.map(d => d.label).join(', ') + '). Placements, radio and scanner sheets are hidden.\n\nFirst, every punch is synced to the FT Master Timesheet as the final stamp.'))
         runRefresh('api_closeOut', 'Closing out the show…');
     }
     if (a.dataset.sact === 'schedule') runRefresh('api_refreshSchedule', 'Refreshing partners from the Master Timesheet…');
