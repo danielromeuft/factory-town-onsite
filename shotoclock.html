@@ -466,6 +466,9 @@ function callAt(st, p, ts) {
   return new Date(y, mo - 1, d + (/am/i.test(m[3]) ? 1 : 0), h, Number(m[2])).getTime();
 }
 const earlyMs = st => ((st && st.earlyMax) || 30) * 60000;
+/** Clock-ins only on the show's own nights (same rule as api_punch). No days loaded = no rule. */
+const showTonight = (st, ms) => { const d = (st && st.days) || []; return !d.length || d.some(x => x.key === nightOf(new Date(ms).toISOString())); };
+const nextShow = (st, ms) => { const n = nightOf(new Date(ms).toISOString()); const d = ((st && st.days) || []).find(x => x.key > n); return d ? d.label : ''; };
 /** Clock-in time to record: the call time when early or up to callGrace minutes late (the line), else the tap. */
 const callGraceMin = st => (st && st.callGrace) || 10;
 const recordedIn = (st, call, tsMs) => call && Math.floor((tsMs - call) / 60000) <= callGraceMin(st) ? call : tsMs;
@@ -487,7 +490,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '7';
+const BUILT_VERSION = '8';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -869,7 +872,10 @@ function renderModal() {
     armIdle(45000);
     if (s === 'none') {
       const st0 = V(), call = callAt(st0, p, now), early = call - now;
-      if (call && early > earlyMs(st0)) {
+      if (!showTonight(st0, now)) {
+        m.noTcp = true;
+        body = head('Not clocked in') + `<div class="warn"><div class="l">No show tonight</div><div class="t">Clock-ins open on show days only${nextShow(st0, now) ? ': next is ' + esc(nextShow(st0, now)) : ''}.</div></div>`;
+      } else if (call && early > earlyMs(st0)) {
         m.noTcp = true;
         body = head('Not clocked in') + `<div class="warn"><div class="l">Too early to clock in</div><div class="t">Your call time is ${fmtT(new Date(call).toISOString())}. You can clock in starting at ${fmtT(new Date(call - earlyMs(st0)).toISOString())}.</div></div>`;
         modalTimer = setInterval(() => { if (S.modal && S.modal.step === 'actions' && callAt(V(), p, Date.now()) - Date.now() <= earlyMs(V())) renderModal(); }, 5000);
@@ -976,6 +982,7 @@ function punch(action) {
   const ok = { in: s === 'none', break: s === 'in', return: s === 'break', out: s === 'in' }[action];
   if (!ok) { toast('That punch no longer applies. Try again.', true); closeModal(); return; }
   if (action === 'in') {
+    if (!showTonight(V(), Date.parse(ts))) { renderModal(); return; }   // not a show night: the screen says so
     const call = callAt(V(), p, ts);
     if (call && call - Date.parse(ts) > earlyMs(V())) { renderModal(); return; }   // too early: the screen says so
   }
@@ -1363,7 +1370,7 @@ function renderPlace(st) {
     </div>
     <div class="tray" data-drop="">
       <div class="th"><span>Available · ${unplaced.length - resting.length}</span><span>${items.length - unplaced.length} placed${resting.length ? ' · ' + resting.length + ' on break' : ''}</span></div>
-      <div class="tb">${items.length ? teams.map(chipHtml).join('') + leads.map(chipHtml).join('') + resting.map(chipHtml).join('') || '<span style="color:var(--muted);font-weight:600;padding:12px">Everyone is placed.</span>' : '<span style="color:var(--muted);font-weight:600;padding:12px">No teams yet. Go to Settings (gear, top right) and tap Refresh Placements.</span>'}</div>
+      <div class="tb">${items.length ? leads.map(chipHtml).join('') + teams.map(chipHtml).join('') + resting.map(chipHtml).join('') || '<span style="color:var(--muted);font-weight:600;padding:12px">Everyone is placed.</span>' : '<span style="color:var(--muted);font-weight:600;padding:12px">No teams yet. Go to Settings (gear, top right) and tap Refresh Placements.</span>'}</div>
     </div>
     ${mapHtml(items)}`;
   updateRings();
