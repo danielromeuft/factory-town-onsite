@@ -267,6 +267,22 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .toast.red{background:var(--red)}
 
 /* radios page: 25 cards on the left, the staff pool pinned on the right */
+.histbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:64px;margin-top:16px;border-radius:20px;border:2px solid var(--line);background:#fff;font-size:20px;font-weight:800;color:var(--ink)}
+.histbtn svg{width:24px;height:24px}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.hitem{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:12px 14px;border-radius:18px;border:2px solid var(--line);background:#fff;text-align:left;min-width:0}
+.hitem.out{border-color:#c4b5fd;background:#f5f3ff}
+.hitem .hn{display:flex;align-items:center;gap:6px;font-size:18px;font-weight:900;color:var(--ink)}
+.hitem .hn svg{width:18px;height:18px;flex:none}
+.hitem .hp{font-size:15px;font-weight:700;color:var(--ink);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hitem:not(.out) .hp{color:var(--muted)}
+.hitem .hc{font-size:13px;font-weight:600;color:var(--muted)}
+.hlog{margin-bottom:16px}
+.hlog .tr{font-size:17px;gap:12px}
+.hlog .tr span{min-width:0}
+.hlog .tr small{font-size:14px;color:var(--muted);font-weight:600}
+.hlog .tr > b{white-space:nowrap;font-size:16px}
+.hempty{padding:30px 0;text-align:center;font-size:18px;font-weight:700;color:var(--muted)}
 .rwrap{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start}
 .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
 .rcard{position:relative;border:2px dashed #d4d4d8;border-radius:18px;padding:10px 10px 8px;min-height:104px;display:flex;flex-direction:column;gap:6px;background:#fff;min-width:0;transition:background .12s,border-color .12s}
@@ -490,7 +506,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '8';
+const BUILT_VERSION = '9';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -583,6 +599,13 @@ const Mock = (() => {
     api_radio(op) { if (!db.radios) db.radios = blankRadios(); applyOp(db, { type:'radio', radio: op.radio, person: op.person, ts: op.ts }); save(); return { ok:true, state: clone(db) }; },
     api_radiosToBase() { db.radios = blankRadios(); save(); return { ok:true, state: clone(db), msg:'All 25 radios are At Base.' }; },
     api_scanner(op) { applyOp(db, { type:'scanner', scanner: op.scanner, person: op.person, ts: op.ts }); save(); return { ok:true, state: clone(db) }; },
+    api_kitHistory(key) {
+      const k = KIT[key], items = {}, t = m => new Date(Date.now() - m * 60000).toISOString();
+      k.names.forEach(n => { items[n] = []; });
+      items[k.names[0]] = [{ t: t(240), change: 'Checked out', person: db.people[6].id }, { t: t(150), change: 'Returned to base (handed to ' + db.people[7].id + ')', person: db.people[6].id }, { t: t(150), change: 'Checked out', person: db.people[7].id }];
+      items[k.names[1]] = [{ t: t(200), change: 'Checked out', person: db.people[8].id }];
+      return { ok: true, items };
+    },
     api_scannersToBase() { db.scanners = blankScanners(); save(); return { ok:true, state: clone(db), msg:'All 25 scanners are At Base.' }; },
     api_setPartners(op) { applyOp(db, Object.assign({}, op, { type:'partners' })); (op.cols || []).forEach(w => console.log('[demo] schedule column', w.key, '->', w.names.join(' / '))); save(); return { ok:true, state: clone(db) }; },
     api_saveSettings(s) { if ('scheduleTab' in s) db.settings.scheduleTabOverride = s.scheduleTab; if ('maxBreaks' in s) { db.settings.maxBreaksOverride = s.maxBreaks ? String(s.maxBreaks) : ''; } db.maxBreaks = Number(db.settings.maxBreaksOverride) || 1; save(); return { ok:true, state: clone(db) }; },
@@ -1532,7 +1555,8 @@ function renderKit(st, k) {
         <div class="th"><span>At Base · ${base.length}</span><span>${holders.length} ${holders.length === 1 ? 'person has' : 'people have'} one</span></div>
         <div class="tb">${pool}</div>
       </div>
-    </div>`;
+    </div>
+    <button class="histbtn" data-khist="${k.key}">${I.clock}Show History</button>`;
   if (poolTop) root.querySelector('.rpool').scrollTop = poolTop;
   if (keepFocus) { const i = $('#' + k.q); i.focus({ preventScroll: true }); try { i.setSelectionRange(pos, pos); } catch (e) {} }
 }
@@ -1561,6 +1585,64 @@ document.addEventListener('click', e => {
   const r = kitList(V(), k).find(y => y.name === x.dataset.rret);
   if (r && r.person && confirm('Return ' + r.name + ' to base? ' + cap(r.person) + ' no longer has it.')) giveKit(k, r.name, '');
 }, true);
+
+/**
+ * Show History (bottom of the Radios and Scanners pages): every radio or scanner, tap one to see tonight's log
+ * (checked out to who, returned to base, when). Read from the log columns of tonight's sheet page (api_kitHistory).
+ */
+function openHistory(k) { S.hist = { k, item: '', items: null, err: '' }; renderHistory(); loadHistory(); }
+function loadHistory() {
+  const h = S.hist; if (!h) return;
+  h.err = ''; h.loading = true; renderHistory();
+  call('api_kitHistory', h.k.key).then(r => {
+    if (S.hist !== h) return;
+    h.loading = false;
+    if (!r || !r.ok) h.err = (r && r.msg) || 'Could not load the history.'; else h.items = r.items || {};
+    renderHistory();
+  }).catch(() => { if (S.hist !== h) return; h.loading = false; h.err = 'No connection. Try again.'; renderHistory(); });
+}
+function closeHistory() { S.hist = null; $('#modalRoot').innerHTML = ''; }
+function renderHistory() {
+  const h = S.hist; if (!h) return;
+  const k = h.k, st = V(), now = {}, names = {};
+  kitList(st, k).forEach(r => { now[r.name] = r; });
+  (st.people || []).forEach(p => { names[p.id] = p.name; });
+  const who = id => esc(names[id] || cap(id));
+  const close = `<button class="close" data-hact="close" aria-label="Close">${I.x}</button>`;
+  const today = (st.days || []).find(d => d.key === st.activeDay);
+  let body;
+  if (!h.items) {
+    body = `<div class="mname">${esc(cap(k.one))} History</div><div class="msub">${today ? esc(today.label) : 'Tonight'}</div>`
+      + (h.err ? `<div class="err">${esc(h.err)}</div><button class="big blue" data-hact="retry">Try again</button>` : `<div class="hempty">Loading…</div>`);
+  } else if (!h.item) {
+    body = `<div class="mname">${esc(cap(k.one))} History</div><div class="msub">${today ? esc(today.label) : 'Tonight'} · tap a ${k.one} to see who had it and when</div>`
+      + `<div class="hgrid">${k.names.map(n => {
+        const r = now[n] || {}, log = h.items[n] || [];
+        return `<button class="hitem ${r.person ? 'out' : ''}" data-hitem="${esc(n)}"><span class="hn">${I[k.icon]}${esc(n)}</span>`
+          + `<span class="hp">${r.person ? who(r.person) : 'At Base'}</span><span class="hc">${log.length ? log.length + (log.length === 1 ? ' change' : ' changes') : 'No changes'}</span></button>`;
+      }).join('')}</div>`;
+  } else {
+    const log = h.items[h.item] || [], r = now[h.item] || {};
+    body = `<div class="mname">${esc(h.item)}</div><div class="msub">${r.person ? 'With ' + who(r.person) + (r.since ? ' since ' + fmtT(r.since) : '') : 'At Base now'}</div>`
+      + (log.length ? `<div class="times hlog">${log.map(e => `<div class="tr"><span><b>${who(e.person)}</b><br><small>${esc(e.change)}</small></span><b>${fmtDT(e.t)}</b></div>`).join('')}</div>`
+        : `<div class="hempty">No changes yet tonight.</div>`)
+      + `<button class="big ghost" data-hact="back">${I.back}All ${k.many}</button>`;
+  }
+  $('#modalRoot').innerHTML = `<div class="overlay" data-hact="bg"><div class="sheet hsheet">${close}${body}</div></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-khist]');
+  if (b && KIT[b.dataset.khist]) { openHistory(KIT[b.dataset.khist]); return; }
+  if (!S.hist) return;
+  const it = e.target.closest('[data-hitem]');
+  if (it) { S.hist.item = it.dataset.hitem; renderHistory(); $('.hsheet').scrollTop = 0; return; }
+  const a = e.target.closest('[data-hact]'); if (!a) return;
+  const act = a.dataset.hact;
+  if (act === 'bg' && e.target !== a) return;
+  if (act === 'close' || act === 'bg') closeHistory();
+  else if (act === 'back') { S.hist.item = ''; renderHistory(); }
+  else if (act === 'retry') loadHistory();
+});
 
 /* ============ settings ============ */
 let bridgeSeen = '', bridgeAsked = 0;
@@ -1739,7 +1821,7 @@ if (IN_ONSITE) {
   }).catch(() => {});
   // A new OnSite build reloads this page when nothing is open (never mid-punch, mid-drag or in Settings).
   setInterval(() => {
-    if (document.hidden || S.modal || drag || S.settingsOpen || S.edit) return;
+    if (document.hidden || S.modal || S.hist || drag || S.settingsOpen || S.edit) return;
     fetch('version.txt?ts=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
       v = String(v || '').trim();
       if (v && BUILT_VERSION && v !== BUILT_VERSION) location.reload();
