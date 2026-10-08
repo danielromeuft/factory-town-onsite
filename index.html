@@ -360,7 +360,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '10';
+const APP_VERSION = '11';
 
 /* ============ icons ============ */
 const I = {
@@ -922,6 +922,30 @@ function sharpenGray(id) {
   return id;
 }
 
+/**
+ * Settings > Developer > ID scan diagnostics (developer codes only): live numbers under the camera, and
+ * "Send frame" saves the exact picture the reader sees to Drive (Flag ID Photos/Scan tests) to debug real IDs.
+ */
+const idDiag = () => !!(AUTH && AUTH.dev && store.get('devIdDiag'));
+const idStat = { start: 0, tries: 0, ms: 0, crop: '', found: 0, err: '' };
+function idShowDiag(look) {
+  const c = $('#cstat'); if (!c || !idDiag()) return;
+  c.style.cssText = 'font:600 13px/1.35 ui-monospace,Menlo,monospace;bottom:8px;text-shadow:0 1px 3px #000';
+  c.textContent = 'cam ' + video.videoWidth + 'x' + video.videoHeight + ' · crop ' + idStat.crop + ' · try ' + idStat.tries + ' · ' + idStat.ms + ' ms · found ' + idStat.found +
+    ' · tilt ' + look.tilt.toFixed(1) + ' · wide ' + look.wide.toFixed(2) + ' · sharp ' + Math.round(look.peak) + ' · light ' + Math.round(look.mean) + (idStat.err ? ' · ERR ' + idStat.err : '');
+}
+function sendIdFrame(btn) {
+  const fr = $('#idf');
+  if (!fr || !video || !video.videoWidth) return toast('The camera is not ready yet.');
+  const b = videoBox(fr, 0.08), c = document.createElement('canvas');
+  c.width = b.w; c.height = b.h;
+  c.getContext('2d').drawImage(video, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+  const info = 'cam ' + video.videoWidth + 'x' + video.videoHeight + ' crop ' + b.w + 'x' + b.h + ' tries ' + idStat.tries + ' ' + idStat.ms + 'ms' + (idStat.err ? ' ERR ' + idStat.err : '');
+  btn.disabled = true;
+  call('api_idTestFrame', AUTH.token, c.toDataURL('image/jpeg', 0.95), info + ' ' + navigator.userAgent.slice(0, 60))
+    .then(r => toast(r.ok ? 'Frame sent' : (r.msg || 'Not sent'))).catch(() => toast('No connection.')).then(() => { btn.disabled = false; });
+}
+
 /** One camera tick on the ID step: advice now, and a read of the frame in the background (one at a time). */
 let idDecoding = false, idCv = null, idTries = 0;
 async function readId() {
@@ -931,8 +955,9 @@ async function readId() {
   const look = idLook(videoBox(fr, 0));
   setGuide(idAdvice(look), !gCur || gCur.indexOf('|spin|') >= 0);   // first live frame replaces "Starting camera" at once
   if (fl.idSince && Date.now() - fl.idSince > 12000) { const p = $('#idPhoto'); if (p && !p.classList.contains('hl')) p.classList.add('hl'); }
-  if (idDecoding) return '';
-  idDecoding = true;
+  idShowDiag(look);
+  if (idDecoding && Date.now() - idStat.start < 6000) return '';   // a read that hangs is given up on after 6 s
+  idDecoding = true; idStat.start = Date.now();
   try {
     const b = videoBox(fr, 0.08), k = Math.min(1, 1800 / b.w), w = Math.round(b.w * k), h = Math.round(b.h * k);
     idCv = idCv || document.createElement('canvas'); idCv.width = w; idCv.height = h;
@@ -947,10 +972,13 @@ async function readId() {
     } else g.drawImage(video, b.x, b.y, b.w, b.h, 0, 0, w, h);
     let img = g.getImageData(0, 0, w, h);
     if (Math.floor(t / 4) % 2) img = sharpenGray(img);
-    const res = await ZXingWASM.readBarcodes(img, { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: false, maxNumberOfSymbols: 1, textMode: 'Plain' });
+    // Every third round of eight uses the other way of telling black from white (better on uneven light).
+    const binarizer = Math.floor(t / 8) % 3 === 2 ? 'GlobalHistogram' : 'LocalAverage';
+    const res = await ZXingWASM.readBarcodes(img, { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: false, maxNumberOfSymbols: 1, textMode: 'Plain', binarizer });
     const hit = res.find(x => x.isValid && x.text);
+    Object.assign(idStat, { tries: t, ms: Date.now() - idStat.start, crop: w + 'x' + h, found: res.length, err: '' });
     if (hit && mode === 'flag' && fl && fl.step === 'id' && !busy) onFlagCode(hit.text);
-  } catch (e) {} finally { idDecoding = false; }
+  } catch (e) { idStat.err = String((e && e.message) || e).slice(0, 80); } finally { idDecoding = false; }
   return '';
 }
 
@@ -1044,6 +1072,7 @@ function renderFlag() {
       '<div class="cam idcam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe" id="idf"><div class="bz"></div></div>' +
       '<div class="guide" id="guide"><span class="spin"></span><span>Starting camera…</span></div><div class="cstat" id="cstat"></div></div>' +
       '<div class="scanfoot"><button class="fl-alt" id="idPhoto">' + I.camera + 'Take photo instead</button><button class="fl-alt" id="manual">Type name + DOB</button><button class="fl-alt" id="bk">' + I.back + 'Back</button></div>';
+    if (idDiag()) { $('.scanfoot').insertAdjacentHTML('afterbegin', '<button class="fl-alt" id="idSend">Send frame</button>'); $('#idSend').onclick = e => sendIdFrame(e.currentTarget); }
     $('#idPhoto').onclick = () => { fl.step = 'photo'; render(); };
     $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.manMode = 'search'; fl.back = 'id'; fl.step = 'manual'; render(); };
     $('#bk').onclick = flagStart;
@@ -1487,7 +1516,11 @@ function openDeveloper(back) {
     '<div class="setrow"><span>Sell and Scan on Home</span><b style="color:' + (on ? 'var(--green)' : 'var(--muted)') + '">' + (on ? 'On' : 'Off') + '</b></div>' +
     '<button class="bigset' + (on ? '' : ' green') + '" id="dSS">' + (on ? 'Hide Sell and Scan' : 'Show Sell and Scan') + '</button>' +
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">This device only. They stay hidden for everyone else, and hide again if someone else signs in here.</div>' +
+    '<div class="setrow" style="margin-top:14px"><span>ID scan diagnostics</span><b style="color:' + (idDiag() ? 'var(--green)' : 'var(--muted)') + '">' + (idDiag() ? 'On' : 'Off') + '</b></div>' +
+    '<button class="bigset' + (idDiag() ? '' : ' green') + '" id="dDiag">' + (idDiag() ? 'Turn off ID scan diagnostics' : 'Turn on ID scan diagnostics') + '</button>' +
+    '<div class="msub" style="margin:8px 4px 0;font-size:15px">Shows camera numbers on the ID scan screen and a Send frame button that saves what the reader sees to Drive.</div>' +
     '<button class="bigset" id="dBack">Back to Settings</button></div></div>';
+  $('#dDiag').onclick = () => { store.set('devIdDiag', idDiag() ? null : true); if (mode === 'flag') render(); openDeveloper(back); };
   $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
   $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
   $('#dBack').onclick = back;
