@@ -226,7 +226,40 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 
 /* flag */
 .fl-alt{height:52px;padding:0 20px;border-radius:999px;border:2px solid var(--line);background:#fff;font-size:17px;font-weight:800}
-.cam .frame.idframe{inset:30% 5%}
+/* Flag start: three big choices */
+.fl-pick{display:flex;flex-direction:column;gap:16px;max-width:640px;margin:2vh auto 0}
+.fl-pick .mode{min-height:132px}
+.mode.fticket{background:var(--blue)} .mode.fid{background:#b91c1c} .mode.fname{background:#27272a}
+/* ID camera: wider view, card-shaped frame, live guidance */
+.cam.idcam{aspect-ratio:4/3}
+.cam .frame.idframe{inset:auto;left:7%;right:7%;top:50%;aspect-ratio:1.586;transform:translateY(-50%);transition:border-color .25s,box-shadow .25s}
+.cam .frame.idframe.warn{border-color:#facc15}
+.cam .frame.idframe.good{border-color:#22c55e;animation:idpulse 1s ease-in-out infinite}
+.cam .frame.idframe.got{border-color:#22c55e;border-width:8px}
+@keyframes idpulse{50%{box-shadow:0 0 0 2000px rgba(0,0,0,.35),0 0 0 8px rgba(34,197,94,.45)}}
+.cam .frame .bz{position:absolute;left:6%;right:6%;bottom:12%;height:30%;border:2px dashed rgba(255,255,255,.55);border-radius:10px}
+.cam .frame.good .bz,.cam .frame.got .bz{border-color:rgba(34,197,94,.8)}
+.guide{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:92%;padding:12px 20px 12px 14px;border-radius:999px;background:rgba(17,17,24,.82);color:#fff;font-size:21px;font-weight:900;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.guide svg{width:28px;height:28px;flex:none}
+.guide.warn{background:rgba(161,98,7,.92)} .guide.good{background:rgba(21,128,61,.92)}
+.guide.pop{animation:gpop .35s ease-out}
+@keyframes gpop{0%{transform:translateX(-50%) scale(.85);opacity:.4}100%{transform:translateX(-50%) scale(1);opacity:1}}
+.guide .spin,.loadspin{width:24px;height:24px;border-radius:50%;border:3.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cam .gotit{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(21,128,61,.55);color:#fff;font-size:30px;font-weight:900;animation:gpop .3s ease-out}
+.cam .gotit svg{width:84px;height:84px}
+.cam .shot{position:absolute;inset:0;background:#fff;animation:flash .35s ease-out forwards}
+@keyframes flash{to{opacity:0}}
+.fl-alt.hl{border-color:var(--red);color:var(--red);animation:hl 1.2s ease-in-out infinite}
+@keyframes hl{50%{transform:scale(1.04)}}
+.loading{display:flex;flex-direction:column;align-items:center;gap:20px;padding-top:14vh;text-align:center}
+.loading .loadspin{width:64px;height:64px;border-width:7px;border-color:var(--line);border-top-color:var(--ink)}
+.loading .q{margin:0}
+.shutter{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:640px;margin:14px auto 0;height:78px;border-radius:999px;background:var(--ink);color:#fff;font-size:24px;font-weight:900}
+.shutter svg{width:32px;height:32px}
+.idphoto{display:block;width:100%;max-width:640px;margin:0 auto;border-radius:24px;border:2px solid var(--line)}
+.idthumb{display:flex;align-items:center;gap:14px;margin:0 0 14px;padding:10px;border-radius:18px;background:var(--soft);border:1px solid var(--line);font-size:16px;font-weight:700;color:var(--muted)}
+.idthumb img{width:96px;height:60px;object-fit:cover;border-radius:10px;flex:none}
 .digits.dob{align-items:center}
 .digits.dob i{width:48px;height:64px;font-size:32px}
 .digits.dob b{font-size:32px;color:var(--muted);font-weight:900}
@@ -327,7 +360,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '9';
+const APP_VERSION = '10';
 
 /* ============ icons ============ */
 const I = {
@@ -342,6 +375,13 @@ const I = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
   mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9.5"/></svg>',
+  idcard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2.2"/><path d="M5.5 16c.6-1.5 1.7-2.2 3-2.2s2.4.7 3 2.2M14 10h4.5M14 13.5h3"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4 4.2-6 8-6s6.8 2 8 6"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  closer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5M9 9l-4-4M15 9l4-4M9 15l-4 4M15 15l4 4"/></svg>',
+  further: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5M4 4l5 5M20 4l-5 5M4 20l5-5M20 20l-5-5"/></svg>',
+  still: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12M11 11.5v-6a1.5 1.5 0 0 1 3 0V12M14 11.5V7a1.5 1.5 0 0 1 3 0v7c0 3.9-2.6 7-6.5 7-2.5 0-4.2-1.4-5.4-3.5L3.6 15c-.7-1.2.9-2.4 1.9-1.4L8 16"/></svg>',
 };
 
 /* ============ helpers ============ */
@@ -629,6 +669,11 @@ function startCamera() {
       if (!video || !document.body.contains(video)) { stopCamera(); return; }
       video.srcObject = s; video.play().catch(() => {});
       $('#cstat').textContent = camHint();
+      // Keep refocusing as an ID moves closer (ignored where the camera does not support it).
+      try {
+        const tr = s.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
+        if ((cap.focusMode || []).indexOf('continuous') >= 0) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+      } catch (e) {}
       loopScan();
     })
     .catch(err => {
@@ -639,9 +684,9 @@ function startCamera() {
     });
 }
 
-/** The camera runs on the Scan tab and on the Flag ticket and ID steps. */
-const camActive = () => (mode === 'scan' && tab === 'scan') || (mode === 'flag' && fl && (fl.step === 'ticket' || fl.step === 'id'));
-const camHint = () => mode === 'flag' && fl && fl.step === 'id' ? 'Point at the barcode on the back of the ID' : 'Point at a ticket QR';
+/** The camera runs on the Scan tab and on the Flag ticket, ID and ID photo steps. */
+const camActive = () => (mode === 'scan' && tab === 'scan') || (mode === 'flag' && fl && (fl.step === 'ticket' || fl.step === 'id' || fl.step === 'photo'));
+const camHint = () => mode === 'flag' && fl && fl.step === 'id' ? '' : mode === 'flag' && fl && fl.step === 'photo' ? 'Front of the ID inside the frame' : 'Point at a ticket QR';
 
 function stopCamera() {
   clearTimeout(scanTimer); scanTimer = null;
@@ -652,8 +697,9 @@ function loopScan() {
   clearTimeout(scanTimer);
   const tick = async () => {
     if (!stream || !camActive()) return;
-    if (!busy && video && video.readyState >= 2) {
-      const code = await (mode === 'flag' && fl.step === 'id' ? readId() : readFrame());
+    const step = mode === 'flag' && fl ? fl.step : '';
+    if (!busy && video && video.readyState >= 2 && step !== 'photo') {
+      const code = await (step === 'id' ? readId() : readFrame());
       if (code && camActive()) mode === 'flag' ? onFlagCode(code) : onCode(code);
     }
     scanTimer = setTimeout(tick, 120);
@@ -751,12 +797,15 @@ function beepOk() { tone(1318, 0, .11, 'sine', .35); tone(1760, .12, .2, 'sine',
 function beepBad() { tone(196, 0, .28, 'square', .2); tone(147, .32, .4, 'square', .2); }
 
 /* ============ flag ============
- * Flag a guest so another gate or Guest Services sees it later (e.g. 18 to 20 let in as GA at VIP: no 21+ band).
- * 1. Scan their ticket (any QR: DICE or ours). Already flagged: the flag shows in red, with Edit and Remove.
- * 2. Not flagged: scan the barcode on the back of their ID (or type name + date of birth). Only the name and
- *    date of birth leave the device; the rest of the ID barcode is thrown away right here.
- * 3. Same name + DOB already flagged (they switched tickets): the flag shows, and this ticket can be added to it.
- * 4. Otherwise pick the flag type and save.
+ * Flag a guest so another gate or Guest Services sees it later (e.g. a VIP ticket holder under 21 let in as GA).
+ * Opens on three choices (10/8): Ticket, ID, Name.
+ * 1. Ticket: scan any QR (DICE or ours). Already flagged: the flag shows in red, with Edit and Remove.
+ * 2. ID: scan the barcode on the back (live advice on the camera). Only the name and date of birth leave the
+ *    device; the rest of the ID barcode is thrown away right here. If it will not read: take a photo of the
+ *    front instead (saved with the flag), then type the name and date of birth.
+ * 3. Name: search by part of a name and/or a date of birth.
+ * Same name + DOB already flagged (they switched tickets): the flag shows, and this ticket can be added to it.
+ * Otherwise pick the flag type and save.
  */
 const FLAG_TYPES = ['Under 21 VIP', 'Third Party Ticket', 'No re-entry', 'Ejected / banned', 'Other'];
 const FLAG_STYLE = { 'Under 21 VIP': ['#dc2626', 'U21'], 'Third Party Ticket': ['#2563eb', '3P'], 'No re-entry': ['#d97706', 'NR'], 'Ejected / banned': ['#18181b', 'BAN'], 'Other': ['#7c3aed', '!'] };
@@ -765,44 +814,157 @@ const ENTRY_TEXT = { Admitted: 'Admit Entry', Denied: 'Deny Entry' };
 const ENTRY_DONE = { Admitted: 'Entry admitted', Denied: 'Entry denied' };
 let fl = null;   // the flag flow in progress
 
-/** ID barcode reader: the browser's own when it knows PDF417 (Chrome, Android), else ZXing (iPad Safari), loaded on first use. */
-let idDetector = null, zxingLoading = null;
-if ('BarcodeDetector' in window && BarcodeDetector.getSupportedFormats) {
-  BarcodeDetector.getSupportedFormats().then(f => { if (f.indexOf('pdf417') >= 0) idDetector = new BarcodeDetector({ formats: ['pdf417'] }); }).catch(() => {});
-}
-function loadZXing() {
-  if (window.ZXing) return Promise.resolve();
-  return zxingLoading || (zxingLoading = new Promise((res, rej) => {
+/**
+ * ID barcode reader: zxing-cpp built for the browser (zxing-wasm), loaded the first time Flag opens the ID step.
+ * Only the picture inside the card frame is read, at the camera's full resolution. Before 10/8 the whole picture
+ * was shrunk first, and the thin bars of a license barcode blurred together, so real IDs never read.
+ * Each frame also gets a quick look (light, glare, how big the barcode is) to tell the person what to change.
+ */
+const ZX_BASE = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/';
+let zxLoading = null, zxReady = false;
+function loadZX() {
+  if (zxReady) return Promise.resolve();
+  return zxLoading || (zxLoading = new Promise((res, rej) => {
+    const fail = e => { zxLoading = null; rej(e); };
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
-    s.onload = res; s.onerror = () => { zxingLoading = null; rej(new Error('load')); };
+    s.src = ZX_BASE + 'iife/reader/index.js';
+    s.onload = () => {
+      try {
+        ZXingWASM.prepareZXingModule({ overrides: { locateFile: (p, pre) => p.endsWith('.wasm') ? ZX_BASE + 'reader/' + p : pre + p }, fireImmediately: true })
+          .then(() => { zxReady = true; res(); }, fail);
+      } catch (e) { fail(e); }
+    };
+    s.onerror = () => fail(new Error('load'));
     document.head.appendChild(s);
   }));
 }
-// ZXing reads PDF417 only when it is fairly straight, so each frame is also tried turned a few degrees.
-const ID_ANGLES = [0, 4, -4, 8, -8, 12, -12];
-let idTry = 0, idBase = null, idWork = null;
+
+/** Where an on-screen element sits in the camera's own pixels (the video is shown with object-fit: cover). pad grows it. */
+function videoBox(el, pad) {
+  const vr = video.getBoundingClientRect(), r = el.getBoundingClientRect(), vw = video.videoWidth, vh = video.videoHeight;
+  const s = Math.max(vr.width / vw, vr.height / vh), ox = (vw * s - vr.width) / 2, oy = (vh * s - vr.height) / 2;
+  let w = r.width / s, h = r.height / s, x = (r.left - vr.left + ox) / s - w * pad, y = (r.top - vr.top + oy) / s - h * pad;
+  w *= 1 + 2 * pad; h *= 1 + 2 * pad;
+  x = Math.max(0, x); y = Math.max(0, y);
+  return { x: Math.round(x), y: Math.round(y), w: Math.round(Math.min(vw - x, w)), h: Math.round(Math.min(vh - y, h)) };
+}
+
+/**
+ * Quick look at the card frame: brightness, glare, and where the barcode texture is. A PDF417 is the busiest
+ * left-to-right pattern on the card, so cells with strong left-right changes mark it; rows with several busy cells
+ * give its width. Too narrow = too far away. Touching both sides = too close.
+ */
+let lookCv = null;
+function idLook(b) {
+  const W = 320, H = Math.max(60, Math.round(W * b.h / b.w));
+  lookCv = lookCv || document.createElement('canvas'); lookCv.width = W; lookCv.height = H;
+  const g = lookCv.getContext('2d', { willReadFrequently: true });
+  g.drawImage(video, b.x, b.y, b.w, b.h, 0, 0, W, H);
+  const d = g.getImageData(0, 0, W, H).data, L = new Float32Array(W * H);
+  let sum = 0, hot = 0;
+  for (let i = 0; i < W * H; i++) { const v = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000; L[i] = v; sum += v; if (v > 248) hot++; }
+  const CX = 20, CY = 12, cell = new Float32Array(CX * CY), cw = W / CX, ch = H / CY;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W - 1; x++) cell[((y / ch) | 0) * CX + ((x / cw) | 0)] += Math.abs(L[y * W + x + 1] - L[y * W + x]);
+  const area = cw * ch;
+  let minX = CX, maxX = -1, rows = 0, peak = 0;
+  for (let r = 0; r < CY; r++) {
+    let n = 0, lo = CX, hi = -1;
+    for (let c = 0; c < CX; c++) { const e = cell[r * CX + c] / area; peak = Math.max(peak, e); if (e > ID_BUSY) { n++; lo = Math.min(lo, c); hi = Math.max(hi, c); } }
+    if (n >= 5) { rows++; minX = Math.min(minX, lo); maxX = Math.max(maxX, hi); }
+  }
+  // Tilt: the bars are the strongest edges, so the most common edge direction (within 25 degrees of upright) is their angle.
+  const hist = new Float32Array(51);
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x;
+    const gx = L[i - W + 1] + 2 * L[i + 1] + L[i + W + 1] - L[i - W - 1] - 2 * L[i - 1] - L[i + W - 1];
+    const gy = L[i + W - 1] + 2 * L[i + W] + L[i + W + 1] - L[i - W - 1] - 2 * L[i - W] - L[i - W + 1];
+    const m = Math.abs(gx) + Math.abs(gy); if (m < 120) continue;
+    let a = Math.atan2(gy, gx) * 180 / Math.PI; if (a > 90) a -= 180; else if (a < -90) a += 180;
+    if (a >= -25 && a <= 25) hist[Math.round(a) + 25] += m;
+  }
+  let best = 25; for (let k = 0; k < 51; k++) if (hist[k] > hist[best]) best = k;
+  let tilt = best - 25;   // to a fraction of a degree: the top of a parabola through the peak and its neighbours
+  if (best > 0 && best < 50) { const a = hist[best - 1], c = hist[best + 1], d = a - 2 * hist[best] + c; if (d) tilt += 0.5 * (a - c) / d; }
+  return { mean: sum / (W * H), glare: hot / (W * H), rows, wide: rows ? (maxX - minX + 1) / CX : 0, edges: rows && minX === 0 && maxX === CX - 1, peak, tilt };
+}
+const ID_BUSY = 14;   // average left-right change per pixel that counts as barcode texture (tuned on test IDs)
+/** What to tell the person holding the ID: [style, icon, words]. */
+function idAdvice(a) {
+  if (a.mean < 50) return ['warn', 'sun', 'More light'];
+  if (a.glare > 0.08) return ['warn', 'sun', 'Tilt the card to cut the glare'];
+  if (!a.rows) return ['', 'idcard', 'Back of the ID in the frame'];
+  if (a.edges) return ['warn', 'further', 'Move back a little'];
+  if (a.wide < 0.55) return ['warn', 'closer', 'Move closer'];
+  if (a.peak < ID_BUSY * 2) return ['warn', 'still', 'Hold still'];
+  return ['good', '', 'Reading ID…'];
+}
+/** Shows advice on the camera. A new message has to hold for two frames, so it does not flicker. */
+let gCur = '', gPend = '', gPendN = 0;
+function setGuide(a, now) {
+  const k = a.join('|');
+  if (k === gCur) { gPend = ''; return; }
+  if (!now) { if (k !== gPend) { gPend = k; gPendN = 1; return; } if (++gPendN < 2) return; }
+  gCur = k; gPend = '';
+  const el = $('#guide'); if (!el) return;
+  el.className = 'guide ' + a[0]; void el.offsetWidth; el.classList.add('pop');
+  el.innerHTML = (a[1] === 'spin' || a[0] === 'good' ? '<span class="spin"></span>' : (I[a[1]] || '')) + '<span>' + esc(a[2]) + '</span>';
+  const fr = $('#idf'); if (fr) { fr.classList.toggle('warn', a[0] === 'warn'); fr.classList.toggle('good', a[0] === 'good'); }
+}
+
+/** Grayscale + a light sharpen (center minus neighbours), written back as RGB for the reader. */
+function sharpenGray(id) {
+  const W = id.width, H = id.height, d = id.data, L = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) L[i] = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x, v = L[i] + 0.8 * (4 * L[i] - L[i - 1] - L[i + 1] - L[i - W] - L[i + W]);
+    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v < 0 ? 0 : v > 255 ? 255 : v;
+  }
+  return id;
+}
+
+/** One camera tick on the ID step: advice now, and a read of the frame in the background (one at a time). */
+let idDecoding = false, idCv = null, idTries = 0;
 async function readId() {
+  const fr = $('#idf');
+  if (!fr || !video.videoWidth) return '';
+  if (!zxReady) { setGuide(['', 'spin', 'Getting the ID reader ready…'], true); loadZX().catch(() => setGuide(['warn', 'alert', 'ID reader did not load. Take a photo instead.'], true)); return ''; }
+  const look = idLook(videoBox(fr, 0));
+  setGuide(idAdvice(look), !gCur || gCur.indexOf('|spin|') >= 0);   // first live frame replaces "Starting camera" at once
+  if (fl.idSince && Date.now() - fl.idSince > 12000) { const p = $('#idPhoto'); if (p && !p.classList.contains('hl')) p.classList.add('hl'); }
+  if (idDecoding) return '';
+  idDecoding = true;
   try {
-    if (idDetector) { const f = await idDetector.detect(video); return f && f[0] ? f[0].rawValue : ''; }
-    if (!window.ZXing) { loadZXing().catch(() => {}); return ''; }
-    const vw = video.videoWidth, vh = video.videoHeight;
-    if (!vw) return '';
-    const scale = Math.min(1, 1280 / Math.max(vw, vh)), w = Math.round(vw * scale), h = Math.round(vh * scale);
-    idBase = idBase || document.createElement('canvas'); idWork = idWork || document.createElement('canvas');
-    idBase.width = idWork.width = w; idBase.height = idWork.height = h;
-    idBase.getContext('2d', { willReadFrequently: true }).drawImage(video, 0, 0, w, h);
-    const ang = ID_ANGLES[idTry++ % ID_ANGLES.length];
-    let src = idBase;
-    if (ang) {
-      const g = idWork.getContext('2d', { willReadFrequently: true });
-      g.save(); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.translate(w / 2, h / 2); g.rotate(ang * Math.PI / 180); g.drawImage(idBase, -w / 2, -h / 2); g.restore();
-      src = idWork;
-    }
-    const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(src)));
-    return new ZXing.PDF417Reader().decode(bmp, hints).getText();
-  } catch (e) { return ''; }
+    const b = videoBox(fr, 0.08), k = Math.min(1, 1800 / b.w), w = Math.round(b.w * k), h = Math.round(b.h * k);
+    idCv = idCv || document.createElement('canvas'); idCv.width = w; idCv.height = h;
+    const g = idCv.getContext('2d', { willReadFrequently: true });
+    // The reader only handles a barcode within about a degree of level, so a tilted card is turned level first.
+    // Tries step through the measured tilt, a degree either side and two further out (the measure runs a little low),
+    // each plain and sharpened (sharpened reads farther away).
+    const t = ++idTries, s = look.tilt < 0 ? -1 : 1, tilt = look.tilt + [0, s, -s, 2 * s][t % 4];
+    if (Math.abs(tilt) >= 0.5) {
+      g.save(); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.translate(w / 2, h / 2); g.rotate(-tilt * Math.PI / 180);
+      g.drawImage(video, b.x, b.y, b.w, b.h, -w / 2, -h / 2, w, h); g.restore();
+    } else g.drawImage(video, b.x, b.y, b.w, b.h, 0, 0, w, h);
+    let img = g.getImageData(0, 0, w, h);
+    if (Math.floor(t / 4) % 2) img = sharpenGray(img);
+    const res = await ZXingWASM.readBarcodes(img, { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: false, maxNumberOfSymbols: 1, textMode: 'Plain' });
+    const hit = res.find(x => x.isValid && x.text);
+    if (hit && mode === 'flag' && fl && fl.step === 'id' && !busy) onFlagCode(hit.text);
+  } catch (e) {} finally { idDecoding = false; }
+  return '';
+}
+
+/** "Take photo instead": the front of the ID, cropped to the frame, as a JPEG kept with the flag. */
+function takeIdPhoto() {
+  const fr = $('#idf');
+  if (!fr || !video || !video.videoWidth) return toast('The camera is not ready yet.');
+  const b = videoBox(fr, 0.05), k = Math.min(1, 1600 / b.w), c = document.createElement('canvas');
+  c.width = Math.round(b.w * k); c.height = Math.round(b.h * k);
+  c.getContext('2d').drawImage(video, b.x, b.y, b.w, b.h, 0, 0, c.width, c.height);
+  fl.photo = c.toDataURL('image/jpeg', 0.82);
+  $('#cam').insertAdjacentHTML('beforeend', '<div class="shot"></div>');
+  if (navigator.vibrate) navigator.vibrate(40);
+  setTimeout(() => { if (fl && fl.step === 'photo') { fl.step = 'photoReview'; render(); } }, 300);
 }
 
 /**
@@ -810,7 +972,8 @@ async function readId() {
  * Only these two leave this function; address, license number and the rest are dropped.
  */
 function parseAAMVA(text) {
-  const s = String(text || '');
+  // Readers that spell out control characters (<LF>, <RS>, <CR>) get them turned back into the real ones.
+  const s = String(text || '').replace(/<LF>/g, '\n').replace(/<RS>/g, '\x1e').replace(/<CR>/g, '\r').replace(/<GS>/g, '\x1d');
   if (!/ANSI|AAMVA/.test(s) || !/DBB/.test(s)) return null;
   const f = code => { const m = new RegExp('(?:^|[\\n\\r\\x1e]|DL|ID)' + code + '([^\\n\\r\\x1e]*)').exec(s); return m ? m[1].trim() : ''; };
   let first = f('DAC') || f('DCT'), last = f('DCS') || f('DAB'), middle = f('DAD');
@@ -840,30 +1003,67 @@ function ageOf(dob) {
 const fmtDob = dob => { const [y, m, d] = String(dob).split('-'); return y ? Number(m) + '/' + Number(d) + '/' + y : ''; };
 const fmtWhenMs = ms => ms ? new Date(ms).toLocaleString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
 
-function flagStart() { fl = { step: 'ticket' }; lastCode = ''; render(); }
+/** Flag opens on three choices: Ticket, ID, Name. "Next" buttons go back to whichever one was picked. */
+let flagFrom = 'ticket';
+function flagStart() { fl = { step: 'start' }; lastCode = ''; render(); }
+function flagGo(from) {
+  flagFrom = from; lastCode = '';
+  fl = from === 'ticket' ? { step: 'ticket' } : from === 'id' ? { step: 'id', code: '' } : { step: 'manual', manMode: 'search', man: { name: '', dob: '' }, code: '' };
+  render();
+}
+const flagNext = () => flagGo(flagFrom);
+const nextLabel = () => flagFrom === 'ticket' ? 'Scan next ticket' : flagFrom === 'id' ? 'Scan next ID' : 'New search';
+const loadingHtml = (q, sub) => '<div class="loading"><div class="loadspin"></div><div class="q">' + esc(q) + '</div>' + (sub ? '<p class="qs">' + esc(sub) + '</p>' : '') + '</div>';
 
 function renderFlag() {
-  if (!fl) fl = { step: 'ticket' };
+  if (!fl) fl = { step: 'start' };
   const m = $('#main');
-  const camStep = fl.step === 'ticket' || fl.step === 'id';
+  const camStep = fl.step === 'ticket' || fl.step === 'id' || fl.step === 'photo';
   if (!camStep) stopCamera();
-  if (fl.step === 'ticket') {
+  if (fl.step !== 'id') fl.idSince = 0;
+  if (fl.step === 'start') {
+    setTitle('Flag');
+    m.innerHTML = '<div class="fl-pick">' +
+      '<button class="mode fticket" data-go="ticket">' + I.scan + '<div><b>Ticket</b><span>Scan their ticket QR: DICE or ours</span></div></button>' +
+      '<button class="mode fid" data-go="id">' + I.idcard + '<div><b>ID</b><span>Scan the barcode on the back of their ID</span></div></button>' +
+      '<button class="mode fname" data-go="name">' + I.user + '<div><b>Name</b><span>Search or flag by name and date of birth</span></div></button></div>';
+    m.querySelectorAll('[data-go]').forEach(b => { b.onclick = () => flagGo(b.dataset.go); });
+    loadZX().catch(() => {});   // warm the ID reader up while they choose
+  } else if (fl.step === 'ticket') {
     setTitle('Flag · Scan ticket');
     m.innerHTML = '<div class="step"><div class="q">Scan their ticket</div><p class="qs">Any ticket QR: DICE or ours. If it was flagged, it shows right away.</p></div>' +
       '<div class="cam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
-      '<div class="scanfoot"><button class="fl-alt" id="noTk">No ticket? Check or flag by ID</button><button class="fl-alt" id="srch">' + I.search + 'Search by name or DOB</button></div>';
-    $('#noTk').onclick = () => { fl = { step: 'id', code: '' }; render(); };
-    $('#srch').onclick = () => { fl = { step: 'manual', manMode: 'search', man: { name: '', dob: '' }, code: '' }; render(); };
+      '<div class="scanfoot"><button class="fl-alt" id="bk">' + I.back + 'Back</button></div>';
+    $('#bk').onclick = flagStart;
     startCamera();
   } else if (fl.step === 'id') {
     setTitle('Flag · Scan ID');
-    m.innerHTML = '<div class="step"><div class="q">Scan the back of their ID</div><p class="qs">Hold the long barcode flat and inside the frame. Only their name and date of birth are kept.</p></div>' +
-      '<div class="cam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
-      '<div class="scanfoot"><button class="fl-alt" id="manual">Type name or DOB instead</button><button class="fl-alt" id="bk">Back</button></div>';
-    $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.manMode = 'search'; fl.step = 'manual'; render(); };
-    $('#bk').onclick = () => { flagStart(); };
-    if (!idDetector) loadZXing().catch(() => toast('The ID reader did not load. Type name or DOB instead.', 4500));
+    fl.idSince = fl.idSince || Date.now();
+    gCur = ''; gPend = '';
+    m.innerHTML = '<div class="step"><div class="q">Scan the back of their ID</div><p class="qs">Fit the card in the frame, barcode in the dashed box. Only their name and date of birth are kept.</p></div>' +
+      '<div class="cam idcam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe" id="idf"><div class="bz"></div></div>' +
+      '<div class="guide" id="guide"><span class="spin"></span><span>Starting camera…</span></div><div class="cstat" id="cstat"></div></div>' +
+      '<div class="scanfoot"><button class="fl-alt" id="idPhoto">' + I.camera + 'Take photo instead</button><button class="fl-alt" id="manual">Type name + DOB</button><button class="fl-alt" id="bk">' + I.back + 'Back</button></div>';
+    $('#idPhoto').onclick = () => { fl.step = 'photo'; render(); };
+    $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.manMode = 'search'; fl.back = 'id'; fl.step = 'manual'; render(); };
+    $('#bk').onclick = flagStart;
     startCamera();
+  } else if (fl.step === 'photo') {
+    setTitle('Flag · ID photo');
+    m.innerHTML = '<div class="step"><div class="q">Photo of the front of the ID</div><p class="qs">The photo is saved with the flag. Next you\'ll type their name and date of birth.</p></div>' +
+      '<div class="cam idcam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe" id="idf"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
+      '<button class="shutter" id="snap">' + I.camera + 'Take photo</button>' +
+      '<div class="scanfoot"><button class="fl-alt" id="bk">' + I.back + 'Back to scanning</button></div>';
+    $('#snap').onclick = takeIdPhoto;
+    $('#bk').onclick = () => { fl.step = 'id'; render(); };
+    startCamera();
+  } else if (fl.step === 'photoReview') {
+    setTitle('Flag · ID photo');
+    m.innerHTML = '<div class="step"><div class="q">Use this photo?</div><p class="qs">Check that the name and date of birth are readable.</p></div>' +
+      '<img class="idphoto" src="' + fl.photo + '" alt="ID photo">' +
+      '<div class="row2" style="max-width:640px;margin:14px auto 0"><button class="big ghost" id="retake">' + I.camera + 'Retake</button><button class="big dark" id="use">' + I.check + 'Use photo</button></div>';
+    $('#retake').onclick = () => { fl.photo = ''; fl.step = 'photo'; render(); };
+    $('#use').onclick = () => { fl.man = { name: '', dob: '' }; fl.manMode = 'flag'; fl.back = 'photoReview'; fl.step = 'manual'; render(); };
   } else if (fl.step === 'manual') {
     // search: part of a name and/or a DOB, either is enough. flag: saving a flag needs the full name AND the DOB.
     const search = fl.manMode === 'search';
@@ -872,6 +1072,7 @@ function renderFlag() {
     const box = i => '<i class="' + (i < d.length ? 'on' : '') + '">' + esc(d[i] || '') + '</i>';
     m.innerHTML = '<div class="step"><div class="q">' + (search ? 'Search by name or date of birth' : 'Name and date of birth') + '</div>' +
       '<p class="qs">' + (search ? 'Part of a name, a date of birth, or both. Either one is enough.' : 'Both are needed to save a flag. Type them as on their ID.') + '</p>' +
+      (fl.photo && !search ? idThumb() : '') +
       '<label class="field" style="margin-top:0"><span>' + (search ? 'Name (or part of it)' : 'Full name') + '</span><input id="mn" autocomplete="off" autocapitalize="words" value="' + esc(fl.man.name) + '"></label>' +
       '<div class="field"><span>Date of birth (month, day, year)' + (search ? ', optional' : '') + '</span></div>' +
       '<div class="digits dob">' + [0, 1].map(box).join('') + '<b>/</b>' + [2, 3].map(box).join('') + '<b>/</b>' + [4, 5, 6, 7].map(box).join('') + '</div>' +
@@ -884,7 +1085,11 @@ function renderFlag() {
       if (k === 'del') fl.man.dob = fl.man.dob.slice(0, -1); else if (fl.man.dob.length < 8) fl.man.dob += k;
       render();
     });
-    $('#bk').onclick = () => { if (fl.back === 'results') { fl.step = 'results'; render(); } else if (fl.fixing) { fl.fixing = false; fl.step = 'form'; render(); } else flagStart(); };
+    $('#bk').onclick = () => {
+      if (fl.fixing) { fl.fixing = false; fl.step = 'form'; render(); }
+      else if (fl.back === 'results' || fl.back === 'photoReview' || fl.back === 'id') { fl.step = fl.back; fl.back = ''; render(); }
+      else flagStart();
+    };
     $('#nx').onclick = () => {
       const name = mn.value.replace(/\s+/g, ' ').trim(), x = fl.man.dob;
       const dob = x.length === 8 ? x.slice(4) + '-' + x.slice(0, 2) + '-' + x.slice(2, 4) : '';
@@ -899,15 +1104,15 @@ function renderFlag() {
     };
   } else if (fl.step === 'checking') {
     setTitle('Flag');
-    m.innerHTML = '<div class="step center" style="padding-top:12vh"><div class="q">Checking…</div></div>';
+    m.innerHTML = loadingHtml(fl.via === 'ticket' ? 'Checking this ticket…' : 'Checking for flags…', fl.person ? fl.person.name + ' · DOB ' + fmtDob(fl.person.dob) : '');
   } else if (fl.step === 'clear') {
     setTitle('Flag · Not flagged');
     m.innerHTML = '<div class="step"><div class="fl-clear">' + I.check + '<div><b>No flag on this ticket</b><span>Checked just now.</span></div></div>' +
       '<button class="big red" id="flagIt">' + I.alert + 'Flag this person</button>' +
       '<p class="qs center" style="margin-top:10px">Next you\'ll scan their ID (or type name + DOB).</p>' +
-      '<button class="big ghost" id="next">Scan next ticket</button></div>';
+      '<button class="big ghost" id="next">' + nextLabel() + '</button></div>';
     $('#flagIt').onclick = () => { fl.step = 'id'; render(); };
-    $('#next').onclick = flagStart;
+    $('#next').onclick = flagNext;
   } else if (fl.step === 'results') {
     const q = fl.query, n = fl.flags.length;
     setTitle('Flag · Search');
@@ -918,7 +1123,7 @@ function renderFlag() {
         : '<div class="fl-clear">' + I.check + '<div><b>No flags found</b><span>Search: ' + esc(what) + '</span></div></div>') +
       fl.flags.map((f, i) => flagCard(f, i, { match: true, link: !!fl.code })).join('') +
       '<button class="big red" id="flagNew">' + I.alert + 'Flag this person' + (n ? ' (not listed)' : '') + '</button>' +
-      '<div class="row2"><button class="bigset" id="again">' + I.search + 'New search</button><button class="bigset" id="next">Scan next ticket</button></div></div>';
+      '<div class="row2"><button class="bigset" id="again">' + I.search + 'New search</button><button class="bigset" id="next">' + (flagFrom === 'name' ? 'Done' : nextLabel()) + '</button></div></div>';
     bindCards(m);
     $('#flagNew').onclick = () => {
       if (full) return gotPerson({ name: titleCase(q.name), dob: q.dob });
@@ -927,20 +1132,21 @@ function renderFlag() {
       toast('Saving a flag needs their full name and date of birth.');
     };
     $('#again').onclick = () => { fl.man = { name: q.name, dob: '' }; fl.manMode = 'search'; fl.back = ''; fl.step = 'manual'; render(); };
-    $('#next').onclick = flagStart;
+    $('#next').onclick = flagFrom === 'name' ? flagStart : flagNext;
   } else if (fl.step === 'found') {
     setTitle('Flag · Flagged');
-    const link = fl.via === 'id' && fl.code;
+    const link = fl.via === 'id' && (fl.code || fl.photo);
+    const what = fl.code && fl.photo ? 'this ticket and the ID photo' : fl.code ? 'this ticket' : 'the ID photo';
     m.innerHTML = '<div class="step"><div class="fl-head">' + I.alert + (fl.flags.length > 1 ? fl.flags.length + ' flags' : 'Flagged') +
       '<span>' + (fl.via === 'id' ? 'Matched by name + date of birth' : 'This ticket was flagged') + '</span></div>' +
       fl.flags.map((f, i) => flagCard(f, i, {})).join('') +
-      (link ? '<button class="big dark" id="link">Add this ticket to the flag</button>' : '') +
+      (link ? '<button class="big dark" id="link">Add ' + what + ' to the flag</button>' : '') +
       (fl.via === 'id' && fl.person ? '<button class="bigset" id="newOne">Different person: flag them separately</button>' : '') +
-      '<button class="big ghost" id="next">Scan next ticket</button></div>';
+      '<button class="big ghost" id="next">' + nextLabel() + '</button></div>';
     bindCards(m);
-    if ($('#link')) $('#link').onclick = e => saveFlag(Object.assign({}, fl.flags[0], { code: fl.code }), e.target, 'Ticket added to the flag.');
+    if ($('#link')) $('#link').onclick = e => saveFlag(Object.assign({}, fl.flags[0], { code: fl.code, photo: fl.photo || '' }), e.target, 'Added ' + what + ' to the flag.');
     if ($('#newOne')) $('#newOne').onclick = () => { fl.edit = null; fl.type = ''; fl.note = ''; fl.platform = ''; fl.entry = ''; fl.step = 'form'; render(); };
-    $('#next').onclick = flagStart;
+    $('#next').onclick = flagNext;
   } else if (fl.step === 'form') {
     const p = fl.person, age = ageOf(p.dob), under = age < 21;
     if (!fl.type && !fl.edit) fl.type = under ? 'Under 21 VIP' : '';
@@ -951,6 +1157,7 @@ function renderFlag() {
       '<div class="tr"><span>Date of birth</span><b>' + esc(fmtDob(p.dob)) + '</b></div>' +
       '<div class="tr"><span>Age</span><b style="color:' + (under ? 'var(--red)' : 'var(--ink)') + '">' + age + (under ? ' &middot; UNDER 21' : '') + '</b></div>' +
       (fl.code && !fl.edit ? '<div class="tr"><span>Ticket</span><b>Scanned</b></div>' : '') + '</div>' +
+      (fl.photo && !fl.edit ? '<div style="margin-top:12px">' + idThumb() + '</div>' : '') +
       '<button class="linkbtn" id="fix" style="margin-top:8px">Fix name or date of birth</button>' +
       '<div class="field"><span>Flag type</span></div><div class="fl-types">' +
       FLAG_TYPES.map(t => {
@@ -978,7 +1185,7 @@ function renderFlag() {
       if (third && !fl.platform) return toast('Type the ticket platform.');
       if (fl.type === 'Other' && !fl.note) return toast('Add a note for "Other".');
       if (!fl.entry) return toast('Pick Admit Entry or Deny Entry.');
-      saveFlag({ n: fl.edit ? fl.edit.n : 0, type: fl.type, name: p.name, dob: p.dob, note: fl.note, platform: fl.platform, entry: fl.entry, code: fl.edit ? '' : (fl.code || '') }, e.target);
+      saveFlag({ n: fl.edit ? fl.edit.n : 0, type: fl.type, name: p.name, dob: p.dob, note: fl.note, platform: fl.platform, entry: fl.entry, code: fl.edit ? '' : (fl.code || ''), photo: fl.edit ? '' : (fl.photo || '') }, e.target);
     };
   } else if (fl.step === 'saved') {
     const f = fl.saved, c = (FLAG_STYLE[f.type] || FLAG_STYLE.Other)[0];
@@ -987,10 +1194,10 @@ function renderFlag() {
       '<div class="fl-name">' + esc(titleCase(f.name)) + '</div><div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) + ' &middot; ' + f.age + '</div>' +
       flagExtras(f) +
       '<div class="fl-by">' + esc(fl.savedMsg || 'Flag saved. Any gate or Guest Services scanning this ticket or ID will see it.') + '</div></div>' +
-      '<button class="big dark" id="next">Scan next ticket</button></div>';
-    $('#next').onclick = flagStart;
+      '<button class="big dark" id="next">' + nextLabel() + '</button></div>';
+    $('#next').onclick = flagNext;
     clearTimeout(renderFlag.t);
-    renderFlag.t = setTimeout(() => { if (mode === 'flag' && fl && fl.step === 'saved') flagStart(); }, 5000);
+    renderFlag.t = setTimeout(() => { if (mode === 'flag' && fl && fl.step === 'saved') flagNext(); }, 5000);
   }
 }
 
@@ -1006,9 +1213,24 @@ function flagCard(f, i, opts) {
     flagExtras(f) +
     (f.note ? '<div class="fl-note">' + esc(f.note) + '</div>' : '') +
     '<div class="fl-by">Flagged by ' + esc(f.by) + ' &middot; ' + esc(fmtWhenMs(f.at)) + (f.event ? ' &middot; ' + esc(f.event) : '') + '</div>' +
+    (f.photo ? '<button class="bigset" data-photo="' + i + '">' + I.camera + 'View ID photo</button>' : '') +
     (opts.link ? '<button class="bigset" data-link="' + i + '">Add the scanned ticket to this flag</button>' : '') +
     '<div class="row2"><button class="bigset" data-edit="' + i + '">Edit</button><button class="bigset red" data-rm="' + i + '">Remove</button></div></div>';
 }
+/** The ID photo waiting to be saved with a flag, as a small preview. */
+const idThumb = () => '<div class="idthumb"><img src="' + fl.photo + '" alt="">ID photo will be saved with the flag</div>';
+/** Flag card > View ID photo: fetched from Drive through the server (sign-in needed), shown full width. */
+function showIdPhoto(f) {
+  $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet"><button class="close" id="mx">' + I.x + '</button>' +
+    '<div class="mname">' + esc(titleCase(f.name)) + '</div><div class="msub">ID photo · flag #' + f.n + '</div><div id="phbox">' + loadingHtml('Loading photo…') + '</div></div></div>';
+  const close = () => { $('#modal').innerHTML = ''; };
+  $('#mx').onclick = close; $('#ov').onclick = e => { if (e.target.id === 'ov') close(); };
+  call('api_flagPhoto', AUTH.token, f.n).then(r => {
+    const box = $('#phbox'); if (!box) return;
+    box.innerHTML = r.ok ? '<img class="idphoto" src="' + r.photo + '" alt="ID photo">' : '<p class="qs">' + esc(r.msg || 'Could not load the photo.') + '</p>';
+  }).catch(() => { const box = $('#phbox'); if (box) box.innerHTML = '<p class="qs">No connection. Try again.</p>'; });
+}
+
 /** Platform (third party tickets) and whether they were let in, shown under the DOB on a flag card. */
 function flagExtras(f) {
   return (f.platform ? '<div class="fl-plat">Platform: <b>' + esc(f.platform) + '</b></div>' : '') +
@@ -1017,6 +1239,7 @@ function flagExtras(f) {
 function bindCards(m) {
   m.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => { const f = fl.flags[+b.dataset.edit]; fl.edit = f; fl.person = { name: f.name, dob: f.dob }; fl.type = f.type; fl.note = f.note; fl.platform = f.platform || ''; fl.entry = f.entry || ''; fl.step = 'form'; render(); }; });
   m.querySelectorAll('[data-rm]').forEach(b => { b.onclick = () => removeFlag(fl.flags[+b.dataset.rm]); });
+  m.querySelectorAll('[data-photo]').forEach(b => { b.onclick = () => showIdPhoto(fl.flags[+b.dataset.photo]); });
   m.querySelectorAll('[data-link]').forEach(b => { b.onclick = e => saveFlag(Object.assign({}, fl.flags[+b.dataset.link], { code: fl.code }), e.target, 'Ticket added to the flag.'); });
 }
 
@@ -1048,37 +1271,42 @@ function onFlagCode(code) {
     fl = { step: 'checking', code: code, via: 'ticket' }; render();
     call('api_flagCheck', AUTH.token, { code: code }).then(r => {
       busy = false;
-      if (!r.ok) { toast(r.msg || 'Could not check.'); flagStart(); return; }
+      if (!r.ok) { toast(r.msg || 'Could not check.'); flagNext(); return; }
       if (r.flags.length) { fl = { step: 'found', code: code, via: 'ticket', flags: r.flags }; beepBad(); if (navigator.vibrate) navigator.vibrate([120, 80, 120]); }
       else { fl = { step: 'clear', code: code, via: 'ticket' }; beepOk(); }
       render();
-    }).catch(() => { busy = false; toast('No connection. Scan again.'); flagStart(); });
+    }).catch(() => { busy = false; toast('No connection. Scan again.'); flagNext(); });
   } else if (fl.step === 'id') {
     const p = parseAAMVA(code);
-    if (!p) { toast('That barcode is not an ID we can read. Try again, or type name + DOB.'); return; }
+    if (!p) { setGuide(['warn', 'alert', 'Not a US or Canadian ID barcode'], true); return; }
+    // Got it: green check on the camera for a moment, then the "Checking for flags" screen.
+    busy = true;
+    const fr = $('#idf'); if (fr) fr.className = 'frame idframe got';
+    const cam = $('#cam'); if (cam) cam.insertAdjacentHTML('beforeend', '<div class="gotit">' + I.check + '<span>Got it</span></div>');
     if (navigator.vibrate) navigator.vibrate(60);
-    gotPerson(p);
+    beepOk();
+    setTimeout(() => { busy = false; if (mode === 'flag' && fl && fl.step === 'id') gotPerson(p); }, 650);
   }
 }
 
 /** Name + DOB from the ID (scanned or typed): check for a flag on the same person, else go to the form. */
 function gotPerson(p) {
   if (fl.fixing) { fl.fixing = false; fl.person = p; fl.step = 'form'; render(); return; }
-  const code = fl.code || '';
+  const code = fl.code || '', photo = fl.photo || '';
   busy = true;
-  fl = Object.assign(fl, { step: 'checking', person: p }); render();
+  fl = Object.assign(fl, { step: 'checking', via: 'id', person: p }); render();
   call('api_flagCheck', AUTH.token, { name: p.name, dob: p.dob }).then(r => {
     busy = false;
     if (!r.ok) { toast(r.msg || 'Could not check.'); fl.step = 'form'; render(); return; }
-    if (r.flags.length) { fl = { step: 'found', code: code, via: 'id', flags: r.flags, person: p }; beepBad(); if (navigator.vibrate) navigator.vibrate([120, 80, 120]); }
-    else fl = { step: 'form', code: code, person: p, type: '', note: '' };
+    if (r.flags.length) { fl = { step: 'found', code: code, photo: photo, via: 'id', flags: r.flags, person: p }; beepBad(); if (navigator.vibrate) navigator.vibrate([120, 80, 120]); }
+    else fl = { step: 'form', code: code, photo: photo, person: p, type: '', note: '' };
     render();
   }).catch(() => { busy = false; toast('No connection. Try again.'); fl.step = 'form'; render(); });
 }
 
 function saveFlag(op, btn, msg) {
   if (btn) btn.disabled = true;
-  call('api_flagSave', AUTH.token, { n: op.n || 0, type: op.type, name: op.name, dob: op.dob, note: op.note || '', platform: op.platform || '', entry: op.entry || '', code: op.code || '' }).then(r => {
+  call('api_flagSave', AUTH.token, { n: op.n || 0, type: op.type, name: op.name, dob: op.dob, note: op.note || '', platform: op.platform || '', entry: op.entry || '', code: op.code || '', photo: op.photo || '' }).then(r => {
     if (!r.ok) { toast(r.msg || 'Not saved.'); if (btn) btn.disabled = false; return; }
     fl = { step: 'saved', saved: r.flag, savedMsg: msg || '' };
     beepOk(); render();
