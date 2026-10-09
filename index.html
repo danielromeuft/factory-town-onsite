@@ -238,6 +238,11 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 /* ID scan: a wide box shaped like the barcode alone. It reads fastest when the barcode fills the box edge to edge. */
 .cam.bccam{aspect-ratio:3/2}
 .cam .frame.bcframe{inset:auto;left:3%;right:3%;top:50%;aspect-ratio:3.4;border-radius:16px;transform:translateY(-50%);transition:border-color .25s,box-shadow .25s}
+/* Scanner line sweeping across the barcode box while the reader works; green once the barcode is placed well. */
+.cam .frame.bcframe.scanning::after{content:"";position:absolute;top:10%;bottom:10%;left:2%;width:4px;border-radius:4px;background:#fff;box-shadow:0 0 14px 3px rgba(255,255,255,.75);animation:sweep 1.3s ease-in-out infinite alternate}
+.cam .frame.bcframe.scanning.good::after{background:#4ade80;box-shadow:0 0 16px 4px rgba(74,222,128,.85)}
+.cam .frame.bcframe.got::after{display:none}
+@keyframes sweep{to{left:calc(98% - 4px)}}
 .cam .frame.warn{border-color:#facc15}
 .cam .frame.good{border-color:#22c55e;animation:idpulse 1s ease-in-out infinite}
 .cam .frame.got{border-color:#22c55e;border-width:8px}
@@ -367,7 +372,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '17';
+const APP_VERSION = '18';
 
 /* ============ icons ============ */
 const I = {
@@ -984,7 +989,7 @@ function idAdvice(a) {
   if (a.edges) return ['warn', 'further', 'Move back a little'];
   if (a.wide < 0.6) return ['warn', 'closer', 'Move closer'];   // barcode under about 70% of the box
   if (a.peak < ID_BUSY * 2) return ['warn', 'still', 'Hold still'];
-  return ['good', '', 'Reading ID…'];
+  return ['good', '', 'Reading barcode… hold still'];
 }
 /** Shows advice on the camera. A new message has to hold for two frames, so it does not flicker. */
 let gCur = '', gPend = '', gPendN = 0;
@@ -1043,6 +1048,7 @@ async function readId() {
   if (!zxReady) { setGuide(['', 'spin', 'Getting the ID reader ready…'], true); loadZX().catch(() => setGuide(['warn', 'alert', 'ID reader did not load. Take a photo instead.'], true)); return ''; }
   const look = idLook(videoBox(fr, 0.08, 0.15));   // a little past the box, so a barcode spilling over it shows
   setGuide(idAdvice(look), !gCur || gCur.indexOf('|spin|') >= 0);   // first live frame replaces "Starting camera" at once
+  fr.classList.add('scanning');   // the sweeping scanner line: shows the reader is working whatever the advice says
   if (fl.idSince && Date.now() - fl.idSince > 12000) { const p = $('#idPhoto'); if (p && !p.classList.contains('hl')) p.classList.add('hl'); }
   idShowDiag(look);
   if (idDecoding && Date.now() - idStat.start < 6000) return '';   // a read that hangs is given up on after 6 s
@@ -1050,7 +1056,10 @@ async function readId() {
   try {
     // Tries cycle through three sizes: as is, and enlarged 1.5x and 1.75x. Enlarging read a real license frame
     // that failed at its own size (10/8: the reader samples each bar more evenly when it is bigger).
-    const t = ++idTries, sc = [1, 1.5, 1.75][t % 3], u = Math.floor(t / 3);
+    // When the barcode already fills the box it is big enough: skip the slow enlarged tries (one in six as a backup),
+    // which about doubles the tries per second right when a read is most likely.
+    const t = ++idTries, full = look.wide >= 0.75;
+    const sc = full ? (t % 6 === 0 ? 1.5 : 1) : [1, 1.5, 1.75][t % 3], u = full ? t : Math.floor(t / 3);
     const b = videoBox(fr, 0.06, 0.5), k = Math.min(1, 2400 / b.w) * sc, w = Math.round(b.w * k), h = Math.round(b.h * k);
     idCv = idCv || document.createElement('canvas'); idCv.width = w; idCv.height = h;
     const g = idCv.getContext('2d', { willReadFrequently: true });
