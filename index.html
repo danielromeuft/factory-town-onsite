@@ -249,7 +249,11 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 @keyframes gpop{0%{transform:translateX(-50%) scale(.85);opacity:.4}100%{transform:translateX(-50%) scale(1);opacity:1}}
 .guide .spin,.loadspin{width:24px;height:24px;border-radius:50%;border:3.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
-.cam .gotit{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(21,128,61,.55);color:#fff;font-size:30px;font-weight:900;animation:gpop .3s ease-out}
+.cam .gotit{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(21,128,61,.55);color:#fff;font-size:30px;font-weight:900;animation:gotin .3s ease-out}
+/* "Got it" fills the camera, so it only fades and grows in place (gpop also shifts sideways to centre the pill). */
+.cam .gotit svg,.cam .gotit span{animation:gotgrow .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes gotin{from{opacity:0}to{opacity:1}}
+@keyframes gotgrow{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 .cam .gotit svg{width:84px;height:84px}
 .cam .shot{position:absolute;inset:0;background:#fff;animation:flash .35s ease-out forwards}
 @keyframes flash{to{opacity:0}}
@@ -363,7 +367,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '14';
+const APP_VERSION = '15';
 
 /* ============ icons ============ */
 const I = {
@@ -704,6 +708,28 @@ function pickIdCamera(hi) {
   }).catch(() => '');
 }
 function showLive() { const c = $('#cam'); if (c) c.classList.add('live'); }
+/**
+ * Resolves once the camera is really delivering the picture we asked for: the same frame size four checks in a
+ * row (100 ms apart) and, where the camera reports it, the zoom already applied. The iPhone accepts a zoom request
+ * before it shows, and its first frames come in at another size (the black bars), so a fixed wait was not enough.
+ * Gives up after 2.5 s and shows the picture anyway.
+ */
+function whenSettled(s) {
+  return new Promise(done => {
+    let last = '', same = 0, n = 0;
+    const tick = () => {
+      if (!video || stream !== s || ++n > 25) return done();
+      let z = 0; try { z = s.getVideoTracks()[0].getSettings().zoom || 0; } catch (e) {}
+      const zoomOk = !camZoom || !z || Math.abs(z - camZoom) < 0.05;
+      const key = video.videoWidth + 'x' + video.videoHeight + ':' + z;
+      same = video.videoWidth && zoomOk && key === last ? same + 1 : 0;
+      last = key;
+      if (same >= 4) return setTimeout(done, 150);
+      setTimeout(tick, 100);
+    };
+    tick();
+  });
+}
 function startCamera() {
   video = $('#vid');
   if (!video) return;
@@ -734,7 +760,7 @@ function startCamera() {
         if (camFocus || camZoom || torchState) ready = tr.applyConstraints(camConstraints()).catch(() => { camZoom = 0; torchState = ''; });
         const b = $('#idFlash'); if (b) { b.hidden = !torchState; b.innerHTML = I.sun + 'Flash ' + (torchState || 'off'); }
       } catch (e) {}
-      ready.then(() => setTimeout(showLive, 250));
+      ready.then(() => whenSettled(s)).then(showLive);
       loopScan();
     })
     .catch(err => {
