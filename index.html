@@ -377,7 +377,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '20';
+const APP_VERSION = '21';
 
 /* ============ icons ============ */
 const I = {
@@ -1029,16 +1029,6 @@ function setGuide(a, now) {
   const fr = $('#idf'); if (fr) { fr.classList.toggle('warn', a[0] === 'warn'); fr.classList.toggle('good', a[0] === 'good'); }
 }
 
-/** Grayscale + a light sharpen (center minus neighbours), written back as RGB for the reader. */
-function sharpenGray(id) {
-  const W = id.width, H = id.height, d = id.data, L = new Float32Array(W * H);
-  for (let i = 0; i < W * H; i++) L[i] = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
-  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
-    const i = y * W + x, v = L[i] + 0.8 * (4 * L[i] - L[i - 1] - L[i + 1] - L[i - W] - L[i + W]);
-    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v < 0 ? 0 : v > 255 ? 255 : v;
-  }
-  return id;
-}
 
 /**
  * Settings > Developer > ID scan diagnostics (developer codes only): live numbers under the camera, and
@@ -1049,19 +1039,25 @@ const idStat = { start: 0, tries: 0, ms: 0, crop: '', found: 0, err: '', last: '
 /**
  * Developer > ID scan stats (this device): for each variation the reader cycles through (size, tilt step, sharpen,
  * black/white method), how many tries had a barcode in view and how many of those read it. To decide what to cut.
- * Stored as { '<dimension> <value>': [tries, reads], _reads, _secs }.
+ * Stored as { '<dimension> <value>': [tries, reads], _reads, _secs, _seenSecs }. A new key per rotation (v21: 'idStats2'),
+ * so counts from an older rotation never mix in.
  */
+const ID_STATS = 'idStats2';
 function idStatAdd(v, read) {
   if (!AUTH || !AUTH.dev) return;
-  const s = store.get('idStats') || {};
+  const s = store.get(ID_STATS) || {};
   Object.keys(v).forEach(k => { const e = s[k + ' ' + v[k]] = s[k + ' ' + v[k]] || [0, 0]; e[0]++; if (read) e[1]++; });
-  if (read) { s._reads = (s._reads || 0) + 1; s._secs = (s._secs || 0) + (Date.now() - (fl.idSince || Date.now())) / 1000; }
-  store.set('idStats', s);
+  if (read) {
+    s._reads = (s._reads || 0) + 1;
+    s._secs = (s._secs || 0) + (Date.now() - (fl.idSince || Date.now())) / 1000;               // from opening the scanner
+    s._seenSecs = (s._seenSecs || 0) + (Date.now() - (fl.firstSeen || Date.now())) / 1000;   // from the barcode first being seen
+  }
+  store.set(ID_STATS, s);
 }
 function idStatsHtml() {
-  const s = store.get('idStats') || {}, keys = Object.keys(s).filter(k => k[0] !== '_').sort();
+  const s = store.get(ID_STATS) || {}, keys = Object.keys(s).filter(k => k[0] !== '_').sort();
   if (!keys.length) return '<div class="msub" style="margin:8px 4px 0;font-size:15px">No scans counted yet. Scan some IDs with diagnostics on.</div>';
-  return '<div class="msub" style="margin:8px 4px 4px;font-size:15px"><b>' + (s._reads || 0) + '</b> reads, average <b>' + ((s._secs || 0) / Math.max(1, s._reads || 0)).toFixed(1) + ' s</b> from opening the scanner.</div>' +
+  return '<div class="msub" style="margin:8px 4px 4px;font-size:15px"><b>' + (s._reads || 0) + '</b> reads, average <b>' + ((s._secs || 0) / Math.max(1, s._reads || 0)).toFixed(1) + ' s</b> from opening the scanner, <b>' + ((s._seenSecs || 0) / Math.max(1, s._reads || 0)).toFixed(1) + ' s</b> from the barcode first being seen.</div>' +
     keys.map(k => { const [n, r] = s[k]; return '<div class="setrow" style="padding:8px 4px;font-size:16px"><span>' + esc(k) + '</span><b>' + r + ' of ' + n + ' · ' + (n ? (100 * r / n).toFixed(1) : '0') + '%</b></div>'; }).join('');
 }
 function idShowDiag(look) {
@@ -1098,36 +1094,32 @@ async function readId() {
   if (idDecoding && Date.now() - idStat.start < 6000) return '';   // a read that hangs is given up on after 6 s
   idDecoding = true; idStat.start = Date.now();
   try {
-    // Tries cycle through three sizes: as is, and enlarged 1.5x and 1.75x. Enlarging read a real license frame
-    // that failed at its own size (10/8: the reader samples each bar more evenly when it is bigger).
-    // When the barcode already fills the box it is big enough: skip the slow enlarged tries (one in six as a backup),
-    // which about doubles the tries per second right when a read is most likely.
-    const t = ++idTries, full = look.wide >= 0.75;
-    const sc = full ? (t % 6 === 0 ? 1.5 : 1) : [1, 1.5, 1.75][t % 3], u = full ? t : Math.floor(t / 3);
+    // The rotation is set by Daniel's stats (10/8, 52 reads on his iPhone, rate = reads per try with a barcode in
+    // view): sharpening 6% vs 23% without (dropped), enlarged 1.75x 10% (dropped), 1.5x 20% and 1x 13% (alternate),
+    // tilt as measured 27% vs 8 to 12% for the steps around it (measured 3 tries in 5, +1/-1 as backup, +2 dropped),
+    // black/white local 15% vs global 12% (global 1 try in 3 as backup).
+    // (A mirrored picture is fine: tested 10/8, the reader reads a mirrored barcode as well as a normal one.)
+    const t = ++idTries, sc = t % 2 ? 1.5 : 1;
     const b = videoBox(fr, 0.06, 0.5), k = Math.min(1, 2400 / b.w) * sc, w = Math.round(b.w * k), h = Math.round(b.h * k);
     idCv = idCv || document.createElement('canvas'); idCv.width = w; idCv.height = h;
     const g = idCv.getContext('2d', { willReadFrequently: true });
     g.imageSmoothingQuality = 'high';
     // The reader only handles a barcode within about a degree of level, so a tilted card is turned level first.
-    // Tries step through the measured tilt, a degree either side and two further out (the measure runs a little low),
-    // each plain and sharpened (sharpened reads farther away).
-    // (A mirrored picture is fine: tested 10/8, the reader reads a mirrored barcode as well as a normal one.)
-    const s = look.tilt < 0 ? -1 : 1, tilt = look.tilt + [0, s, -s, 2 * s][u % 4];
+    const s = look.tilt < 0 ? -1 : 1, step = [0, 0, 1, 0, -1][t % 5], tilt = look.tilt + step * s;
     g.save(); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.translate(w / 2, h / 2);
     if (Math.abs(tilt) >= 0.5) g.rotate(-tilt * Math.PI / 180);
     g.drawImage(video, b.x, b.y, b.w, b.h, -w / 2, -h / 2, w, h); g.restore();
-    let img = g.getImageData(0, 0, w, h);
-    if (Math.floor(u / 4) % 2) img = sharpenGray(img);
-    // Every third round of eight uses the other way of telling black from white (better on uneven light).
-    const binarizer = Math.floor(u / 8) % 3 === 2 ? 'GlobalHistogram' : 'LocalAverage';
+    const img = g.getImageData(0, 0, w, h);
+    const binarizer = t % 3 === 2 ? 'GlobalHistogram' : 'LocalAverage';
     const res = await ZXingWASM.readBarcodes(img, { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: false, maxNumberOfSymbols: 1, textMode: 'Plain', binarizer, returnErrors: true });
-    if (res.length) idSeen = Date.now();   // a barcode is in view, even if this try did not read it
+    if (res.length) { idSeen = Date.now(); if (fl && !fl.firstSeen) fl.firstSeen = idSeen; }   // a barcode is in view, even if this try did not read it
     const hit = res.find(x => x.isValid && x.text);
     Object.assign(idStat, { tries: t, ms: Date.now() - idStat.start, crop: w + 'x' + h, found: res.length, err: '' });
     // Which variation did it: counted only on tries with a barcode in view, so the rates compare like with like.
-    const v = { size: sc + 'x', tilt: ['measured', '+1', '-1', '+2'][u % 4], sharpen: Math.floor(u / 4) % 2 ? 'yes' : 'no', 'black/white': binarizer === 'GlobalHistogram' ? 'global' : 'local' };
+    const v = { size: sc + 'x', tilt: step ? (step > 0 ? '+1' : '-1') : 'measured', 'black/white': binarizer === 'GlobalHistogram' ? 'global' : 'local' };
     if (res.length) idStatAdd(v, !!hit);
-    if (hit) idStat.last = v.size + ' · tilt ' + v.tilt + ' · sharpen ' + v.sharpen + ' · ' + v['black/white'] + ' · ' + ((Date.now() - (fl.idSince || Date.now())) / 1000).toFixed(1) + ' s';
+    if (hit) idStat.last = v.size + ' · tilt ' + v.tilt + ' · ' + v['black/white'] + ' · ' + ((Date.now() - (fl.idSince || Date.now())) / 1000).toFixed(1) + ' s open, ' +
+      ((Date.now() - (fl.firstSeen || Date.now())) / 1000).toFixed(1) + ' s from barcode seen';
     if (hit && mode === 'flag' && fl && fl.step === 'id' && !busy) onFlagCode(hit.text);
   } catch (e) { idStat.err = String((e && e.message) || e).slice(0, 80); } finally { idDecoding = false; }
   return '';
@@ -1676,7 +1668,7 @@ function openDeveloper(back) {
     '<button class="bigset" id="dStatsReset">Reset ID scan stats</button>' +
     '<button class="bigset" id="dBack">Back to Settings</button></div></div>';
   $('#dDiag').onclick = () => { store.set('devIdDiag', idDiag() ? null : true); if (mode === 'flag') render(); openDeveloper(back); };
-  $('#dStatsReset').onclick = () => confirmBox('Reset ID scan stats?', 'The counts on this device start again from zero.', 'Reset', 'red', () => { store.set('idStats', null); openDeveloper(back); });
+  $('#dStatsReset').onclick = () => confirmBox('Reset ID scan stats?', 'The counts on this device start again from zero.', 'Reset', 'red', () => { store.set(ID_STATS, null); openDeveloper(back); });
   $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
   $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
   $('#dBack').onclick = back;
