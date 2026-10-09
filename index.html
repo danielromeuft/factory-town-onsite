@@ -387,7 +387,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '26';
+const APP_VERSION = '28';
 
 /* ============ icons ============ */
 const I = {
@@ -463,7 +463,7 @@ const store = {
   set(k, v) { try { v == null ? localStorage.removeItem('ftos.' + k) : localStorage.setItem('ftos.' + k, JSON.stringify(v)); } catch (e) {} },
 };
 let AUTH = store.get('auth');   // { token, name, dev }
-/** Sell and Scan are hidden (10/8). A developer code can turn them back on for this device in Settings > Developer. */
+/** Sell and Scan are hidden (10/8). A developer code can turn them back on for this device in Settings > Developer Settings. */
 const sellScanOn = () => !!(AUTH && AUTH.dev && store.get('devSellScan'));
 
 function signedOut() {
@@ -1089,7 +1089,7 @@ function setGuide(a, now) {
 
 
 /**
- * Settings > Developer > ID scan diagnostics (developer codes only): live numbers under the camera, and
+ * Settings > Developer Settings > ID scan diagnostics (developer codes only): live numbers under the camera, and
  * "Send frame" saves the exact picture the reader sees to Drive (Flag ID Photos/Scan tests) to debug real IDs.
  */
 const idDiag = () => !!(AUTH && AUTH.dev && store.get('devIdDiag'));
@@ -1715,8 +1715,12 @@ function promptBox(title, sub, value, type, okText, onOk, color) {
 
 /* ============ settings ============ */
 function openSettings() {
+  // The server reply (event, version) redraws Settings only if Settings is still the open screen: tapping Developer
+  // Settings before it arrived used to get covered by the redraw (10/9). lastInfo keeps the reply for Back.
+  let lastInfo = null;
   const draw = info => {
-    $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
+    if (info) lastInfo = info;
+    $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet" id="setSheet">' +
       '<button class="close" id="mx">' + I.x + '</button><div class="mname">Settings</div><div class="msub">Factory Town OnSite</div>' +
       '<div class="setrow"><span>Signed in as</span><b>' + esc(AUTH ? AUTH.name : 'Nobody') + '</b></div>' +
       '<div class="setrow"><span>Event</span><b>' + esc(info ? (info.event || 'Not set') : '…') + '</b></div>' +
@@ -1724,18 +1728,18 @@ function openSettings() {
       '<div class="setrow"><span>Emails left today</span><b style="' + (info && info.emailsLeft < 15 ? 'color:var(--red)' : '') + '">' + (info ? info.emailsLeft : '…') + '</b></div>' +
       '<div class="setrow"><span>Version</span><b>App ' + esc(APP_VERSION) + (info ? ' &middot; Server ' + esc(info.build) : '') + '</b></div>' +
       (AUTH ? '<button class="bigset" id="sEvent">Refresh Event</button><div class="msub" style="margin:8px 4px 0;font-size:15px">Reads the current event from the Master Timesheet. A new event gets its own flags page; flags from past events stay active.</div>' : '') +
-      (AUTH && AUTH.dev ? '<button class="bigset" id="sDev">Developer</button>' : '') +
+      (AUTH && AUTH.dev ? '<button class="bigset" id="sDev">Developer Settings</button>' : '') +
       (mode !== 'home' ? '<button class="bigset" id="sHome">Back to Home</button>' : '') +
       (AUTH ? '<button class="bigset red" id="sOut">Sign out</button>' : '') +
       '</div></div>';
-    const dv = $('#sDev'); if (dv) dv.onclick = () => openDeveloper(() => draw(info));
+    const dv = $('#sDev'); if (dv) dv.onclick = () => openDeveloper(() => draw(lastInfo));
     $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
     $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
     const h = $('#sHome'); if (h) h.onclick = () => { $('#modal').innerHTML = ''; goHome(); };
     const ev = $('#sEvent'); if (ev) ev.onclick = () => {
       ev.disabled = true; ev.textContent = 'Reading the Master Timesheet…';
       call('api_refreshEvent', AUTH.token).then(r => { toast(r.msg || (r.ok ? 'Done' : 'Could not refresh'), 5000); return call('api_info', AUTH.token); })
-        .then(r => { if (r && r.ok && $('#mx')) draw(r); }).catch(() => { toast('No connection. Try again.'); if ($('#sEvent')) draw(null); });
+        .then(r => { if (r && r.ok && $('#setSheet')) draw(r); }).catch(() => { toast('No connection. Try again.'); if ($('#sEvent')) draw(null); });
     };
     const o = $('#sOut'); if (o) o.onclick = () => confirmBox('Sign out ' + AUTH.name + '?', 'This device will ask for a code next time.', 'Sign out', 'red', () => {
       call('api_logout', AUTH.token).catch(() => {});
@@ -1743,14 +1747,14 @@ function openSettings() {
     });
   };
   draw(null);
-  if (AUTH) call('api_info', AUTH.token).then(r => { if (r.ok) setDev(r.dev); if (r.ok && $('#mx')) draw(r); }).catch(() => {});
+  if (AUTH) call('api_info', AUTH.token).then(r => { if (r.ok) setDev(r.dev); if (r.ok) { lastInfo = r; if ($('#setSheet')) draw(r); } }).catch(() => {});
 }
 
-/** Settings > Developer (developer codes only): turn the retired Sell and Scan back on for this device. */
+/** Settings > Developer Settings (developer codes only): Sell and Scan, ID scan diagnostics and stats, Reset flags. */
 function openDeveloper(back) {
   const on = sellScanOn();
   $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
-    '<button class="close" id="mx">' + I.x + '</button><div class="mname">Developer</div><div class="msub">Only developer codes see this.</div>' +
+    '<button class="close" id="mx">' + I.x + '</button><div class="mname">Developer Settings</div><div class="msub">Only developer codes see this.</div>' +
     '<div class="setrow"><span>Sell and Scan on Home</span><b style="color:' + (on ? 'var(--green)' : 'var(--muted)') + '">' + (on ? 'On' : 'Off') + '</b></div>' +
     '<button class="bigset' + (on ? '' : ' green') + '" id="dSS">' + (on ? 'Hide Sell and Scan' : 'Show Sell and Scan') + '</button>' +
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">This device only. They stay hidden for everyone else, and hide again if someone else signs in here.</div>' +
@@ -1759,8 +1763,33 @@ function openDeveloper(back) {
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">Shows camera numbers on the ID scan screen and a Send frame button that saves what the reader sees to Drive.</div>' +
     '<div class="setrow" style="margin-top:14px"><span>ID scan stats (this device)</span><b></b></div>' + idStatsHtml() +
     '<button class="bigset" id="dStatsReset">Reset ID scan stats</button>' +
+    '<div class="setrow" style="margin-top:14px"><span>Flags</span><b></b></div>' +
+    '<button class="bigset" id="dFlagsRemove">Remove flags</button>' +
+    '<div class="msub" style="margin:8px 4px 0;font-size:15px">Marks every active flag for this event Removed. The rows stay on the sheet, with a note in History.</div>' +
+    '<button class="bigset red" id="dFlagsWipe">Reset flags</button>' +
+    '<div class="msub" style="margin:8px 4px 0;font-size:15px">Empties this event\'s Flags page, active and removed, for a clean sheet after a day of testing. Flags from past events are not touched.</div>' +
     '<button class="bigset" id="dBack">Back to Settings</button></div></div>';
   $('#dDiag').onclick = () => { store.set('devIdDiag', idDiag() ? null : true); if (mode === 'flag') render(); openDeveloper(back); };
+  // Remove flags / Reset flags: ask the server how many it would touch, confirm with that number, then do it.
+  const flagsClear = (how, btn) => {
+    const wipe = how === 'wipe';
+    btn.disabled = true;
+    call('api_flagsClear', AUTH.token, how, true).then(r => {
+      btn.disabled = false;
+      if (!r.ok) return toast(r.msg || 'Could not check the flags.');
+      const ev = r.event || 'this event', n = r.count, s = n === 1 ? '' : 's';
+      if (!n) return toast(wipe ? 'The Flags page for ' + ev + ' is already empty.' : 'No active flags for ' + ev + '.');
+      confirmBox(wipe ? 'Reset flags: delete all ' + n + ' flag' + s + '?' : 'Remove ' + n + ' active flag' + s + '?',
+        wipe ? 'Empties the Flags page for ' + ev + ', active and removed. Only the sheet\'s version history can bring them back.'
+          : 'Every active flag for ' + ev + '. They stay on the sheet as Removed.',
+        wipe ? 'Delete all' : 'Remove all', 'red', () => {
+          call('api_flagsClear', AUTH.token, how, false).then(x => toast(x.ok ? x.count + ' flag' + (x.count === 1 ? '' : 's') + (wipe ? ' deleted. The Flags page is empty.' : ' removed.') : (x.msg || 'Nothing changed.'), 4500))
+            .catch(() => toast('No connection. Try again.'));
+        });
+    }).catch(() => { btn.disabled = false; toast('No connection. Try again.'); });
+  };
+  $('#dFlagsRemove').onclick = e => flagsClear('remove', e.currentTarget);
+  $('#dFlagsWipe').onclick = e => flagsClear('wipe', e.currentTarget);
   $('#dStatsReset').onclick = () => confirmBox('Reset ID scan stats?', 'The counts on this device start again from zero.', 'Reset', 'red', () => { store.set(ID_STATS, null); openDeveloper(back); });
   $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
   $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
