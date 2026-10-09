@@ -387,7 +387,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '25';
+const APP_VERSION = '26';
 
 /* ============ icons ============ */
 const I = {
@@ -1296,8 +1296,9 @@ function renderFlag() {
     bindFlash();
     if (idDiag()) { $('.scanfoot').insertAdjacentHTML('afterbegin', '<button class="fl-alt" id="idSend">Send frame</button>'); $('#idSend').onclick = e => sendIdFrame(e.currentTarget); }
     $('#idPhoto').onclick = () => { fl.step = 'photo'; render(); };
-    $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.manMode = 'search'; fl.back = 'id'; fl.step = 'manual'; render(); };
-    $('#bk').onclick = flagStart;
+    // Adding guest details to a flag form: Type name + DOB asks for the full name and DOB, Back returns to the form.
+    $('#manual').onclick = () => { fl.man = { name: '', dob: '' }; fl.manMode = fl.fixing ? 'flag' : 'search'; fl.back = fl.fixing ? '' : 'id'; fl.step = 'manual'; render(); };
+    $('#bk').onclick = () => { if (fl.fixing) { fl.fixing = false; fl.step = 'form'; render(); } else flagStart(); };
     startCamera();
   } else if (fl.step === 'photo') {
     setTitle('Flag · ID photo');
@@ -1360,10 +1361,11 @@ function renderFlag() {
   } else if (fl.step === 'clear') {
     setTitle('Flag · Not flagged');
     m.innerHTML = '<div class="step"><div class="fl-clear">' + I.check + '<div><b>No flag on this ticket</b><span>Checked just now.</span></div></div>' +
-      '<button class="big red" id="flagIt">' + I.alert + 'Flag this person</button>' +
-      '<p class="qs center" style="margin-top:10px">Next you\'ll scan their ID (or type name + DOB).</p>' +
+      '<button class="big red" id="flagIt">' + I.alert + 'Flag this ticket</button>' +
+      '<p class="qs center" style="margin-top:10px">Next you\'ll pick the flag type. Adding the guest\'s details is optional.</p>' +
       '<button class="big ghost" id="next">' + nextLabel() + '</button></div>';
-    $('#flagIt').onclick = () => { fl.step = 'id'; render(); };
+    // Straight to the flag details for this ticket (10/9, Daniel); the guest can be added from there.
+    $('#flagIt').onclick = () => { fl = { step: 'form', code: fl.code, via: 'ticket', person: null, type: '', note: '', platform: '', entry: '' }; render(); };
     $('#next').onclick = flagNext;
   } else if (fl.step === 'results') {
     const q = fl.query, n = fl.flags.length;
@@ -1400,20 +1402,24 @@ function renderFlag() {
     if ($('#newOne')) $('#newOne').onclick = () => { fl.edit = null; fl.type = ''; fl.note = ''; fl.platform = ''; fl.entry = ''; fl.step = 'form'; render(); };
     $('#next').onclick = flagNext;
   } else if (fl.step === 'form') {
-    const p = fl.person, age = ageOf(p.dob), under = age < 21;
-    if (!fl.type && !fl.edit) fl.type = under ? 'Under 21 VIP' : '';
+    // person is null for a ticket-only flag (Flag this ticket): guest details are optional and added from here.
+    const p = fl.person, age = p ? ageOf(p.dob) : null, under = !!p && age < 21;
+    if (!fl.type && !fl.edit && under) fl.type = 'Under 21 VIP';
     const third = fl.type === 'Third Party Ticket';
     setTitle(fl.edit ? 'Edit flag #' + fl.edit.n : 'Flag · New');
-    m.innerHTML = '<div class="step"><div class="q">' + (fl.edit ? 'Edit flag' : 'Flag this person') + '</div>' +
-      '<div class="summary"><div class="tr"><span>Name</span><b>' + esc(p.name) + '</b></div>' +
-      '<div class="tr"><span>Date of birth</span><b>' + esc(fmtDob(p.dob)) + '</b></div>' +
-      '<div class="tr"><span>Age</span><b style="color:' + (under ? 'var(--red)' : 'var(--ink)') + '">' + age + (under ? ' &middot; UNDER 21' : '') + '</b></div>' +
+    m.innerHTML = '<div class="step"><div class="q">' + (fl.edit ? 'Edit flag' : p ? 'Flag this person' : 'Flag this ticket') + '</div>' +
+      '<div class="summary">' + (p
+        ? '<div class="tr"><span>Name</span><b>' + esc(p.name) + '</b></div>' +
+          '<div class="tr"><span>Date of birth</span><b>' + esc(fmtDob(p.dob)) + '</b></div>' +
+          '<div class="tr"><span>Age</span><b style="color:' + (under ? 'var(--red)' : 'var(--ink)') + '">' + age + (under ? ' &middot; UNDER 21' : '') + '</b></div>'
+        : '<div class="tr"><span>Guest</span><b style="color:var(--muted)">Not added</b></div>') +
       (fl.code && !fl.edit ? '<div class="tr"><span>Ticket</span><b>Scanned</b></div>' : '') + '</div>' +
       (fl.photo && !fl.edit ? '<div style="margin-top:12px">' + idThumb() + '</div>' : '') +
-      '<button class="linkbtn" id="fix" style="margin-top:8px">Fix name or date of birth</button>' +
+      (p ? '<button class="linkbtn" id="fix" style="margin-top:8px">Fix name or date of birth</button>'
+        : '<button class="bigset" id="addGuest" style="margin-top:12px">' + I.idcard + 'Add guest details (optional)</button>') +
       '<div class="field"><span>Flag type</span></div><div class="fl-types">' +
       FLAG_TYPES.map(t => {
-        const off = t === 'Under 21 VIP' && !under;
+        const off = t === 'Under 21 VIP' && !!p && !under;
         return '<button class="fl-t' + (fl.type === t ? ' on' : '') + '" data-t="' + esc(t) + '" style="--fc:' + FLAG_STYLE[t][0] + '"' + (off ? ' disabled' : '') + '>' + esc(t) + (off ? '<small>They are 21+</small>' : '') + '</button>';
       }).join('') + '</div>' +
       (third ? '<label class="field"><span>Platform (required)</span><input id="fplat" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="CrowdVolt, Ticketmaster, StubHub…" value="' + esc(fl.platform || '') + '"></label>' : '') +
@@ -1428,7 +1434,10 @@ function renderFlag() {
     if (plat) plat.oninput = keep;
     m.querySelectorAll('.fl-t').forEach(b => { b.onclick = () => { keep(); fl.type = b.dataset.t; render(); if (fl.type === 'Third Party Ticket' && !fl.platform) $('#fplat').focus(); }; });
     m.querySelectorAll('.fl-e').forEach(b => { b.onclick = () => { keep(); fl.entry = b.dataset.e; render(); }; });
-    $('#fix').onclick = () => { keep(); const [y, mo, d] = p.dob.split('-'); fl.man = { name: p.name, dob: mo + d + y }; fl.manMode = 'flag'; fl.back = ''; fl.fixing = true; fl.step = 'manual'; render(); };
+    if ($('#fix')) $('#fix').onclick = () => { keep(); const [y, mo, d] = p.dob.split('-'); fl.man = { name: p.name, dob: mo + d + y }; fl.manMode = 'flag'; fl.back = ''; fl.fixing = true; fl.step = 'manual'; render(); };
+    // Add guest details: the ID scanner (with Type name + DOB and Take photo instead), then back here with the
+    // guest filled in; type, note and entry picked so far stay (same fl, fixing = come back to this form).
+    if ($('#addGuest')) $('#addGuest').onclick = () => { keep(); fl.fixing = true; fl.idSince = 0; fl.step = 'id'; render(); };
     $('#cx').onclick = flagStart;
     $('#save').onclick = e => {
       keep();
@@ -1437,13 +1446,13 @@ function renderFlag() {
       if (third && !fl.platform) return toast('Type the ticket platform.');
       if (fl.type === 'Other' && !fl.note) return toast('Add a note for "Other".');
       if (!fl.entry) return toast('Pick Admit Entry or Deny Entry.');
-      saveFlag({ n: fl.edit ? fl.edit.n : 0, type: fl.type, name: p.name, dob: p.dob, note: fl.note, platform: fl.platform, entry: fl.entry, code: fl.edit ? '' : (fl.code || ''), photo: fl.edit ? '' : (fl.photo || '') }, e.target);
+      saveFlag({ n: fl.edit ? fl.edit.n : 0, type: fl.type, name: p ? p.name : '', dob: p ? p.dob : '', note: fl.note, platform: fl.platform, entry: fl.entry, code: fl.edit ? '' : (fl.code || ''), photo: fl.edit ? '' : (fl.photo || '') }, e.target);
     };
   } else if (fl.step === 'saved') {
     const f = fl.saved, c = (FLAG_STYLE[f.type] || FLAG_STYLE.Other)[0];
     setTitle('Flag saved');
     m.innerHTML = '<div class="step"><div class="fl-card" style="--fc:' + c + '"><div class="fl-type">' + esc(f.type) + '</div>' +
-      '<div class="fl-name">' + esc(titleCase(f.name)) + '</div><div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) + ' &middot; ' + f.age + '</div>' +
+      flagWho(f, false) +
       flagExtras(f) +
       '<div class="fl-by">' + esc(fl.savedMsg || 'Flag saved. Any gate or Guest Services scanning this ticket or ID will see it.') + '</div></div>' +
       '<button class="big dark" id="next">' + nextLabel() + '</button></div>';
@@ -1453,6 +1462,13 @@ function renderFlag() {
   }
 }
 
+/** Name and date of birth on a flag card, or a note that only the ticket was flagged (guest details not added). */
+function flagWho(f, now) {
+  if (!f.name) return '<div class="fl-name">Ticket flag</div><div class="fl-dob">Guest details not added</div>';
+  return '<div class="fl-name">' + esc(titleCase(f.name)) + '</div><div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) +
+    (f.age != null ? ' &middot; ' + (now ? '<b>' + f.age + ' now</b>' : f.age) : '') + '</div>';
+}
+
 /** One flag as a colored card. opts.match: show how a search matched; opts.link: offer to add the scanned ticket. */
 const MATCH_TEXT = { both: 'Name + DOB match', name: 'Name match', dob: 'DOB match' };
 function flagCard(f, i, opts) {
@@ -1460,8 +1476,7 @@ function flagCard(f, i, opts) {
   return '<div class="fl-card" style="--fc:' + c + '">' +
     (opts.match && f.match ? '<div class="fl-match">' + esc(MATCH_TEXT[f.match] || '') + '</div>' : '') +
     '<div class="fl-type">' + esc(f.type) + '</div>' +
-    '<div class="fl-name">' + esc(titleCase(f.name)) + '</div>' +
-    '<div class="fl-dob">DOB ' + esc(fmtDob(f.dob)) + (f.age != null ? ' &middot; <b>' + f.age + ' now</b>' : '') + '</div>' +
+    flagWho(f, true) +
     flagExtras(f) +
     (f.note ? '<div class="fl-note">' + esc(f.note) + '</div>' : '') +
     '<div class="fl-by">Flagged by ' + esc(f.by) + ' &middot; ' + esc(fmtWhenMs(f.at)) + (f.event ? ' &middot; ' + esc(f.event) : '') + '</div>' +
@@ -1489,7 +1504,7 @@ function flagExtras(f) {
     (ENTRY_DONE[f.entry] ? '<div class="fl-ent ' + (f.entry === 'Admitted' ? 'yes' : 'no') + '">' + (f.entry === 'Admitted' ? I.check : I.x) + ENTRY_DONE[f.entry] + '</div>' : '');
 }
 function bindCards(m) {
-  m.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => { const f = fl.flags[+b.dataset.edit]; fl.edit = f; fl.person = { name: f.name, dob: f.dob }; fl.type = f.type; fl.note = f.note; fl.platform = f.platform || ''; fl.entry = f.entry || ''; fl.step = 'form'; render(); }; });
+  m.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => { const f = fl.flags[+b.dataset.edit]; fl.edit = f; fl.person = f.name ? { name: f.name, dob: f.dob } : null; fl.type = f.type; fl.note = f.note; fl.platform = f.platform || ''; fl.entry = f.entry || ''; fl.step = 'form'; render(); }; });
   m.querySelectorAll('[data-rm]').forEach(b => { b.onclick = () => removeFlag(fl.flags[+b.dataset.rm]); });
   m.querySelectorAll('[data-photo]').forEach(b => { b.onclick = () => showIdPhoto(fl.flags[+b.dataset.photo]); });
   m.querySelectorAll('[data-link]').forEach(b => { b.onclick = e => saveFlag(Object.assign({}, fl.flags[+b.dataset.link], { code: fl.code }), e.target, 'Ticket added to the flag.'); });
