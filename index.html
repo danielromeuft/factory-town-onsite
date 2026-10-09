@@ -367,7 +367,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '16';
+const APP_VERSION = '17';
 
 /* ============ icons ============ */
 const I = {
@@ -1673,6 +1673,9 @@ function checkUpdate() {
 }
 setInterval(checkUpdate, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+// Also right after opening: GitHub Pages lets a phone keep the page for 10 minutes, and a Home Screen app can open
+// that cached old copy (10/8: Safari had v16, the saved app still v14).
+setTimeout(checkUpdate, 1500);
 
 /* ============ live ticket page (customer opened the link in their email) ============ */
 function renderLiveTicket(v) {
