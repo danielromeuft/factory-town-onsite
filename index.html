@@ -230,6 +230,17 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .fl-pick{display:flex;flex-direction:column;gap:16px;max-width:640px;margin:2vh auto 0}
 .fl-pick .mode{min-height:132px}
 .mode.fticket{background:var(--blue)} .mode.fid{background:#b91c1c} .mode.fname{background:#27272a}
+.fl-pick .mode.flist{min-height:96px;background:var(--soft);color:var(--ink);border:2px solid var(--line)}
+.mode.flist b{font-size:30px} .mode.flist svg{width:40px;height:40px}
+.fl-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.fl-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border-radius:20px;border:2px solid var(--line);background:#fff;padding:14px 16px}
+.fl-row i{width:10px;align-self:stretch;border-radius:6px;background:var(--fc);flex:none}
+.fl-row div{flex:1;min-width:0}
+.fl-row b{display:block;font-size:21px;font-weight:900;line-height:1.15;word-break:break-word}
+.fl-row span{display:block;font-size:15px;font-weight:700;color:var(--muted);margin-top:3px}
+.fl-row span em{font-style:normal;color:var(--fc)}
+.fl-row small{font-size:13px;font-weight:700;color:var(--muted);text-align:right;flex:none;max-width:90px}
+.fl-list .fl-card{margin-bottom:0}
 /* ID camera: wider view, card-shaped frame, live guidance */
 .cam.idcam{aspect-ratio:4/3}
 .cam.idcam video{opacity:0}
@@ -387,10 +398,11 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '28';
+const APP_VERSION = '29';
 
 /* ============ icons ============ */
 const I = {
+  list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.3"/><circle cx="4" cy="12" r="1.3"/><circle cx="4" cy="18" r="1.3"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg>',
   x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
@@ -1257,11 +1269,12 @@ let flagFrom = 'ticket';
 function flagStart() { fl = { step: 'start' }; lastCode = ''; render(); }
 function flagGo(from) {
   flagFrom = from; lastCode = '';
+  if (from === 'list') return flagList();
   fl = from === 'ticket' ? { step: 'ticket' } : from === 'id' ? { step: 'id', code: '' } : { step: 'manual', manMode: 'search', man: { name: '', dob: '' }, code: '' };
   render();
 }
 const flagNext = () => flagGo(flagFrom);
-const nextLabel = () => flagFrom === 'ticket' ? 'Scan next ticket' : flagFrom === 'id' ? 'Scan next ID' : 'New search';
+const nextLabel = () => flagFrom === 'ticket' ? 'Scan next ticket' : flagFrom === 'id' ? 'Scan next ID' : flagFrom === 'list' ? 'Back to list' : 'New search';
 const loadingHtml = (q, sub) => '<div class="loading"><div class="loadspin"></div><div class="q">' + esc(q) + '</div>' + (sub ? '<p class="qs">' + esc(sub) + '</p>' : '') + '</div>';
 
 function renderFlag() {
@@ -1275,9 +1288,19 @@ function renderFlag() {
     m.innerHTML = '<div class="fl-pick">' +
       '<button class="mode fticket" data-go="ticket">' + I.scan + '<div><b>Ticket</b><span>Scan their ticket QR: DICE or ours</span></div></button>' +
       '<button class="mode fid" data-go="id">' + I.idcard + '<div><b>ID</b><span>Scan the barcode on the back of their ID</span></div></button>' +
-      '<button class="mode fname" data-go="name">' + I.user + '<div><b>Name</b><span>Search or flag by name and date of birth</span></div></button></div>';
+      '<button class="mode fname" data-go="name">' + I.user + '<div><b>Name</b><span>Search or flag by name and date of birth</span></div></button>' +
+      '<button class="mode flist" data-go="list">' + I.list + '<div><b>View list</b><span>Every flagged ticket and person</span></div></button></div>';
     m.querySelectorAll('[data-go]').forEach(b => { b.onclick = () => flagGo(b.dataset.go); });
     warmReader();   // warm the ID reader up while they choose
+  } else if (fl.step === 'list') {
+    setTitle('Flag · List');
+    if (!fl.all) { m.innerHTML = loadingHtml('Loading flags…'); return; }
+    m.innerHTML = '<div class="step"><div class="toolbar"><label class="search">' + I.search + '<input id="flq" type="search" placeholder="Name, type, platform" autocomplete="off" value="' + esc(fl.q) + '"></label></div>' +
+      '<div class="chips" id="flk"></div><div class="fl-list" id="fll"></div>' +
+      '<button class="big ghost" id="bk" style="margin-top:16px">' + I.back + 'Back</button></div>';
+    $('#flq').oninput = e => { fl.q = e.target.value; fl.open = -1; drawFlagList(); };
+    $('#bk').onclick = flagStart;
+    drawFlagList();
   } else if (fl.step === 'ticket') {
     setTitle('Flag · Scan ticket');
     m.innerHTML = '<div class="step"><div class="q">Scan their ticket</div><p class="qs">Any ticket QR: DICE or ours. If it was flagged, it shows right away.</p></div>' +
@@ -1438,7 +1461,7 @@ function renderFlag() {
     // Add guest details: the ID scanner (with Type name + DOB and Take photo instead), then back here with the
     // guest filled in; type, note and entry picked so far stay (same fl, fixing = come back to this form).
     if ($('#addGuest')) $('#addGuest').onclick = () => { keep(); fl.fixing = true; fl.idSince = 0; fl.step = 'id'; render(); };
-    $('#cx').onclick = flagStart;
+    $('#cx').onclick = flagFrom === 'list' ? flagNext : flagStart;
     $('#save').onclick = e => {
       keep();
       fl.note = fl.note.trim();
@@ -1460,6 +1483,35 @@ function renderFlag() {
     clearTimeout(renderFlag.t);
     renderFlag.t = setTimeout(() => { if (mode === 'flag' && fl && fl.step === 'saved') flagNext(); }, 5000);
   }
+}
+
+/** Flag > View list: all active flags, filtered by kind (ticket + person, person only, ticket only) and by a search box. */
+const flagKind = f => f.name && f.codes ? 'both' : f.name ? 'person' : 'ticket';
+const FLAG_KINDS = [['all', 'All'], ['both', 'Ticket + person'], ['person', 'Person only'], ['ticket', 'Ticket only']];
+function flagList() {
+  fl = { step: 'list', all: null, kind: 'all', q: '', open: -1 }; render();
+  call('api_flagList', AUTH.token).then(r => {
+    if (mode !== 'flag' || !fl || fl.step !== 'list') return;
+    if (!r.ok) { toast(r.msg || 'Could not load the list.'); return flagStart(); }
+    fl.all = r.flags; render();
+  }).catch(() => { toast('No connection. Try again.'); if (fl && fl.step === 'list') flagStart(); });
+}
+/** Draws the chips and rows only, so typing in the search box keeps focus. Tap a row to open its full card. */
+function drawFlagList() {
+  const words = fl.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = f => { const t = [f.name, f.type, f.platform, f.note].join(' ').toLowerCase(); return words.every(w => t.indexOf(w) >= 0); };
+  const found = fl.all.filter(hit);
+  fl.flags = found.filter(f => fl.kind === 'all' || flagKind(f) === fl.kind);
+  $('#flk').innerHTML = FLAG_KINDS.map(([k, label]) => '<button class="fchip' + (fl.kind === k ? ' on' : '') + '" data-k="' + k + '">' + label + ' <b>' + (k === 'all' ? found.length : found.filter(f => flagKind(f) === k).length) + '</b></button>').join('');
+  const tix = n => n ? n + ' ticket' + (n === 1 ? '' : 's') : '';
+  $('#fll').innerHTML = fl.flags.length ? fl.flags.map((f, i) => i === fl.open ? flagCard(f, i, {}) :
+    '<button class="fl-row" data-open="' + i + '" style="--fc:' + (FLAG_STYLE[f.type] || FLAG_STYLE.Other)[0] + '"><i></i><div><b>' + (f.name ? esc(titleCase(f.name)) : 'Ticket flag') + '</b>' +
+    '<span><em>' + esc(f.type) + '</em>' + [f.dob ? 'DOB ' + esc(fmtDob(f.dob)) : '', tix(f.codes), f.platform ? esc(f.platform) : ''].filter(Boolean).map(x => ' &middot; ' + x).join('') + '</span></div>' +
+    '<small>' + esc(fmtWhenMs(f.at)) + '</small></button>').join('')
+    : '<p class="qs center">' + (fl.all.length ? 'No flags match.' : 'No active flags.') + '</p>';
+  $('#flk').querySelectorAll('[data-k]').forEach(b => { b.onclick = () => { fl.kind = b.dataset.k; fl.open = -1; drawFlagList(); }; });
+  $('#fll').querySelectorAll('[data-open]').forEach(b => { b.onclick = () => { fl.open = +b.dataset.open; drawFlagList(); }; });
+  bindCards($('#fll'));
 }
 
 /** Name and date of birth on a flag card, or a note that only the ticket was flagged (guest details not added). */
@@ -1582,7 +1634,7 @@ function saveFlag(op, btn, msg) {
 
 function removeFlag(f) {
   promptBox('Remove this flag?', titleCase(f.name) + ' · ' + f.type + '. It stays on the sheet as Removed. Reason (optional):', '', 'text', 'Remove flag', v => {
-    call('api_flagRemove', AUTH.token, f.n, v).then(r => { toast(r.ok ? 'Flag removed.' : (r.msg || 'Not removed.')); if (r.ok) flagStart(); })
+    call('api_flagRemove', AUTH.token, f.n, v).then(r => { toast(r.ok ? 'Flag removed.' : (r.msg || 'Not removed.')); if (r.ok) (flagFrom === 'list' ? flagNext() : flagStart()); })
       .catch(() => toast('No connection. Try again.'));
   }, 'red');
 }
