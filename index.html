@@ -372,7 +372,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '18';
+const APP_VERSION = '19';
 
 /* ============ icons ============ */
 const I = {
@@ -674,7 +674,10 @@ function camMsg(html) {
  * Tickets keep 1080p (QR codes are big and 4K is slower), so the camera restarts when switching between them.
  */
 let streamHi = false, camZoom = 0;
-const ID_ZOOM = 1.5;   // with the barcode box filling the view, this lets the card sit about a hand-width away, where the main camera focuses
+// 2x: the main camera cannot focus much closer than a hand-width, and at 1.5x a barcode there only filled about half
+// the box (10/8: "Move closer" past the focus point). 2x is also the iPhone's own 2x mode, which on recent Pro
+// models crops the full-resolution sensor, so the barcode gets more real detail, not just bigger.
+const ID_ZOOM = 2;
 /**
  * Flash (torch) on the ID steps: real license barcodes were found but misread in room light (10/8, Daniel's
  * Florida license: ChecksumError every try) and read once a flashlight was held up. On by default where the
@@ -987,7 +990,7 @@ function idAdvice(a) {
   if (a.glare > 0.08) return ['warn', 'sun', 'Tilt the card to cut the glare'];
   if (!a.rows) return ['', 'idcard', 'Back of the ID in the frame'];
   if (a.edges) return ['warn', 'further', 'Move back a little'];
-  if (a.wide < 0.6) return ['warn', 'closer', 'Move closer'];   // barcode under about 70% of the box
+  if (a.wide < 0.45) return ['warn', 'closer', 'Move closer'];   // barcode under about half the box (it keeps trying anyway)
   if (a.peak < ID_BUSY * 2) return ['warn', 'still', 'Hold still'];
   return ['good', '', 'Reading barcode… hold still'];
 }
@@ -1041,14 +1044,15 @@ function sendIdFrame(btn) {
 }
 
 /** One camera tick on the ID step: advice now, and a read of the frame in the background (one at a time). */
-let idDecoding = false, idCv = null, idTries = 0;
+let idDecoding = false, idCv = null, idTries = 0, idSeen = 0;   // idSeen: when the reader last saw a barcode
 async function readId() {
   const fr = $('#idf');
   if (!fr || !video.videoWidth) return '';
   if (!zxReady) { setGuide(['', 'spin', 'Getting the ID reader ready…'], true); loadZX().catch(() => setGuide(['warn', 'alert', 'ID reader did not load. Take a photo instead.'], true)); return ''; }
   const look = idLook(videoBox(fr, 0.08, 0.15));   // a little past the box, so a barcode spilling over it shows
   setGuide(idAdvice(look), !gCur || gCur.indexOf('|spin|') >= 0);   // first live frame replaces "Starting camera" at once
-  fr.classList.add('scanning');   // the sweeping scanner line: shows the reader is working whatever the advice says
+  // The sweeping scanner line shows only while the reader is picking up a barcode (read or near miss), until 0.9 s after.
+  fr.classList.toggle('scanning', Date.now() - idSeen < 900);
   if (fl.idSince && Date.now() - fl.idSince > 12000) { const p = $('#idPhoto'); if (p && !p.classList.contains('hl')) p.classList.add('hl'); }
   idShowDiag(look);
   if (idDecoding && Date.now() - idStat.start < 6000) return '';   // a read that hangs is given up on after 6 s
@@ -1076,7 +1080,8 @@ async function readId() {
     if (Math.floor(u / 4) % 2) img = sharpenGray(img);
     // Every third round of eight uses the other way of telling black from white (better on uneven light).
     const binarizer = Math.floor(u / 8) % 3 === 2 ? 'GlobalHistogram' : 'LocalAverage';
-    const res = await ZXingWASM.readBarcodes(img, { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: false, maxNumberOfSymbols: 1, textMode: 'Plain', binarizer });
+    const res = await ZXingWASM.readBarcodes(img, { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: false, maxNumberOfSymbols: 1, textMode: 'Plain', binarizer, returnErrors: true });
+    if (res.length) idSeen = Date.now();   // a barcode is in view, even if this try did not read it
     const hit = res.find(x => x.isValid && x.text);
     Object.assign(idStat, { tries: t, ms: Date.now() - idStat.start, crop: w + 'x' + h, found: res.length, err: '' });
     if (hit && mode === 'flag' && fl && fl.step === 'id' && !busy) onFlagCode(hit.text);
