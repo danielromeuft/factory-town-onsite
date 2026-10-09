@@ -232,13 +232,16 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .mode.fticket{background:var(--blue)} .mode.fid{background:#b91c1c} .mode.fname{background:#27272a}
 /* ID camera: wider view, card-shaped frame, live guidance */
 .cam.idcam{aspect-ratio:4/3}
+.cam.idcam video{opacity:0;transition:opacity .3s}
+.cam.idcam.live video{opacity:1}
 .cam .frame.idframe{inset:auto;left:7%;right:7%;top:50%;aspect-ratio:1.586;transform:translateY(-50%);transition:border-color .25s,box-shadow .25s}
-.cam .frame.idframe.warn{border-color:#facc15}
-.cam .frame.idframe.good{border-color:#22c55e;animation:idpulse 1s ease-in-out infinite}
-.cam .frame.idframe.got{border-color:#22c55e;border-width:8px}
+/* ID scan: a wide box shaped like the barcode alone. It reads fastest when the barcode fills the box edge to edge. */
+.cam.bccam{aspect-ratio:3/2}
+.cam .frame.bcframe{inset:auto;left:3%;right:3%;top:50%;aspect-ratio:3.4;border-radius:16px;transform:translateY(-50%);transition:border-color .25s,box-shadow .25s}
+.cam .frame.warn{border-color:#facc15}
+.cam .frame.good{border-color:#22c55e;animation:idpulse 1s ease-in-out infinite}
+.cam .frame.got{border-color:#22c55e;border-width:8px}
 @keyframes idpulse{50%{box-shadow:0 0 0 2000px rgba(0,0,0,.35),0 0 0 8px rgba(34,197,94,.45)}}
-.cam .frame .bz{position:absolute;left:6%;right:6%;bottom:12%;height:30%;border:2px dashed rgba(255,255,255,.55);border-radius:10px}
-.cam .frame.good .bz,.cam .frame.got .bz{border-color:rgba(34,197,94,.8)}
 .guide{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:92%;padding:12px 20px 12px 14px;border-radius:999px;background:rgba(17,17,24,.82);color:#fff;font-size:21px;font-weight:900;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .guide svg{width:28px;height:28px;flex:none}
 .guide.warn{background:rgba(161,98,7,.92)} .guide.good{background:rgba(21,128,61,.92)}
@@ -360,7 +363,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '13';
+const APP_VERSION = '14';
 
 /* ============ icons ============ */
 const I = {
@@ -662,7 +665,7 @@ function camMsg(html) {
  * Tickets keep 1080p (QR codes are big and 4K is slower), so the camera restarts when switching between them.
  */
 let streamHi = false, camZoom = 0;
-const ID_ZOOM = 1.8;
+const ID_ZOOM = 1.5;   // with the barcode box filling the view, this lets the card sit about a hand-width away, where the main camera focuses
 /**
  * Flash (torch) on the ID steps: real license barcodes were found but misread in room light (10/8, Daniel's
  * Florida license: ChecksumError every try) and read once a flashlight was held up. On by default where the
@@ -687,34 +690,51 @@ function setTorch(on) {
       .catch(() => { torchState = was; });
   } catch (e) {}
 }
+/**
+ * ID steps use the plain main camera ("Back Camera"), not the combined "Back Triple Camera" Safari picks by default:
+ * that one hops between the ultra-wide and main lens around the zoom we set (seen 10/8 as the picture jumping).
+ * Labels are only known once the camera was allowed once; until then it falls back to any back camera.
+ */
+function pickIdCamera(hi) {
+  if (!hi || !navigator.mediaDevices.enumerateDevices) return Promise.resolve('');
+  return navigator.mediaDevices.enumerateDevices().then(list => {
+    const cams = list.filter(d => d.kind === 'videoinput');
+    const main = cams.find(d => /^back camera$/i.test(d.label)) || cams.find(d => /back/i.test(d.label) && !/ultra|tele|dual|triple/i.test(d.label));
+    return main ? main.deviceId : '';
+  }).catch(() => '');
+}
+function showLive() { const c = $('#cam'); if (c) c.classList.add('live'); }
 function startCamera() {
   video = $('#vid');
   if (!video) return;
   const hi = mode === 'flag' && !!fl && (fl.step === 'id' || fl.step === 'photo');
   if (stream && streamHi !== hi) stopCamera();
-  if (stream) { video.srcObject = stream; video.play().catch(() => {}); const cs = $('#cstat'); if (cs) cs.textContent = camHint(); loopScan(); return; }
+  if (stream) { video.srcObject = stream; video.play().catch(() => {}); showLive(); const cs = $('#cstat'); if (cs) cs.textContent = camHint(); loopScan(); return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     return camMsg('<b>No camera access here</b>Open this app in Safari or Chrome, or check in by hand from Tickets Sold.');
   }
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: hi ? 3840 : 1920 }, height: { ideal: hi ? 2160 : 1080 } }, audio: false })
+  pickIdCamera(hi).then(deviceId => navigator.mediaDevices.getUserMedia({ video: Object.assign(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } },
+    { width: { ideal: hi ? 3840 : 1920 }, height: { ideal: hi ? 2160 : 1080 } }), audio: false }))
     .then(s => {
       stream = s; streamHi = hi; camZoom = 0; torchState = ''; camFocus = false;
       if (!video || !document.body.contains(video)) { stopCamera(); return; }
       video.srcObject = s; video.play().catch(() => {});
       $('#cstat').textContent = camHint();
-      // Keep refocusing as an ID moves closer, and on the ID steps zoom in a little so the card can stay at a
-      // distance the camera can focus at (both ignored where the camera does not support them).
+      // Keep refocusing as an ID moves closer, and on the ID steps zoom in a little and turn the flash on. All of it
+      // goes in one request (a later applyConstraints replaces an earlier one), and the picture only fades in once
+      // it is applied, so nobody sees it start wide with black bars and then jump.
+      let ready = Promise.resolve();
       try {
         const tr = s.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
-        if ((cap.focusMode || []).indexOf('continuous') >= 0) { camFocus = true; tr.applyConstraints(camConstraints()).catch(() => {}); }
+        camFocus = (cap.focusMode || []).indexOf('continuous') >= 0;
         if (hi) {
-          // Zoom and flash go in one request: a later applyConstraints replaces the earlier one.
           if (cap.zoom && cap.zoom.max > 1) camZoom = Math.max(cap.zoom.min || 1, Math.min(cap.zoom.max, ID_ZOOM));
           if (cap.torch) torchState = torchWanted ? 'on' : 'off';
-          if (camZoom || torchState) tr.applyConstraints(camConstraints()).catch(() => { camZoom = 0; torchState = ''; });
-          const b = $('#idFlash'); if (b) { b.hidden = !torchState; b.innerHTML = I.sun + 'Flash ' + (torchState || 'off'); }
         }
+        if (camFocus || camZoom || torchState) ready = tr.applyConstraints(camConstraints()).catch(() => { camZoom = 0; torchState = ''; });
+        const b = $('#idFlash'); if (b) { b.hidden = !torchState; b.innerHTML = I.sun + 'Flash ' + (torchState || 'off'); }
       } catch (e) {}
+      ready.then(() => setTimeout(showLive, 250));
       loopScan();
     })
     .catch(err => {
@@ -881,11 +901,12 @@ function loadZX() {
 }
 
 /** Where an on-screen element sits in the camera's own pixels (the video is shown with object-fit: cover). pad grows it. */
-function videoBox(el, pad) {
+function videoBox(el, pad, padY) {
+  if (padY == null) padY = pad;
   const vr = video.getBoundingClientRect(), r = el.getBoundingClientRect(), vw = video.videoWidth, vh = video.videoHeight;
   const s = Math.max(vr.width / vw, vr.height / vh), ox = (vw * s - vr.width) / 2, oy = (vh * s - vr.height) / 2;
-  let w = r.width / s, h = r.height / s, x = (r.left - vr.left + ox) / s - w * pad, y = (r.top - vr.top + oy) / s - h * pad;
-  w *= 1 + 2 * pad; h *= 1 + 2 * pad;
+  let w = r.width / s, h = r.height / s, x = (r.left - vr.left + ox) / s - w * pad, y = (r.top - vr.top + oy) / s - h * padY;
+  w *= 1 + 2 * pad; h *= 1 + 2 * padY;
   x = Math.max(0, x); y = Math.max(0, y);
   return { x: Math.round(x), y: Math.round(y), w: Math.round(Math.min(vw - x, w)), h: Math.round(Math.min(vh - y, h)) };
 }
@@ -935,7 +956,7 @@ function idAdvice(a) {
   if (a.glare > 0.08) return ['warn', 'sun', 'Tilt the card to cut the glare'];
   if (!a.rows) return ['', 'idcard', 'Back of the ID in the frame'];
   if (a.edges) return ['warn', 'further', 'Move back a little'];
-  if (a.wide < 0.55) return ['warn', 'closer', 'Move closer'];
+  if (a.wide < 0.6) return ['warn', 'closer', 'Move closer'];   // barcode under about 70% of the box
   if (a.peak < ID_BUSY * 2) return ['warn', 'still', 'Hold still'];
   return ['good', '', 'Reading ID…'];
 }
@@ -994,7 +1015,7 @@ async function readId() {
   const fr = $('#idf');
   if (!fr || !video.videoWidth) return '';
   if (!zxReady) { setGuide(['', 'spin', 'Getting the ID reader ready…'], true); loadZX().catch(() => setGuide(['warn', 'alert', 'ID reader did not load. Take a photo instead.'], true)); return ''; }
-  const look = idLook(videoBox(fr, 0));
+  const look = idLook(videoBox(fr, 0.08, 0.15));   // a little past the box, so a barcode spilling over it shows
   setGuide(idAdvice(look), !gCur || gCur.indexOf('|spin|') >= 0);   // first live frame replaces "Starting camera" at once
   if (fl.idSince && Date.now() - fl.idSince > 12000) { const p = $('#idPhoto'); if (p && !p.classList.contains('hl')) p.classList.add('hl'); }
   idShowDiag(look);
@@ -1004,7 +1025,7 @@ async function readId() {
     // Tries cycle through three sizes: as is, and enlarged 1.5x and 1.75x. Enlarging read a real license frame
     // that failed at its own size (10/8: the reader samples each bar more evenly when it is bigger).
     const t = ++idTries, sc = [1, 1.5, 1.75][t % 3], u = Math.floor(t / 3);
-    const b = videoBox(fr, 0.08), k = Math.min(1, 2400 / b.w) * sc, w = Math.round(b.w * k), h = Math.round(b.h * k);
+    const b = videoBox(fr, 0.06, 0.5), k = Math.min(1, 2400 / b.w) * sc, w = Math.round(b.w * k), h = Math.round(b.h * k);
     idCv = idCv || document.createElement('canvas'); idCv.width = w; idCv.height = h;
     const g = idCv.getContext('2d', { willReadFrequently: true });
     g.imageSmoothingQuality = 'high';
@@ -1114,8 +1135,8 @@ function renderFlag() {
     setTitle('Flag · Scan ID');
     fl.idSince = fl.idSince || Date.now();
     gCur = ''; gPend = '';
-    m.innerHTML = '<div class="step"><div class="q">Scan the back of their ID</div><p class="qs">Fit the card in the frame, barcode in the dashed box. Only their name and date of birth are kept.</p></div>' +
-      '<div class="cam idcam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe" id="idf"><div class="bz"></div></div>' +
+    m.innerHTML = '<div class="step"><div class="q">Scan the back of their ID</div><p class="qs">Fill the box with the barcode, edge to edge. Only their name and date of birth are kept.</p></div>' +
+      '<div class="cam idcam bccam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame bcframe" id="idf"></div>' +
       '<div class="guide" id="guide"><span class="spin"></span><span>Starting camera…</span></div><div class="cstat" id="cstat"></div></div>' +
       '<div class="scanfoot">' + flashBtn() + '<button class="fl-alt" id="idPhoto">' + I.camera + 'Take photo instead</button><button class="fl-alt" id="manual">Type name + DOB</button><button class="fl-alt" id="bk">' + I.back + 'Back</button></div>';
     bindFlash();
@@ -1358,7 +1379,7 @@ function onFlagCode(code) {
     if (!p) { setGuide(['warn', 'alert', 'Not a US or Canadian ID barcode'], true); return; }
     // Got it: green check on the camera for a moment, then the "Checking for flags" screen.
     busy = true;
-    const fr = $('#idf'); if (fr) fr.className = 'frame idframe got';
+    const fr = $('#idf'); if (fr) fr.className = 'frame bcframe got';
     const cam = $('#cam'); if (cam) cam.insertAdjacentHTML('beforeend', '<div class="gotit">' + I.check + '<span>Got it</span></div>');
     if (navigator.vibrate) navigator.vibrate(60);
     beepOk();
