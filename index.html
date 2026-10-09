@@ -377,7 +377,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '22';
+const APP_VERSION = '23';
 
 /* ============ icons ============ */
 const I = {
@@ -1087,10 +1087,10 @@ const idStat = { start: 0, tries: 0, ms: 0, crop: '', found: 0, err: '', last: '
 /**
  * Developer > ID scan stats (this device): for each variation the reader cycles through (size, tilt step, sharpen,
  * black/white method), how many tries had a barcode in view and how many of those read it. To decide what to cut.
- * Stored as { '<dimension> <value>': [tries, reads], _reads, _secs, _seenSecs }. A new key per rotation (v21: 'idStats2'),
+ * Stored as { '<dimension> <value>': [tries, reads], _reads, _secs, _seenSecs }. A new key per rotation (v21: 'idStats2', v23: 'idStats3'),
  * so counts from an older rotation never mix in.
  */
-const ID_STATS = 'idStats2';
+const ID_STATS = 'idStats3';
 function idStatAdd(v, read) {
   if (!AUTH || !AUTH.dev) return;
   const s = store.get(ID_STATS) || {};
@@ -1151,12 +1151,14 @@ async function readId() {
     // view): sharpening 6% vs 23% without (dropped), enlarged 1.75x 10% (dropped), 1.5x 20% and 1x 13% (alternate),
     // tilt as measured 27% vs 8 to 12% for the steps around it (measured 3 tries in 5, +1/-1 as backup, +2 dropped),
     // black/white local 15% vs global 12% (global 1 try in 3 as backup).
+    // v23 (10/9, v21 + v22 stats, 51 reads): 1x 26% vs 1.5x 18% per try, and a 1x try is under half the work, so
+    // 1x now takes 2 tries in 3. Black/white changes per group of three tries, so it never lines up with the size.
     // (A mirrored picture is fine: tested 10/8, the reader reads a mirrored barcode as well as a normal one.)
-    const t = ++idTries, sc = t % 2 ? 1.5 : 1;
+    const t = ++idTries, sc = t % 3 === 1 ? 1.5 : 1;
     const b = videoBox(fr, 0.06, 0.5), k = Math.min(1, 2400 / b.w) * sc, w = Math.round(b.w * k), h = Math.round(b.h * k);
     // The reader only handles a barcode within about a degree of level, so a tilted card is turned level first.
     const s = look.tilt < 0 ? -1 : 1, step = [0, 0, 1, 0, -1][t % 5], tilt = look.tilt + step * s;
-    const binarizer = t % 3 === 2 ? 'GlobalHistogram' : 'LocalAverage';
+    const binarizer = Math.floor(t / 3) % 3 === 2 ? 'GlobalHistogram' : 'LocalAverage';
     const opts = { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: false, maxNumberOfSymbols: 1, textMode: 'Plain', binarizer, returnErrors: true };
     let res;
     if (!zxWBad) {
