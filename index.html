@@ -232,8 +232,13 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .mode.fticket{background:var(--blue)} .mode.fid{background:#b91c1c} .mode.fname{background:#27272a}
 /* ID camera: wider view, card-shaped frame, live guidance */
 .cam.idcam{aspect-ratio:4/3}
-.cam.idcam video{opacity:0;transition:opacity .3s}
-.cam.idcam.live video{opacity:1}
+.cam.idcam video{opacity:0}
+/* ID screens: the app draws the camera itself (canvas #pv), cropped to fill the box exactly as the reader sees it.
+   Safari showed the zoomed 4K camera narrower than the box (black bars, 10/8), and then the box on screen and the
+   area being read did not match. The video stays underneath, invisible, as the frame source. */
+.cam canvas.pv{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .3s}
+.cam.idcam.live canvas.pv{opacity:1}
+
 .cam .frame.idframe{inset:auto;left:7%;right:7%;top:50%;aspect-ratio:1.586;transform:translateY(-50%);transition:border-color .25s,box-shadow .25s}
 /* ID scan: a wide box shaped like the barcode alone. It reads fastest when the barcode fills the box edge to edge. */
 .cam.bccam{aspect-ratio:3/2}
@@ -372,7 +377,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '19';
+const APP_VERSION = '20';
 
 /* ============ icons ============ */
 const I = {
@@ -715,7 +720,23 @@ function pickIdCamera(hi) {
     return main ? main.deviceId : '';
   }).catch(() => '');
 }
-function showLive() { const c = $('#cam'); if (c) c.classList.add('live'); }
+function showLive() { const c = $('#cam'); if (c) c.classList.add('live'); startPreview(); }
+/** Draws the camera into the ID screens' canvas every frame, cropped to fill it (the same crop videoBox assumes). */
+let pvRaf = 0;
+function startPreview() { if (!pvRaf && $('#pv')) pvRaf = requestAnimationFrame(drawPreview); }
+function drawPreview() {
+  pvRaf = 0;
+  const cv = $('#pv');
+  if (!cv || !stream || !video) return;
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = Math.round(r.width * dpr), H = Math.round(r.height * dpr), vw = video.videoWidth, vh = video.videoHeight;
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  if (vw && W && H) {
+    const s = Math.max(W / vw, H / vh), sw = W / s, sh = H / s;
+    cv.getContext('2d').drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, W, H);
+  }
+  pvRaf = requestAnimationFrame(drawPreview);
+}
 /**
  * Resolves once the camera is really delivering the picture we asked for: the same frame size four checks in a
  * row (100 ms apart) and, where the camera reports it, the zoom already applied. The iPhone accepts a zoom request
@@ -785,6 +806,7 @@ const camHint = () => mode === 'flag' && fl && fl.step === 'id' ? '' : mode === 
 
 function stopCamera() {
   clearTimeout(scanTimer); scanTimer = null;
+  if (pvRaf) { cancelAnimationFrame(pvRaf); pvRaf = 0; }
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
 
@@ -1023,13 +1045,31 @@ function sharpenGray(id) {
  * "Send frame" saves the exact picture the reader sees to Drive (Flag ID Photos/Scan tests) to debug real IDs.
  */
 const idDiag = () => !!(AUTH && AUTH.dev && store.get('devIdDiag'));
-const idStat = { start: 0, tries: 0, ms: 0, crop: '', found: 0, err: '' };
+const idStat = { start: 0, tries: 0, ms: 0, crop: '', found: 0, err: '', last: '' };
+/**
+ * Developer > ID scan stats (this device): for each variation the reader cycles through (size, tilt step, sharpen,
+ * black/white method), how many tries had a barcode in view and how many of those read it. To decide what to cut.
+ * Stored as { '<dimension> <value>': [tries, reads], _reads, _secs }.
+ */
+function idStatAdd(v, read) {
+  if (!AUTH || !AUTH.dev) return;
+  const s = store.get('idStats') || {};
+  Object.keys(v).forEach(k => { const e = s[k + ' ' + v[k]] = s[k + ' ' + v[k]] || [0, 0]; e[0]++; if (read) e[1]++; });
+  if (read) { s._reads = (s._reads || 0) + 1; s._secs = (s._secs || 0) + (Date.now() - (fl.idSince || Date.now())) / 1000; }
+  store.set('idStats', s);
+}
+function idStatsHtml() {
+  const s = store.get('idStats') || {}, keys = Object.keys(s).filter(k => k[0] !== '_').sort();
+  if (!keys.length) return '<div class="msub" style="margin:8px 4px 0;font-size:15px">No scans counted yet. Scan some IDs with diagnostics on.</div>';
+  return '<div class="msub" style="margin:8px 4px 4px;font-size:15px"><b>' + (s._reads || 0) + '</b> reads, average <b>' + ((s._secs || 0) / Math.max(1, s._reads || 0)).toFixed(1) + ' s</b> from opening the scanner.</div>' +
+    keys.map(k => { const [n, r] = s[k]; return '<div class="setrow" style="padding:8px 4px;font-size:16px"><span>' + esc(k) + '</span><b>' + r + ' of ' + n + ' · ' + (n ? (100 * r / n).toFixed(1) : '0') + '%</b></div>'; }).join('');
+}
 function idShowDiag(look) {
   const c = $('#cstat'); if (!c || !idDiag()) return;
   c.style.cssText = 'font:600 13px/1.35 ui-monospace,Menlo,monospace;bottom:8px;text-shadow:0 1px 3px #000';
   let tr = {}; try { const k = stream.getVideoTracks()[0]; tr = Object.assign({ label: k.label }, k.getSettings ? k.getSettings() : {}); } catch (e) {}
   c.textContent = (tr.facingMode || '?') + ' · ' + (tr.label || '').slice(0, 24) + ' · zoom ' + (camZoom || 'none') + ' · flash ' + (torchState || 'unsupported') + ' · cam ' + video.videoWidth + 'x' + video.videoHeight + ' · crop ' + idStat.crop + ' · try ' + idStat.tries + ' · ' + idStat.ms + ' ms · found ' + idStat.found +
-    ' · tilt ' + look.tilt.toFixed(1) + ' · wide ' + look.wide.toFixed(2) + ' · sharp ' + Math.round(look.peak) + ' · light ' + Math.round(look.mean) + (idStat.err ? ' · ERR ' + idStat.err : '');
+    ' · tilt ' + look.tilt.toFixed(1) + ' · wide ' + look.wide.toFixed(2) + ' · sharp ' + Math.round(look.peak) + ' · light ' + Math.round(look.mean) + (idStat.err ? ' · ERR ' + idStat.err : '') + (idStat.last ? ' · LAST READ ' + idStat.last : '');
 }
 function sendIdFrame(btn) {
   const fr = $('#idf');
@@ -1084,6 +1124,10 @@ async function readId() {
     if (res.length) idSeen = Date.now();   // a barcode is in view, even if this try did not read it
     const hit = res.find(x => x.isValid && x.text);
     Object.assign(idStat, { tries: t, ms: Date.now() - idStat.start, crop: w + 'x' + h, found: res.length, err: '' });
+    // Which variation did it: counted only on tries with a barcode in view, so the rates compare like with like.
+    const v = { size: sc + 'x', tilt: ['measured', '+1', '-1', '+2'][u % 4], sharpen: Math.floor(u / 4) % 2 ? 'yes' : 'no', 'black/white': binarizer === 'GlobalHistogram' ? 'global' : 'local' };
+    if (res.length) idStatAdd(v, !!hit);
+    if (hit) idStat.last = v.size + ' · tilt ' + v.tilt + ' · sharpen ' + v.sharpen + ' · ' + v['black/white'] + ' · ' + ((Date.now() - (fl.idSince || Date.now())) / 1000).toFixed(1) + ' s';
     if (hit && mode === 'flag' && fl && fl.step === 'id' && !busy) onFlagCode(hit.text);
   } catch (e) { idStat.err = String((e && e.message) || e).slice(0, 80); } finally { idDecoding = false; }
   return '';
@@ -1176,7 +1220,7 @@ function renderFlag() {
     fl.idSince = fl.idSince || Date.now();
     gCur = ''; gPend = '';
     m.innerHTML = '<div class="step"><div class="q">Scan the back of their ID</div><p class="qs">Fill the box with the barcode, edge to edge. Only their name and date of birth are kept.</p></div>' +
-      '<div class="cam idcam bccam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame bcframe" id="idf"></div>' +
+      '<div class="cam idcam bccam" id="cam"><video id="vid" playsinline muted autoplay></video><canvas class="pv" id="pv"></canvas><div class="frame bcframe" id="idf"></div>' +
       '<div class="guide" id="guide"><span class="spin"></span><span>Starting camera…</span></div><div class="cstat" id="cstat"></div></div>' +
       '<div class="scanfoot">' + flashBtn() + '<button class="fl-alt" id="idPhoto">' + I.camera + 'Take photo instead</button><button class="fl-alt" id="manual">Type name + DOB</button><button class="fl-alt" id="bk">' + I.back + 'Back</button></div>';
     bindFlash();
@@ -1188,7 +1232,7 @@ function renderFlag() {
   } else if (fl.step === 'photo') {
     setTitle('Flag · ID photo');
     m.innerHTML = '<div class="step"><div class="q">Photo of the front of the ID</div><p class="qs">The photo is saved with the flag. Next you\'ll type their name and date of birth.</p></div>' +
-      '<div class="cam idcam" id="cam"><video id="vid" playsinline muted autoplay></video><div class="frame idframe" id="idf"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
+      '<div class="cam idcam" id="cam"><video id="vid" playsinline muted autoplay></video><canvas class="pv" id="pv"></canvas><div class="frame idframe" id="idf"></div><div class="cstat" id="cstat">Starting camera…</div></div>' +
       '<button class="shutter" id="snap">' + I.camera + 'Take photo</button>' +
       '<div class="scanfoot">' + flashBtn() + '<button class="fl-alt" id="bk">' + I.back + 'Back to scanning</button></div>';
     bindFlash();
@@ -1628,8 +1672,11 @@ function openDeveloper(back) {
     '<div class="setrow" style="margin-top:14px"><span>ID scan diagnostics</span><b style="color:' + (idDiag() ? 'var(--green)' : 'var(--muted)') + '">' + (idDiag() ? 'On' : 'Off') + '</b></div>' +
     '<button class="bigset' + (idDiag() ? '' : ' green') + '" id="dDiag">' + (idDiag() ? 'Turn off ID scan diagnostics' : 'Turn on ID scan diagnostics') + '</button>' +
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">Shows camera numbers on the ID scan screen and a Send frame button that saves what the reader sees to Drive.</div>' +
+    '<div class="setrow" style="margin-top:14px"><span>ID scan stats (this device)</span><b></b></div>' + idStatsHtml() +
+    '<button class="bigset" id="dStatsReset">Reset ID scan stats</button>' +
     '<button class="bigset" id="dBack">Back to Settings</button></div></div>';
   $('#dDiag').onclick = () => { store.set('devIdDiag', idDiag() ? null : true); if (mode === 'flag') render(); openDeveloper(back); };
+  $('#dStatsReset').onclick = () => confirmBox('Reset ID scan stats?', 'The counts on this device start again from zero.', 'Reset', 'red', () => { store.set('idStats', null); openDeveloper(back); });
   $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
   $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
   $('#dBack').onclick = back;
