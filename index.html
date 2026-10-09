@@ -334,6 +334,16 @@ body.ticketpage header,body.ticketpage nav{display:none}
 .live .lstate.void{background:var(--red);color:#fff}
 .center{text-align:center}
 @media (max-width:520px){h1{font-size:21px} main{padding:14px 14px 30px} .mode{min-height:124px} .mode b{font-size:34px}}
+/* Name + DOB screen on phones: everything down to Back and Search fits an iPhone screen (10/9: they sat below
+   the keypad, out of view). Only this screen; the code keypad and other screens keep their size. */
+@media (max-width:520px){
+  .manstep .q{font-size:24px;margin:0 0 2px} .manstep .qs{font-size:15px;margin:0 0 6px}
+  .manstep .field{margin-top:8px} .manstep .field span{font-size:14px;margin-bottom:4px} .manstep .field input{height:52px;font-size:20px;border-radius:16px}
+  .manstep .digits.dob{gap:6px;margin:2px 0 10px} .manstep .digits.dob i{width:36px;height:46px;font-size:24px;border-radius:12px} .manstep .digits.dob b{font-size:24px}
+  .manstep .pad{gap:8px} .manstep .pad button{height:54px;font-size:26px;border-radius:16px}
+  .manstep .perr{min-height:0;margin-top:6px;font-size:15px}
+  .manstep .row2 .big{min-height:60px;font-size:22px;border-radius:20px;margin-top:6px}
+}
 </style>
 </head>
 <body>
@@ -377,7 +387,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '24';
+const APP_VERSION = '25';
 
 /* ============ icons ============ */
 const I = {
@@ -1312,7 +1322,7 @@ function renderFlag() {
     setTitle(search ? 'Flag · Search' : 'Flag · Name + DOB');
     const d = fl.man.dob;
     const box = i => '<i class="' + (i < d.length ? 'on' : '') + '">' + esc(d[i] || '') + '</i>';
-    m.innerHTML = '<div class="step"><div class="q">' + (search ? 'Search by name or date of birth' : 'Name and date of birth') + '</div>' +
+    m.innerHTML = '<div class="step manstep"><div class="q">' + (search ? 'Search by name or date of birth' : 'Name and date of birth') + '</div>' +
       '<p class="qs">' + (search ? 'Part of a name, a date of birth, or both. Either one is enough.' : 'Both are needed to save a flag. Type them as on their ID.') + '</p>' +
       (fl.photo && !search ? idThumb() : '') +
       '<label class="field" style="margin-top:0"><span>' + (search ? 'Name (or part of it)' : 'Full name') + '</span><input id="mn" autocomplete="off" autocapitalize="words" value="' + esc(fl.man.name) + '"></label>' +
