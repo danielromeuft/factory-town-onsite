@@ -87,6 +87,13 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
   mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
 .pill.bring.over::after{background:var(--red)}
+/* break coming up (same as the placements ring): fills over the last 5 minutes, then solid red until they go */
+.pill.ring::after{content:"";position:absolute;inset:-6px;border-radius:26px;padding:4px;pointer-events:none;
+  background:conic-gradient(var(--rc) var(--rp), rgba(0,0,0,.07) 0);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.pill.ringdue::after{background:var(--red);animation:ringdue 1.2s ease-in-out infinite}
+.pill.in.ring .st,.pill.in.ring .st.ret{color:#c2410c;font-weight:800}.pill.in.ringdue .st,.pill.in.ringdue .st.ret{color:var(--red)}
 .empty{border:2px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;color:var(--muted);font-size:19px;line-height:1.5}
 .empty b{color:var(--ink)}
 
@@ -506,7 +513,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '29';
+const BUILT_VERSION = '30';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -841,7 +848,8 @@ function renderTime(st) {
     if (s === 'in') { const back = p.t.b2i || p.t.b1i; ret = !!back; sub = back ? 'Returned · ' + fmtT(back) : 'In · ' + fmtT(p.t.in); }   // after a break, the return time is what matters
     if (s === 'break') sub = breakSub(p.t, now);
     if (s === 'out') sub = 'Out · ' + fmtT(p.t.out);
-    const ring = s === 'break' ? ` bring" data-bd="${+dueAt(p.t)}` : '';
+    const due = s === 'in' ? schedDue(st, p) : 0;
+    const ring = s === 'break' ? ` bring" data-bd="${+dueAt(p.t)}` : due ? `" data-due="${due}" data-sub="${esc(sub)}` : '';
     return `<button class="pill ${c === 'none' ? '' : c}${ring}" data-id="${esc(p.id)}"><span class="nm fit">${esc(p.name)}</span><span class="st fit${ret ? ' ret' : ''}">${esc(sub)}</span></button>`;
   }).join('');
   updatePillRings();
@@ -851,9 +859,26 @@ function breakSub(t, now) {
   const left = dueAt(t) - now;
   return lm >= graceMin() ? 'Late by ' + lm + ' min' : left > 0 ? mmss(left) + ' left' : 'Back now';
 }
+/** Scheduled time (ms) of a clocked-in person's next break, from their team on the placements schedule. 0 = none. */
+function schedDue(st, p) {
+  const pairs = st.pairs || [];
+  const team = pairs.find(x => x.kind === 'team' && (x.members || []).some(m => m.id === p.id));
+  const m = team && team.members.find(m => m.id === p.id);
+  return m ? breakDue(m, team, p) : 0;
+}
 /** Ticks every second: ring shrinks as the break runs out, red once it's past due, "Late by X min" once late. */
 function updatePillRings() {
   const now = Date.now();
+  // Break coming up: same ring as the placements board, with "Break in 3:12", then "Break now" until they punch out.
+  document.querySelectorAll('.pill[data-due]').forEach(el => {
+    const r = ringState(Number(el.dataset.due), now);
+    el.classList.toggle('ring', !!r);
+    el.classList.toggle('ringdue', !!(r && r.due));
+    if (r && !r.due) { el.style.setProperty('--rc', r.c); el.style.setProperty('--rp', (r.p * 360).toFixed(1) + 'deg'); }
+    const st = el.querySelector('.st');
+    const txt = !r ? el.dataset.sub : r.due ? 'Break now' : 'Break in ' + mmss(Number(el.dataset.due) - now);
+    if (st && st.textContent !== txt) st.textContent = txt;
+  });
   document.querySelectorAll('.pill[data-bd]').forEach(el => {
     const due = Number(el.dataset.bd), left = due - now, lm = Math.floor(-left / 60000);
     el.style.setProperty('--rp', (Math.max(0, Math.min(1, left / breakMs())) * 360).toFixed(1) + 'deg');
