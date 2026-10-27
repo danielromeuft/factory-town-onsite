@@ -209,6 +209,8 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .compass svg{width:26px;height:26px}
 .venue{padding:14px;display:flex;flex-direction:column;gap:12px}
 .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.g21{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px}   /* General Roaming 2/3, GS 1/3 */
 .zone{position:relative;min-width:0;border-radius:22px;border:2px dashed;padding:12px 12px 14px;min-height:150px;display:flex;flex-direction:column;gap:10px;transition:background .12s,border-color .12s}
 .zone .zh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.zone .zh>div{min-width:0;flex:1}
 .zone .zt{font-size:19px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
@@ -359,7 +361,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   .mname{font-size:28px}
   .big{min-height:92px;font-size:26px}
   .row2{flex-direction:column;gap:0}
-  .g3{gap:8px}
+  .g3,.g4,.g21{gap:8px}
   .venue,.street{padding:10px}
   .zone{padding:8px;min-height:120px;border-radius:16px}
   .zone .zt{font-size:14px}.zone .zs{font-size:11px}
@@ -513,7 +515,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '30';
+const BUILT_VERSION = '31';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -911,7 +913,7 @@ function renderModal() {
   const m = S.modal; if (!m) return;
   const p = person(m.id); if (!p) { closeModal(); return; }
   clearInterval(modalTimer);
-  const t = p.t, s = statusOf(t), now = Date.now(), max = V().maxBreaks || 1;
+  const t = p.t, s = statusOf(t), now = Date.now(), max = V().maxBreaks != null ? V().maxBreaks : 1;   // 0 on an orientation day
   let body = '';
   const close = `<button class="close" data-act="close" aria-label="Close">${I.x}</button>`;
   const head = sub => `<div class="mname fit">${esc(p.name)}</div><div class="msub">${sub}</div>`;
@@ -1138,7 +1140,7 @@ function saveEdit() {
 
 /* ============ render: placements ============ */
 const ZONES = {
-  top: [['Stage 3','Cypress End','stage'],['Stage 5','The Warehouse','stage'],['Stage 1','Infinity Room','stage']],
+  top: [['Stage 3','Cypress End','stage'],['Oasis','Next to Cypress','stage'],['Stage 5','The Warehouse','stage'],['Stage 1','Infinity Room','stage']],
   mid: [['Stage 4','The Park','stage'],['Stage 2','Chain Room','stage'],['Gallery','Z3TE1','gallery']],
   roam: ['General Roaming','Anywhere inside the venue','roam'],
   gs: ['Guest Services Container','GS container','gs'],
@@ -1253,10 +1255,9 @@ function mapHtml(items, html) {
   return `<div class="map">
       <div class="rail">Seaboard Airline Railroad<span class="compass">${I.north}N</span></div>
       <div class="venue">
-        <div class="g3">${ZONES.top.map(z).join('')}</div>
+        <div class="g4">${ZONES.top.map(z).join('')}</div>
         <div class="g3">${ZONES.mid.map(z).join('')}</div>
-        ${z(ZONES.roam)}
-        ${z(ZONES.gs)}
+        <div class="g21">${z(ZONES.roam)}${z(ZONES.gs)}</div>
         <div class="g3">${ZONES.gates.map(z).join('')}</div>
       </div>
       <div class="wall"></div>
@@ -1407,6 +1408,11 @@ function savePartners() {
 function renderPlace(st) {
   $('#placeView').classList.toggle('editing', !!S.edit);
   if (S.edit) { renderEdit(st); return; }
+  const today = (st.days || []).find(d => d.key === st.activeDay);
+  if (today && today.kind === 'orientation') {
+    $('#placeView').innerHTML = `<div class="ptool"><div class="lbl"><b>${esc(today.label)}</b><br>Orientation day: no schedule or placements. Staff clock in and out on Time Tracking (no breaks). Placements come back on the first show night.</div></div>`;
+    return;
+  }
   const items = placeItems(st);
   const unplaced = items.filter(i => !i.zone || ALL_ZONES.indexOf(i.zone) < 0);
   const byNum = (a, b) => (Number(a.num) || 99) - (Number(b.num) || 99);
