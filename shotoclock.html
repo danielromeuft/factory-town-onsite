@@ -515,7 +515,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '31';
+const BUILT_VERSION = '32';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -1140,12 +1140,12 @@ function saveEdit() {
 
 /* ============ render: placements ============ */
 const ZONES = {
-  top: [['Stage 3','Cypress End','stage'],['Oasis','Next to Cypress','stage'],['Stage 5','The Warehouse','stage'],['Stage 1','Infinity Room','stage']],
+  top: [['Stage 3','Cypress End','stage'],['Oasis','','stage'],['Stage 5','The Warehouse','stage'],['Stage 1','Infinity Room','stage']],
   mid: [['Stage 4','The Park','stage'],['Stage 2','Chain Room','stage'],['Gallery','Z3TE1','gallery']],
-  roam: ['General Roaming','Anywhere inside the venue','roam'],
-  gs: ['Guest Services Container','GS container','gs'],
+  roam: ['General Roaming','','roam'],
+  gs: ['Guest Services Container','','gs'],
   gates: [['South Gate','Gate 6','gate'],['VIP Gate','Gate 4','gate'],['North Gate','Gate 2','gate']],
-  dirs: [['South Directional','Sidewalk outside South','dir'],['VIP Directional','Sidewalk outside VIP','dir'],['North Directional','Sidewalk outside North','dir']],
+  dirs: [['South Directional','','dir'],['VIP Directional','','dir'],['North Directional','','dir']],
 };
 const ALL_ZONES = [].concat(ZONES.top, ZONES.mid, [ZONES.roam], [ZONES.gs], ZONES.gates, ZONES.dirs).map(z => z[0]);
 function chipHtml(it) {
@@ -1245,7 +1245,7 @@ function updateRings() {
 }
 function zoneHtml([name, sub, cls], items, html) {
   const here = items.filter(i => i.zone === name);
-  return `<div class="zone ${cls} ${S.selKey ? 'armed' : ''}" data-drop="${esc(name)}"><div class="zh"><div><div class="zt fit">${esc(name)}</div><div class="zs fit">${esc(sub)}</div></div>${here.length ? `<span class="zc">${here.length}</span>` : ''}</div><div class="zb">${here.map(html || chipHtml).join('')}</div></div>`;
+  return `<div class="zone ${cls} ${S.selKey ? 'armed' : ''}" data-drop="${esc(name)}"><div class="zh"><div><div class="zt fit">${esc(name)}</div>${sub ? `<div class="zs fit">${esc(sub)}</div>` : ''}</div>${here.length ? `<span class="zc">${here.length}</span>` : ''}</div><div class="zb">${here.map(html || chipHtml).join('')}</div></div>`;
 }
 // Department heads float and are never placed.
 const NEVER_PLACE = /\b(daniel|tanjila)\b/i;
