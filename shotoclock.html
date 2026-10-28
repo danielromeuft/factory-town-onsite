@@ -518,7 +518,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '34';
+const BUILT_VERSION = '35';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -532,12 +532,12 @@ function call(fn, ...args) {
 }
 
 // The 25 radios, same list and order as RADIOS in Code.gs.
-const RADIO_NAMES = ['Tanjila', 'Daniel', 'Base', 'Dispatch - Roamers', 'Dispatch - Medical', 'Zone Lead',
+const RADIO_NAMES = ['Aria', 'Daniel', 'Base', 'Dispatch - Roamers', 'Dispatch - Medical', 'Zone Lead',
   'South Lead', 'VIP Lead', 'North Lead', 'GS Container', 'Box Office Lead', 'Box 2', 'Box - Dice',
   'GS 1', 'GS 2', 'GS 3', 'GS 4', 'GS 5', 'GS 6', 'GS 7', 'GS 8', 'GS 9', 'GS 10', 'GS 11', 'GS 12'];
 const blankRadios = () => RADIO_NAMES.map(n => ({ name: n, person: '', since: '' }));
 // The 25 scanners, same list and order as SCANNERS in Code.gs.
-const SCANNER_NAMES = ['Tanjila', 'Daniel', 'GS Container', 'Box Office 1', 'Box Office 2', 'Box Office 3',
+const SCANNER_NAMES = ['Aria', 'Daniel', 'GS Container', 'Box Office 1', 'Box Office 2', 'Box Office 3',
   'North God', 'North VIP', 'North 1', 'North 2', 'North 3', 'North 4', 'North 5',
   'South God', 'South VIP', 'South 1', 'South 2', 'South 3', 'South 4', 'South 5',
   'VIP God', 'VIP 1', 'VIP 2', 'VIP 3', 'Backup'];
@@ -971,7 +971,7 @@ function renderModal() {
     armIdle(60000);
     const n = (m.pin || '').length;
     body = head(m.checking ? 'Checking your code…' : 'Manager code to edit times')
-      + `<div class="msub" style="margin-top:-12px">Gabriel, Aria, Daniel or Tanjila: your 6-digit code.</div>`
+      + `<div class="msub" style="margin-top:-12px">Gabriel, Aria or Daniel: your 6-digit code.</div>`
       + `<div class="dots ${m.shake ? 'shake' : ''}">${[0,1,2,3,4,5].map(i => `<i class="${i < n ? 'f' : ''}"></i>`).join('')}</div>`
       + (m.err ? `<div class="err" style="margin:-12px 0 16px">${esc(m.err)}</div>` : '')
       + `<div class="pad">${[1,2,3,4,5,6,7,8,9].map(d => `<button data-key="${d}">${d}</button>`).join('')}<button class="nil"></button><button data-key="0">0</button><button data-key="del" aria-label="Delete">⌫</button></div>`;
@@ -1251,7 +1251,7 @@ function zoneHtml([name, sub, cls], items, html) {
   return `<div class="zone ${cls} ${S.selKey ? 'armed' : ''}" data-drop="${esc(name)}"><div class="zh"><div><div class="zt fit">${esc(name)}</div>${sub ? `<div class="zs fit">${esc(sub)}</div>` : ''}</div>${here.length ? `<span class="zc">${here.length}</span>` : ''}</div><div class="zb">${here.map(html || chipHtml).join('')}</div></div>`;
 }
 // Department heads float and are never placed.
-const NEVER_PLACE = /\b(daniel|tanjila)\b/i;
+const NEVER_PLACE = /\b(daniel|aria)\b/i;
 const efab = () => `<button class="efab ${S.edit ? 'save' : ''}" id="efab">${S.edit ? I.check + 'Save' : I.pair + 'Edit Partners'}</button>`;
 function mapHtml(items, html) {
   const z = zz => zoneHtml(zz, items, html);
