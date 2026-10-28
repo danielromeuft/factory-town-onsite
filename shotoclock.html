@@ -217,6 +217,9 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .zone .zs{font-size:13px;font-weight:700;opacity:.75;margin-top:2px}
 .zone .zc{font-size:14px;font-weight:900;min-width:30px;height:30px;border-radius:15px;display:grid;place-items:center;color:#fff;padding:0 8px}
 .zone .zb{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;flex:1}
+/* Narrow zones (Oasis, stages on a phone): badge on top, name gets the chip's full width, wrapped by word and shrunk only if one word still won't fit. */
+.zone{container-type:inline-size}
+@container (max-width:120px){.zone .chip{flex-direction:column;align-items:center;gap:2px;padding:4px 3px;border-radius:14px}.zone .chip .x{flex:none;width:100%;text-align:center;line-height:1.15}}
 .zone.stage{border-color:#c4b5fd;background:#faf8ff;color:#5b21b6}.zone.stage .zc{background:var(--purple)}
 .zone.gallery{border-color:#f9a8d4;background:#fff7fb;color:#9d174d}.zone.gallery .zc{background:var(--pink)}
 .zone.roam{border-color:#86efac;background:#f5fef8;color:#166534;min-height:120px}.zone.roam .zc{background:var(--green)}
@@ -515,7 +518,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '33';
+const BUILT_VERSION = '34';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -1792,11 +1795,12 @@ function fitText(root) {
     el.style.fontSize = '';
     if (el.scrollWidth <= el.clientWidth + 1) return;
     let size = parseFloat(getComputedStyle(el).fontSize);
-    while (el.scrollWidth > el.clientWidth + 1 && size > 9) { size -= 0.5; el.style.fontSize = size + 'px'; }
+    while (el.scrollWidth > el.clientWidth + 1 && size > 6) { size -= 0.5; el.style.fontSize = size + 'px'; }
   });
 }
 let fitT = 0;
 addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(() => fitText(), 120); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitText());   // widths change once the web font arrives
 
 /* ============ header: title folds away while scrolling Placements ============ */
 let compact = false, hdrSettle = 0;
