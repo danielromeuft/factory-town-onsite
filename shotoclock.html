@@ -76,6 +76,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .pill .st{font-size:16px;font-weight:600;color:var(--muted)}
 .pill.in{background:var(--blue-t);border-color:#bfdbfe}.pill.in::before{background:var(--blue)}.pill.in .st{color:var(--blue)}
 .pill.in .st.ret{color:var(--green);font-weight:800}   /* back from break: done with it */
+.pill.in .st.ret1{color:var(--blue);font-weight:800}   /* 2-break night: back from the 1st, one still to go */
 .pill.break{background:var(--purple-t);border-color:#ddd6fe}.pill.break::before{background:var(--purple)}.pill.break .st{color:var(--purple)}
 .pill.late{background:var(--red-t);border-color:#fecaca}.pill.late::before{background:var(--red)}.pill.late .st{color:var(--red);font-weight:800}
 .pill.out{background:var(--green-t);border-color:#bbf7d0}.pill.out::before{background:var(--green)}.pill.out .st{color:var(--green)}
@@ -93,7 +94,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
   mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
 .pill.ringdue::after{background:var(--red);animation:ringdue 1.2s ease-in-out infinite}
-.pill.in.ring .st,.pill.in.ring .st.ret{color:#c2410c;font-weight:800}.pill.in.ringdue .st,.pill.in.ringdue .st.ret{color:var(--red)}
+.pill.in.ring .st,.pill.in.ring .st.ret,.pill.in.ring .st.ret1{color:#c2410c;font-weight:800}.pill.in.ringdue .st,.pill.in.ringdue .st.ret,.pill.in.ringdue .st.ret1{color:var(--red)}
 .empty{border:2px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;color:var(--muted);font-size:19px;line-height:1.5}
 .empty b{color:var(--ink)}
 
@@ -518,7 +519,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '35';
+const BUILT_VERSION = '36';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -849,13 +850,19 @@ function renderTime(st) {
   g.innerHTML = list.map(p => {
     const s = statusOf(p.t), c = cls(p);
     let sub = 'Tap to clock in';
-    let ret = false;
-    if (s === 'in') { const back = p.t.b2i || p.t.b1i; ret = !!back; sub = back ? 'Returned · ' + fmtT(back) : 'In · ' + fmtT(p.t.in); }   // after a break, the return time is what matters
+    let ret = '';
+    if (s === 'in') {   // after a break, the return time is what matters
+      const back = p.t.b2i || p.t.b1i;
+      // 2-break nights: "Returned 1st" in blue (one break left), "Returned 2nd" in green (done). 1-break nights: "Returned" in green.
+      const nth = (st.maxBreaks || 1) >= 2 ? (p.t.b2i ? ' 2nd' : ' 1st') : '';
+      ret = !back ? '' : nth === ' 1st' ? 'ret1' : 'ret';
+      sub = back ? 'Returned' + nth + ' · ' + fmtT(back) : 'In · ' + fmtT(p.t.in);
+    }
     if (s === 'break') sub = breakSub(p.t, now);
     if (s === 'out') sub = 'Out · ' + fmtT(p.t.out);
     const due = s === 'in' ? schedDue(st, p) : 0;
     const ring = s === 'break' ? ` bring" data-bd="${+dueAt(p.t)}` : due ? `" data-due="${due}" data-sub="${esc(sub)}` : '';
-    return `<button class="pill ${c === 'none' ? '' : c}${ring}" data-id="${esc(p.id)}"><span class="nm fit">${esc(p.name)}</span><span class="st fit${ret ? ' ret' : ''}">${esc(sub)}</span></button>`;
+    return `<button class="pill ${c === 'none' ? '' : c}${ring}" data-id="${esc(p.id)}"><span class="nm fit">${esc(p.name)}</span><span class="st fit${ret ? ' ' + ret : ''}">${esc(sub)}</span></button>`;
   }).join('');
   updatePillRings();
 }
