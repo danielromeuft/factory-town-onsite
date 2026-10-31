@@ -224,6 +224,61 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .setrow span{color:var(--muted);font-weight:600}
 .setrow b{font-weight:800}
 
+/* wristbands (10/31): VIP band counts. Amber like the VIP ticket badge. */
+.mode.bands{background:#b45309}
+.wb{max-width:760px;margin:0 auto}
+.wb-hero{background:var(--brand);color:#fff;border-radius:28px;padding:20px 20px 18px}
+.wb-hero .k{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.18em;color:#a1a1aa;text-transform:uppercase}
+.wb-day{background:#fff;color:var(--ink);border-radius:999px;padding:7px 14px;font-size:15px;font-weight:900;letter-spacing:0;text-transform:none;flex:none}
+.wb-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.wb-stat{background:#27272a;border-radius:20px;padding:14px 14px 12px;min-width:0}
+.wb-stat b{display:block;font-size:44px;font-weight:900;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.wb-stat span{display:block;font-size:14px;font-weight:700;color:#a1a1aa;margin-top:6px}
+.wb-stat.base{background:#b45309} .wb-stat.base span{color:#fde68a}
+.wb-stat.neg{background:var(--red)} .wb-stat.neg span{color:#fecaca}
+.wb-line{font-size:15px;color:#d4d4d8;font-weight:600;margin-top:12px;line-height:1.4}
+.wb-acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.wb-acts .big{margin-top:0;min-height:76px;font-size:22px;border-radius:22px}
+.wb-acts .big.amber{background:#b45309;grid-column:1/-1;min-height:96px;font-size:28px}
+.big.amber{background:#b45309}
+.wb-h{display:flex;justify-content:space-between;align-items:baseline;margin:26px 2px 10px;font-size:22px;font-weight:900;letter-spacing:-.01em}
+.wb-h small{font-size:15px;font-weight:700;color:var(--muted)}
+.wb-areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.wb-area{border:2px solid #fde68a;border-radius:20px;padding:13px 15px;background:#fffbeb;text-align:left;min-width:0}
+.wb-area b{display:block;font-size:36px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;color:#92400e}
+.wb-area .nm{font-size:17px;font-weight:800;margin-top:3px;line-height:1.2;word-break:break-word}
+.wb-area small{display:block;font-size:13px;color:var(--muted);font-weight:700;margin-top:4px;line-height:1.35}
+.wb-area.zero{background:var(--soft);border-color:var(--line)} .wb-area.zero b{color:#a1a1aa}
+.wb-log{display:flex;flex-direction:column;gap:8px}
+.wb-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border-radius:18px;border:2px solid var(--line);background:#fff;padding:12px 14px}
+.wb-row i{width:8px;align-self:stretch;border-radius:6px;background:var(--fc);flex:none}
+.wb-row div{flex:1;min-width:0}
+.wb-row b{display:block;font-size:19px;font-weight:900;line-height:1.2;word-break:break-word}
+.wb-row span{display:block;font-size:14px;font-weight:700;color:var(--muted);margin-top:2px}
+.wb-row em{font-style:normal;font-size:26px;font-weight:900;color:var(--fc);flex:none;font-variant-numeric:tabular-nums}
+.wb-row.void{border-style:dashed;opacity:.55} .wb-row.void b,.wb-row.void em{text-decoration:line-through}
+.wb-row.fresh{animation:flash 1.4s ease-out}
+.wb-tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.wb-tile{min-height:130px;border-radius:26px;border:2px solid #fde68a;background:#fffbeb;font-size:54px;font-weight:900;letter-spacing:-.03em;color:#92400e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:12px;text-align:center}
+.wb-tile:active{transform:scale(.98)}
+.wb-tile small{font-size:15px;font-weight:700;color:var(--muted);letter-spacing:0}
+.wb-tile.alt{background:var(--soft);border-color:var(--line);color:var(--ink);font-size:30px}
+.wb-tiles.places .wb-tile{min-height:104px;font-size:24px;letter-spacing:-.01em;color:var(--ink);line-height:1.15}
+.wb-tiles.places .wb-tile.person{background:#fff;border-color:var(--line)}
+.wb-num{font-size:76px;font-weight:900;letter-spacing:-.03em;text-align:center;font-variant-numeric:tabular-nums;color:#92400e;margin:0 0 12px;min-height:84px}
+.wb-num.empty{color:#d4d4d8}
+.wb-card{border:2px solid #fde68a;background:#fffbeb;border-radius:28px;padding:22px 20px;text-align:center}
+.wb-card .qty{font-size:84px;font-weight:900;letter-spacing:-.04em;line-height:1;color:#92400e;font-variant-numeric:tabular-nums}
+.wb-card .unit{font-size:17px;font-weight:800;color:#b45309;letter-spacing:.14em;text-transform:uppercase;margin-top:6px}
+.wb-route{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:18px;font-size:24px;font-weight:900}
+.wb-route span{background:#fff;border:2px solid var(--line);border-radius:16px;padding:8px 14px}
+.wb-route svg{width:26px;height:26px;color:#b45309}
+.wb-card .by{font-size:15px;font-weight:700;color:var(--muted);margin-top:14px}
+.wb-warn{margin-top:14px;background:var(--red-t);color:var(--red);border-radius:16px;padding:12px 14px;font-size:16px;font-weight:800;line-height:1.35}
+.wb-note{display:block;margin-top:14px}
+.wb-note input{width:100%;height:56px;border-radius:18px;border:2px solid var(--line);padding:0 16px;font-size:18px;outline:0;background:#fff}
+@media (max-width:520px){.wb-stats{gap:8px} .wb-stat{padding:12px 10px 10px} .wb-stat b{font-size:28px} .wb-stat span{font-size:12px} .wb-areas{grid-template-columns:1fr 1fr;gap:8px} .wb-area{padding:12px} .wb-area b{font-size:30px} .wb-area .nm{font-size:15px} .wb-tile{min-height:110px;font-size:44px} .wb-tiles.places .wb-tile{font-size:20px;min-height:90px} .wb-card .qty{font-size:68px}}
+
 /* flag */
 .fl-alt{height:52px;padding:0 20px;border-radius:999px;border:2px solid var(--line);background:#fff;font-size:17px;font-weight:800}
 /* Flag start: three big choices */
@@ -241,6 +296,9 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .fl-row span em{font-style:normal;color:var(--fc)}
 .fl-row small{font-size:13px;font-weight:700;color:var(--muted);text-align:right;flex:none;max-width:90px}
 .fl-list .fl-card{margin-bottom:0}
+.fl-qr{margin-top:12px;background:rgba(0,0,0,.2);border-radius:16px;padding:10px 14px 12px}
+.fl-qr span{display:block;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+.fl-qr code{display:block;font:600 15px/1.35 ui-monospace,Menlo,monospace;word-break:break-all;margin-top:6px;user-select:all;-webkit-user-select:all}
 /* ID camera: wider view, card-shaped frame, live guidance */
 .cam.idcam{aspect-ratio:4/3}
 .cam.idcam video{opacity:0}
@@ -398,10 +456,12 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '37';
+const APP_VERSION = '38';
 
 /* ============ icons ============ */
 const I = {
+  band: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="4"/><circle cx="16.5" cy="12" r="1.6"/><path d="M7 10.5v3M10 10.5v3"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M7.5 9.5L12 14l4.5-4.5"/><path d="M3 14v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg>',
   list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.3"/><circle cx="4" cy="12" r="1.3"/><circle cx="4" cy="18" r="1.3"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg>',
   x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
@@ -524,7 +584,7 @@ function bindPad(fn) {
 }
 
 /* ============ app state ============ */
-let mode = 'home';      // home | sell | scan | flag
+let mode = 'home';      // home | sell | scan | flag | bands
 let tab = 'scan';       // scan | list  (inside scan mode)
 let S = null;           // tonight's state from the server
 let sale = null;        // the sale in progress
@@ -543,6 +603,7 @@ function render() {
   else if (mode === 'sell') { stopCamera(); renderSell(); }
   else if (mode === 'scan') { tab === 'scan' ? renderScan() : (stopCamera(), renderList()); }
   else if (mode === 'flag') renderFlag();
+  else if (mode === 'bands') { stopCamera(); renderBands(); }
 }
 
 /* ============ home ============ */
@@ -555,7 +616,7 @@ function renderMoved() {
     '<div class="qs" style="text-align:center;word-break:break-all">' + esc(APP_URL) + '</div></div>';
 }
 function renderHome() {
-  setTitle('Box Office');
+  setTitle('OnSite');
   $('#main').innerHTML = '<div class="home">' +
     '<div class="hero"><img src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE &middot; ONSITE</div>' +
     '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' : 'Tap any button and enter your code') + '</div></div>' +
@@ -563,12 +624,14 @@ function renderHome() {
     (sellScanOn() ? '<button class="mode sell" id="goSell">' + I.sell + '<div><b>Sell</b><span>Log a sale and send the customer their QR</span></div></button>' +
       '<button class="mode scan" id="goScan">' + I.scan + '<div><b>Scan</b><span>Check tickets at the gate</span></div></button>' : '') +
     '<button class="mode flag" id="goFlag">' + I.alert + '<div><b>Flag</b><span>Flag or check a guest: Under 21 VIP, Third Party Ticket, No re-entry, Ejected</span></div></button>' +
+    '<button class="mode bands" id="goBands">' + I.band + '<div><b>Wristbands</b><span>VIP bands: received from BOH, issued to gates and staff, on hand at Base</span></div></button>' +
     '</div>';
   // Shot O'clock lives in shotoclock.html on the same site; it only opens on a device signed in with a lead code.
   $('#goShot').onclick = () => { requireLogin(() => { location.href = 'shotoclock.html'; }); };
   if ($('#goSell')) $('#goSell').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'sell'; sale = { step: 'type' }; render(); }); };
   if ($('#goScan')) $('#goScan').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'scan'; tab = 'scan'; render(); poll(true); }); };
   $('#goFlag').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'flag'; flagStart(); }); };
+  $('#goBands').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'bands'; bandsStart(); }); };
 }
 
 /* ============ sell ============ */
@@ -1529,7 +1592,7 @@ function flagCard(f, i, opts) {
     (opts.match && f.match ? '<div class="fl-match">' + esc(MATCH_TEXT[f.match] || '') + '</div>' : '') +
     '<div class="fl-type">' + esc(f.type) + '</div>' +
     flagWho(f, true) +
-    flagExtras(f) +
+    flagExtras(f) + flagQr(f) +
     (f.note ? '<div class="fl-note">' + esc(f.note) + '</div>' : '') +
     '<div class="fl-by">Flagged by ' + esc(f.by) + ' &middot; ' + esc(fmtWhenMs(f.at)) + (f.event ? ' &middot; ' + esc(f.event) : '') + '</div>' +
     (f.photo ? '<button class="bigset" data-photo="' + i + '">' + I.camera + 'View ID photo</button>' : '') +
@@ -1551,6 +1614,11 @@ function showIdPhoto(f) {
 }
 
 /** Platform (third party tickets) and whether they were let in, shown under the DOB on a flag card. */
+/** The QR data of each flagged ticket (DICE text, or our FTOS ticket ID), for reviewing a flag. */
+function flagQr(f) {
+  const t = f.tickets || [];
+  return t.length ? '<div class="fl-qr"><span>Ticket QR' + (t.length === 1 ? '' : 's (' + t.length + ')') + '</span>' + t.map(x => '<code>' + esc(x) + '</code>').join('') + '</div>' : '';
+}
 function flagExtras(f) {
   return (f.platform ? '<div class="fl-plat">Platform: <b>' + esc(f.platform) + '</b></div>' : '') +
     (ENTRY_DONE[f.entry] ? '<div class="fl-ent ' + (f.entry === 'Admitted' ? 'yes' : 'no') + '">' + (f.entry === 'Admitted' ? I.check : I.x) + ENTRY_DONE[f.entry] + '</div>' : '');
@@ -1769,7 +1837,26 @@ function promptBox(title, sub, value, type, okText, onOk, color) {
 function openSettings() {
   // The server reply (event, version) redraws Settings only if Settings is still the open screen: tapping Developer
   // Settings before it arrived used to get covered by the redraw (10/9). lastInfo keeps the reply for Back.
-  let lastInfo = null;
+  let lastInfo = null, lastTcp = null;
+  // TCP bridge switch (10/31: moved here from Developer Settings): read the server's state, then a confirm before turning it on or off.
+  const tcpRead = () => call('api_tcpBridge', AUTH.token, null).then(r => { lastTcp = r; tcpShow(r); }).catch(() => tcpShow({ ok: false, msg: 'No connection' }));
+  const tcpShow = r => {
+    const st = $('#sTcpState'), b = $('#sTcp');
+    if (!st || !b) return;
+    if (!r.ok) { st.textContent = 'Unknown'; b.textContent = r.msg || 'Could not check'; return; }
+    st.textContent = r.on ? 'On' : 'Off'; st.style.color = r.on ? 'var(--green)' : 'var(--muted)';
+    b.disabled = !r.on && !r.allowed;
+    b.className = 'bigset' + (r.on ? ' red' : ' green');
+    b.textContent = r.on ? 'Turn off TCP bridge' : r.allowed ? 'Turn on TCP bridge' : 'Bridge not enabled in the code';
+    if (r.on && r.only && r.only.length) $('#sTcpNote').textContent = 'Testing: only ' + r.only.join(', ') + '. Off: punches go into TCP by hand, and any still waiting are skipped.';
+    b.onclick = () => confirmBox(r.on ? 'Turn off the TCP bridge?' : 'Turn on the TCP bridge?',
+      r.on ? 'New punches stop going to TCP. Any punch still waiting is skipped and must be entered in TCP by hand.' : 'Punches start going to TCP through the base laptop again. Keep the TCP tab open there.',
+      r.on ? 'Turn off' : 'Turn on', r.on ? 'red' : 'green', () => {
+        b.disabled = true;
+        call('api_tcpBridge', AUTH.token, !r.on).then(x => { draw(lastInfo); tcpRead(); if (x.ok) toast('TCP bridge ' + (x.on ? 'on' : 'off') + (x.skipped ? '. ' + x.skipped + ' waiting punch' + (x.skipped === 1 ? '' : 'es') + ' skipped.' : '.'), 4000); else toast(x.msg || 'Nothing changed.'); })
+          .catch(() => { b.disabled = false; toast('No connection. Try again.'); });
+      });
+  };
   const draw = info => {
     if (info) lastInfo = info;
     $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet" id="setSheet">' +
@@ -1780,11 +1867,15 @@ function openSettings() {
       '<div class="setrow"><span>Emails left today</span><b style="' + (info && info.emailsLeft < 15 ? 'color:var(--red)' : '') + '">' + (info ? info.emailsLeft : '…') + '</b></div>' +
       '<div class="setrow"><span>Version</span><b>App ' + esc(APP_VERSION) + (info ? ' &middot; Server ' + esc(info.build) : '') + '</b></div>' +
       (AUTH ? '<button class="bigset" id="sEvent">Refresh Event</button><div class="msub" style="margin:8px 4px 0;font-size:15px">Reads the current event from the Master Timesheet. A new event gets its own flags page; flags from past events stay active.</div>' : '') +
+      (AUTH ? '<div class="setrow" style="margin-top:14px"><span>TCP bridge</span><b id="sTcpState" style="color:var(--muted)">Checking…</b></div>' +
+        '<button class="bigset" id="sTcp" disabled>TCP bridge</button>' +
+        '<div class="msub" id="sTcpNote" style="margin:8px 4px 0;font-size:15px">Sends Shot O\'clock punches to TimeClock Plus through the base laptop. Off: punches go into TCP by hand, and any still waiting are skipped.</div>' : '') +
       (AUTH && AUTH.dev ? '<button class="bigset" id="sDev">Developer Settings</button>' : '') +
       (mode !== 'home' ? '<button class="bigset" id="sHome">Back to Home</button>' : '') +
       (AUTH ? '<button class="bigset red" id="sOut">Sign out</button>' : '') +
       '</div></div>';
     const dv = $('#sDev'); if (dv) dv.onclick = () => openDeveloper(() => draw(lastInfo));
+    if (lastTcp) tcpShow(lastTcp);
     $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
     $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
     const h = $('#sHome'); if (h) h.onclick = () => { $('#modal').innerHTML = ''; goHome(); };
@@ -1799,10 +1890,11 @@ function openSettings() {
     });
   };
   draw(null);
+  if (AUTH) tcpRead();
   if (AUTH) call('api_info', AUTH.token).then(r => { if (r.ok) setDev(r.dev); if (r.ok) { lastInfo = r; if ($('#setSheet')) draw(r); } }).catch(() => {});
 }
 
-/** Settings > Developer Settings (developer codes only): Sell and Scan, ID scan diagnostics and stats, Reset flags. */
+/** Settings > Developer Settings (developer codes only): Sell and Scan, ID scan diagnostics and stats, Reset flags. The TCP bridge switch is in Settings. */
 function openDeveloper(back) {
   const on = sellScanOn();
   $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
@@ -1815,9 +1907,6 @@ function openDeveloper(back) {
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">Shows camera numbers on the ID scan screen and a Send frame button that saves what the reader sees to Drive.</div>' +
     '<div class="setrow" style="margin-top:14px"><span>ID scan stats (this device)</span><b></b></div>' + idStatsHtml() +
     '<button class="bigset" id="dStatsReset">Reset ID scan stats</button>' +
-    '<div class="setrow" style="margin-top:14px"><span>TCP bridge</span><b id="dTcpState" style="color:var(--muted)">Checking…</b></div>' +
-    '<button class="bigset" id="dTcp" disabled>TCP bridge</button>' +
-    '<div class="msub" id="dTcpNote" style="margin:8px 4px 0;font-size:15px">Sends Shot O\'clock punches to TimeClock Plus through the base laptop. Off: punches go into TCP by hand, and any still waiting are skipped.</div>' +
     '<div class="setrow" style="margin-top:14px"><span>Flags</span><b></b></div>' +
     '<button class="bigset" id="dFlagsRemove">Remove flags</button>' +
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">Marks every active flag for this event Removed. The rows stay on the sheet, with a note in History.</div>' +
@@ -1843,25 +1932,6 @@ function openDeveloper(back) {
         });
     }).catch(() => { btn.disabled = false; toast('No connection. Try again.'); });
   };
-  // TCP bridge switch: read the server's state, then a confirm before turning it on or off.
-  const tcpShow = r => {
-    const st = $('#dTcpState'), b = $('#dTcp');
-    if (!st || !b) return;
-    if (!r.ok) { st.textContent = 'Unknown'; b.textContent = r.msg || 'Could not check'; return; }
-    st.textContent = r.on ? 'On' : 'Off'; st.style.color = r.on ? 'var(--green)' : 'var(--muted)';
-    b.disabled = !r.on && !r.allowed;
-    b.className = 'bigset' + (r.on ? ' red' : ' green');
-    b.textContent = r.on ? 'Turn off TCP bridge' : r.allowed ? 'Turn on TCP bridge' : 'Bridge not enabled in the code';
-    if (r.on && r.only && r.only.length) $('#dTcpNote').textContent = 'Testing: only ' + r.only.join(', ') + '. Off: punches go into TCP by hand, and any still waiting are skipped.';
-    b.onclick = () => confirmBox(r.on ? 'Turn off the TCP bridge?' : 'Turn on the TCP bridge?',
-      r.on ? 'New punches stop going to TCP. Any punch still waiting is skipped and must be entered in TCP by hand.' : 'Punches start going to TCP through the base laptop again. Keep the TCP tab open there.',
-      r.on ? 'Turn off' : 'Turn on', r.on ? 'red' : 'green', () => {
-        b.disabled = true;
-        call('api_tcpBridge', AUTH.token, !r.on).then(x => { openDeveloper(back); if (x.ok) toast('TCP bridge ' + (x.on ? 'on' : 'off') + (x.skipped ? '. ' + x.skipped + ' waiting punch' + (x.skipped === 1 ? '' : 'es') + ' skipped.' : '.'), 4000); else toast(x.msg || 'Nothing changed.'); })
-          .catch(() => { b.disabled = false; toast('No connection. Try again.'); });
-      });
-  };
-  call('api_tcpBridge', AUTH.token, null).then(tcpShow).catch(() => tcpShow({ ok: false, msg: 'No connection' }));
   $('#dFlagsRemove').onclick = e => flagsClear('remove', e.currentTarget);
   $('#dFlagsWipe').onclick = e => flagsClear('wipe', e.currentTarget);
   $('#dStatsReset').onclick = () => confirmBox('Reset ID scan stats?', 'The counts on this device start again from zero.', 'Reset', 'red', () => { store.set(ID_STATS, null); openDeveloper(back); });
@@ -1884,6 +1954,205 @@ function setDev(dev) {
 function goHome() {
   if (mode === 'sell' && sale && (sale.step === 'customer' || sale.step === 'checkmail')) return;
   mode = 'home'; sale = null; render();
+}
+
+/* ============ wristbands ============ */
+// Home > Wristbands (10/31): VIP bands received from BOH into Base, issued from Base to areas and people, and
+// returned to Base, per show night (Shot O'clock's show day). Counts are worked out here from that night's log (Code.gs api_bands). A move is logged only
+// after a confirm; a mistake is voided from its row, never deleted.
+const WB_PLACES = ['VIP Gate', 'South Gate', 'North Gate', 'Guest Services Container', 'Box Office'];
+const WB_PEOPLE = ['Daniel', 'Aria'];
+const WB_QTY = [50, 100, 200];
+const WB_KIND = {
+  Issued: { verb: 'Issue', color: '#b45309', ask: 'How many bands are going out?', who: 'Who is getting them?' },
+  Received: { verb: 'Receive', color: '#16a34a', ask: 'How many came from BOH?' },
+  Returned: { verb: 'Return', color: '#2563eb', ask: 'How many are coming back?', who: 'Who is returning them?' },
+};
+let wb = null;      // { step: home | qty | custom | place | confirm, kind, qty, place, data }
+let wbTimer = 0;
+const wbFmt = n => Number(n || 0).toLocaleString('en-US');
+
+function bandsStart() {
+  wb = { step: 'home', data: (wb && wb.data) || null };
+  render();
+  wbLoad();
+}
+function wbLoad() {
+  return call('api_bands', AUTH.token).then(r => {
+    if (!wb) return;
+    if (!r.ok) return toast(r.msg || 'Could not load the wristbands.');
+    wb.data = r;
+    if (mode === 'bands' && wb.step === 'home') render();
+  }).catch(() => { if (mode === 'bands' && wb && !wb.data) { wb.failed = true; render(); } });
+}
+
+/** The night's totals, and each area's / person's bands still out. */
+function wbCount() {
+  const rows = wb.data.rows.filter(r => r.status !== 'Void');
+  const t = { received: 0, issued: 0, returned: 0, areas: {} };
+  const area = n => t.areas[n] = t.areas[n] || { name: n, issued: 0, returned: 0, last: 0, lastBy: '' };
+  rows.forEach(r => {
+    if (r.type === 'Received') t.received += r.qty;
+    else {
+      const a = area(r.type === 'Issued' ? r.to : r.from);
+      if (r.type === 'Issued') { t.issued += r.qty; a.issued += r.qty; } else { t.returned += r.qty; a.returned += r.qty; }
+      if (r.at > a.last) { a.last = r.at; a.lastBy = r.by; }
+    }
+  });
+  t.base = t.received - t.issued + t.returned;
+  t.out = t.issued - t.returned;
+  return t;
+}
+const wbHeld = (t, name) => { const a = t.areas[name]; return a ? a.issued - a.returned : 0; };
+/** Every place and person to show: the usual ones first, then anyone typed in as Custom this event. */
+function wbNames() {
+  const seen = new Set(WB_PLACES.concat(WB_PEOPLE)), extra = [];
+  (wb.data ? wb.data.rows : []).forEach(r => { const n = r.type === 'Issued' ? r.to : r.type === 'Returned' ? r.from : ''; if (n && !seen.has(n)) { seen.add(n); extra.push(n); } });
+  return { places: WB_PLACES.concat(extra), people: WB_PEOPLE };
+}
+
+function renderBands() {
+  if (!wb) wb = { step: 'home' };
+  const m = $('#main');
+  if (wb.step !== 'home') { clearInterval(wbTimer); wbTimer = 0; }
+  if (wb.step === 'home') {
+    setTitle('Wristbands');
+    if (!wb.data) { m.innerHTML = wb.failed ? '<div class="wb"><div class="empty"><b>No connection.</b><br>Check the internet and try again.</div><button class="big dark" id="wbRetry">Try again</button></div>' : loadingHtml('Counting wristbands…'); if ($('#wbRetry')) $('#wbRetry').onclick = () => { wb.failed = false; render(); wbLoad(); }; return; }
+    if (!wbTimer) wbTimer = setInterval(() => { if (mode === 'bands' && wb && wb.step === 'home' && !$('#modal').innerHTML) wbLoad(); else if (mode !== 'bands') { clearInterval(wbTimer); wbTimer = 0; } }, 30000);
+    const d = wb.data, t = wbCount();
+    const names = wbNames(), all = names.places.concat(names.people);
+    const areaHtml = all.map(n => {
+      const a = t.areas[n], held = a ? a.issued - a.returned : 0;
+      const sub = a ? (a.returned ? wbFmt(a.issued) + ' issued, ' + wbFmt(a.returned) + ' back' : 'Last ' + fmtT(a.last) + ' by ' + a.lastBy) : 'None yet';
+      return '<div class="wb-area' + (held ? '' : ' zero') + '"><b>' + wbFmt(held) + '</b><div class="nm">' + esc(n) + '</div><small>' + esc(sub) + '</small></div>';
+    }).join('');
+    const rows = d.rows;
+    const logHtml = rows.length ? rows.map(r => {
+      const k = WB_KIND[r.type], route = r.type === 'Received' ? 'From BOH to Base' : r.type === 'Issued' ? 'To ' + r.to : 'Back from ' + r.from;
+      return '<button class="wb-row' + (r.status === 'Void' ? ' void' : '') + (r.n === wb.fresh ? ' fresh' : '') + '" data-n="' + r.n + '" style="--fc:' + k.color + '"><i></i><div><b>' + esc(route) + '</b><span>' +
+        esc(fmtT(r.at) + ' · ' + r.by + (r.status === 'Void' ? ' · Void' : '') + (r.note ? ' · ' + r.note : '')) + '</span></div><em>' + (r.type === 'Issued' ? '−' : '+') + wbFmt(r.qty) + '</em></button>';
+    }).join('') : '<div class="empty">Nothing logged for ' + esc(d.night) + ' yet.<br>Start with <b>Received from BOH</b> when the bands arrive.</div>';
+    m.innerHTML = '<div class="wb">' +
+      '<div class="wb-hero"><div class="k"><span>VIP bands' + (d.event ? ' · ' + esc(d.event) : '') + '</span>' +
+        '<div class="wb-day">' + esc(d.night) + '</div></div>' +
+        '<div class="wb-stats"><div class="wb-stat"><b>' + wbFmt(t.received) + '</b><span>Received</span></div>' +
+        '<div class="wb-stat"><b>' + wbFmt(t.issued) + '</b><span>Issued</span></div>' +
+        '<div class="wb-stat ' + (t.base < 0 ? 'neg' : 'base') + '"><b>' + wbFmt(t.base) + '</b><span>At Base</span></div></div>' +
+        '<div class="wb-line">' + (t.base < 0 ? 'More issued than received. A delivery from BOH may not be logged yet. ' : '') +
+          (t.returned ? wbFmt(t.returned) + ' returned to Base, so ' + wbFmt(t.issued - t.returned) + ' still out. ' : '') +
+          'This show night only. It follows the day set in Shot O\'clock.</div></div>' +
+      '<div class="wb-acts"><button class="big amber" id="wbIssue">' + I.band + 'Issue bands</button>' +
+        '<button class="big green" id="wbRecv">' + I.inbox + 'From BOH</button><button class="big blue" id="wbRet">' + I.back + 'Return</button></div>' +
+      '<div class="wb-h">Out with each area<small>' + wbFmt(t.out) + ' out</small></div><div class="wb-areas">' + areaHtml + '</div>' +
+      '<div class="wb-h">Log<small>' + rows.length + ' ' + (rows.length === 1 ? 'entry' : 'entries') + '</small></div><div class="wb-log">' + logHtml + '</div></div>';
+    $('#wbIssue').onclick = () => wbGo('Issued');
+    $('#wbRecv').onclick = () => wbGo('Received');
+    $('#wbRet').onclick = () => wbGo('Returned');
+    m.querySelectorAll('[data-n]').forEach(b => { b.onclick = () => wbDetail(d.rows.find(r => r.n === Number(b.dataset.n))); });
+    wb.fresh = 0;
+    return;
+  }
+  const k = WB_KIND[wb.kind];
+  if (wb.step === 'qty') {
+    setTitle('Wristbands · ' + k.verb);
+    m.innerHTML = '<div class="step"><div class="q">' + esc(k.ask) + '</div><p class="qs">' + (wb.kind === 'Received' ? 'They go to Base.' : wb.kind === 'Issued' ? 'From Base. Next you pick who gets them.' : 'Back to Base. Next you pick who is returning them.') + '</p>' +
+      '<div class="wb-tiles">' + WB_QTY.map(q => '<button class="wb-tile" data-q="' + q + '">' + q + '<small>bands</small></button>').join('') +
+      '<button class="wb-tile alt" data-q="custom">Custom<small>Type a number</small></button></div>' +
+      '<button class="big ghost" id="wbBack" style="margin-top:16px">' + I.back + 'Back</button></div>';
+    m.querySelectorAll('[data-q]').forEach(b => { b.onclick = () => { if (b.dataset.q === 'custom') { wb.typed = ''; wb.step = 'custom'; } else { wb.qty = Number(b.dataset.q); wbAfterQty(); } render(); }; });
+    $('#wbBack').onclick = () => { wb.step = 'home'; render(); };
+  } else if (wb.step === 'custom') {
+    setTitle('Wristbands · ' + k.verb);
+    const draw = () => {
+      $('#wbNum').textContent = wb.typed ? wbFmt(wb.typed) : '0';
+      $('#wbNum').classList.toggle('empty', !wb.typed);
+      $('#wbNext').disabled = !(Number(wb.typed) >= 1);
+    };
+    m.innerHTML = '<div class="step"><div class="q">' + esc(k.ask) + '</div><p class="qs">Up to 5,000 at a time.</p>' +
+      '<div class="wb-num" id="wbNum"></div>' + padHtml() +
+      '<div class="row2"><button class="big ghost" id="wbBack">' + I.back + 'Back</button><button class="big amber" id="wbNext">Next</button></div></div>';
+    bindPad(d => {
+      if (d === 'del') wb.typed = wb.typed.slice(0, -1);
+      else if ((wb.typed + d).length <= 4 && !(wb.typed === '' && d === '0') && Number(wb.typed + d) <= 5000) wb.typed += d;
+      draw();
+    });
+    $('#wbNext').onclick = () => { wb.qty = Number(wb.typed); wbAfterQty(); render(); };
+    $('#wbBack').onclick = () => { wb.step = 'qty'; render(); };
+    draw();
+  } else if (wb.step === 'place') {
+    setTitle('Wristbands · ' + k.verb);
+    const t = wbCount(), names = wbNames();
+    const tile = (n, cls) => {
+      const held = wbHeld(t, n);
+      return '<button class="wb-tile ' + cls + '" data-p="' + esc(n) + '">' + esc(n) + '<small>' + (held ? wbFmt(held) + ' with them' : wb.kind === 'Returned' ? 'None out' : 'None yet') + '</small></button>';
+    };
+    // Returning: whoever has bands out comes first.
+    const order = list => wb.kind === 'Returned' ? list.slice().sort((a, b) => (wbHeld(t, b) > 0) - (wbHeld(t, a) > 0)) : list;
+    m.innerHTML = '<div class="step"><div class="q">' + esc(k.who) + '</div><p class="qs">' + wbFmt(wb.qty) + ' bands ' + (wb.kind === 'Issued' ? 'from Base.' : 'back to Base.') + '</p>' +
+      '<div class="wb-tiles places">' + order(names.places).map(n => tile(n, '')).join('') + order(names.people).map(n => tile(n, 'person')).join('') +
+      '<button class="wb-tile alt" data-p="">Custom<small>Type a name</small></button></div>' +
+      '<button class="big ghost" id="wbBack" style="margin-top:16px">' + I.back + 'Back</button></div>';
+    m.querySelectorAll('[data-p]').forEach(b => {
+      b.onclick = () => {
+        if (b.dataset.p) { wb.place = b.dataset.p; wb.step = 'confirm'; return render(); }
+        promptBox(wb.kind === 'Issued' ? 'Who is getting them?' : 'Who is returning them?', 'An area or a person, for example "Lead Ryan" or "Artist Gate".', '', 'text', 'Next', v => {
+          if (!v) return toast('Type a name.');
+          if (/^(base|boh)$/i.test(v)) return toast('Pick an area or a person, not ' + v + '.');
+          wb.place = v.replace(/\s+/g, ' ').slice(0, 40); wb.step = 'confirm'; render();
+        });
+      };
+    });
+    $('#wbBack').onclick = () => { wb.step = 'qty'; render(); };
+  } else if (wb.step === 'confirm') {
+    setTitle('Wristbands · Confirm');
+    const t = wbCount(), from = wb.kind === 'Received' ? 'BOH' : wb.kind === 'Issued' ? 'Base' : wb.place, to = wb.kind === 'Issued' ? wb.place : 'Base';
+    let warn = '';
+    if (wb.kind === 'Issued' && wb.qty > t.base) warn = 'Base only shows ' + wbFmt(Math.max(t.base, 0)) + ' on hand. Log a delivery from BOH first if one came in, or log this anyway.';
+    if (wb.kind === 'Returned' && wb.qty > wbHeld(t, wb.place)) warn = wb.place + ' only shows ' + wbFmt(Math.max(wbHeld(t, wb.place), 0)) + ' bands out. Check the number, or log this anyway.';
+    m.innerHTML = '<div class="step"><div class="q">' + (wb.kind === 'Issued' ? 'Hand them over?' : wb.kind === 'Received' ? 'Log the delivery?' : 'Take them back?') + '</div><p class="qs">Count the bands before you confirm.</p>' +
+      '<div class="wb-card"><div class="qty">' + wbFmt(wb.qty) + '</div><div class="unit">VIP bands</div>' +
+        '<div class="wb-route"><span>' + esc(from) + '</span>' + I.chev + '<span>' + esc(to) + '</span></div>' +
+        '<div class="by">Logged by ' + esc(AUTH.name) + ' · ' + fmtT(Date.now()) + '</div></div>' +
+      (warn ? '<div class="wb-warn">' + esc(warn) + '</div>' : '') +
+      '<label class="wb-note"><input id="wbNoteIn" type="text" maxlength="200" placeholder="Note (optional), e.g. band numbers" value="' + esc(wb.note || '') + '"></label>' +
+      '<div class="row2"><button class="big ghost" id="wbBack">' + I.back + 'Back</button><button class="big amber" id="wbOk">' + I.check + 'Confirm</button></div></div>';
+    $('#wbNoteIn').oninput = e => { wb.note = e.target.value; };
+    $('#wbBack').onclick = () => { wb.step = wb.kind === 'Received' ? 'qty' : 'place'; render(); };
+    $('#wbOk').onclick = e => wbSave(e.currentTarget);
+  }
+}
+
+function wbGo(kind) { wb = { step: 'qty', kind, data: wb.data, opId: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }; render(); }
+function wbAfterQty() { wb.step = wb.kind === 'Received' ? 'confirm' : 'place'; }
+
+function wbSave(btn) {
+  btn.disabled = true; btn.textContent = 'Saving…';
+  call('api_bandLog', AUTH.token, { type: wb.kind, qty: wb.qty, place: wb.place || '', note: wb.note || '', opId: wb.opId }).then(r => {
+    if (!r.ok) { btn.disabled = false; btn.innerHTML = I.check + 'Confirm'; return toast(r.msg || 'Not saved.', 4000); }
+    const k = wb.kind, msg = k === 'Issued' ? wbFmt(wb.qty) + ' bands to ' + wb.place : k === 'Received' ? wbFmt(wb.qty) + ' bands received from BOH' : wbFmt(wb.qty) + ' bands back from ' + wb.place;
+    wb = { step: 'home', data: r, fresh: r.logged };
+    render(); beepOk(); toast('Logged: ' + msg, 3500);
+  }).catch(() => { btn.disabled = false; btn.innerHTML = I.check + 'Confirm'; toast('No connection. Nothing was saved. Try again.', 4000); });
+}
+
+/** A log row: its details, and Void for a mistake. */
+function wbDetail(r) {
+  if (!r) return;
+  const k = WB_KIND[r.type];
+  $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet"><button class="close" id="mx">' + I.x + '</button>' +
+    '<div class="mname" style="color:' + k.color + '">' + wbFmt(r.qty) + ' bands ' + (r.type === 'Issued' ? 'issued' : r.type === 'Received' ? 'received' : 'returned') + '</div><div class="msub">Entry #' + r.n + (r.status === 'Void' ? ' · Void' : '') + '</div>' +
+    '<div class="kv"><div class="tr"><span>From</span><b>' + esc(r.from) + '</b></div><div class="tr"><span>To</span><b>' + esc(r.to) + '</b></div>' +
+    '<div class="tr"><span>When</span><b>' + esc(fmtWhenMs(r.at)) + '</b></div><div class="tr"><span>Logged by</span><b>' + esc(r.by) + '</b></div>' +
+    (r.note ? '<div class="tr"><span>Note</span><b>' + esc(r.note) + '</b></div>' : '') + (r.voided ? '<div class="tr"><span>Voided</span><b>' + esc(r.voided) + '</b></div>' : '') + '</div>' +
+    (r.status === 'Void' ? '' : '<button class="bigset red" id="wbVoid">Void this entry</button><div class="msub" style="margin:8px 4px 0;font-size:15px">For a mistake. It stays on the sheet marked Void and drops out of the counts.</div>') +
+    '</div></div>';
+  $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
+  $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
+  const v = $('#wbVoid');
+  if (v) v.onclick = () => confirmBox('Void entry #' + r.n + '?', wbFmt(r.qty) + ' bands, ' + r.from + ' to ' + r.to + '. The counts go back as if it never happened.', 'Void', 'red', () => {
+    call('api_bandVoid', AUTH.token, r.n).then(x => { if (!x.ok) return toast(x.msg || 'Nothing changed.'); wb.data = x; render(); toast('Entry #' + r.n + ' voided.'); })
+      .catch(() => toast('No connection. Try again.'));
+  });
 }
 
 /* ============ live updates ============ */
