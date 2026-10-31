@@ -519,7 +519,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '36';
+const BUILT_VERSION = '37';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -995,6 +995,10 @@ function renderModal() {
     body = head((m.clockingOut ? 'Fix any times, then clock out' : 'Edit times') + (m.mgr ? ' · editing as ' + esc(m.mgr) : ''))
       + `<div class="ed">${keys.map(k => `<label>${LABELS[k]}<span><input type="time" step="60" data-k="${k}" value="${toHM(draft[k])}"><button class="clr" data-clr="${k}">clear</button>${draft[k] ? tcpPill(m.dtcp[k] || tcpDefault(m.dtcp), `data-tcpk="${k}"`, true) : ''}</span></label>`).join('')}</div>`
       + (m.err ? `<div class="err">${esc(m.err)}</div>` : '')
+      // Clear all times: the shift is saved with no punches at all (manager edit, written to the Edit Log).
+      + (m.confirmClear
+        ? `<div class="warn"><div class="l">Clear every time?</div><div class="t">${esc(p.name)} will have no punches for this night. The change is written to the Edit Log.</div></div><div class="row2"><button class="big red" data-act="clearAllYes">${I.x}Yes, clear all times</button><button class="big ghost" data-act="clearAllNo">Keep them</button></div>`
+        : (!m.clockingOut && TIME_COLS.some(k => draft[k]) ? `<button class="linkbtn" data-act="clearAll">Clear all times (no punches)</button>` : ''))
       + `<div class="row2"><button class="big ${m.clockingOut ? 'pink' : 'blue'}" data-act="saveEdit">${I.check}${m.clockingOut ? 'Save & Clock Out' : 'Save Times'}</button><button class="big ghost" data-act="close">Cancel</button></div>`;
   }
 
@@ -1101,6 +1105,9 @@ document.addEventListener('click', e => {
   else if (act === 'outConfirm') punch('out');
   else if (act === 'editStart') go('pin', { pin: '', clockingOut: m.step === 'review', outTs: m.outTs });
   else if (act === 'saveEdit') saveEdit();
+  else if (act === 'clearAll') { readDraft(); m.confirmClear = true; m.err = ''; renderModal(); }
+  else if (act === 'clearAllNo') { m.confirmClear = false; renderModal(); }
+  else if (act === 'clearAllYes') { TIME_COLS.forEach(k => { m.draft[k] = ''; }); m.confirmClear = false; saveEdit(); }
 });
 document.addEventListener('keydown', e => {
   if (!S.modal) return;

@@ -398,7 +398,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '36';
+const APP_VERSION = '37';
 
 /* ============ icons ============ */
 const I = {
@@ -1815,6 +1815,9 @@ function openDeveloper(back) {
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">Shows camera numbers on the ID scan screen and a Send frame button that saves what the reader sees to Drive.</div>' +
     '<div class="setrow" style="margin-top:14px"><span>ID scan stats (this device)</span><b></b></div>' + idStatsHtml() +
     '<button class="bigset" id="dStatsReset">Reset ID scan stats</button>' +
+    '<div class="setrow" style="margin-top:14px"><span>TCP bridge</span><b id="dTcpState" style="color:var(--muted)">Checking…</b></div>' +
+    '<button class="bigset" id="dTcp" disabled>TCP bridge</button>' +
+    '<div class="msub" id="dTcpNote" style="margin:8px 4px 0;font-size:15px">Sends Shot O\'clock punches to TimeClock Plus through the base laptop. Off: punches go into TCP by hand, and any still waiting are skipped.</div>' +
     '<div class="setrow" style="margin-top:14px"><span>Flags</span><b></b></div>' +
     '<button class="bigset" id="dFlagsRemove">Remove flags</button>' +
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">Marks every active flag for this event Removed. The rows stay on the sheet, with a note in History.</div>' +
@@ -1840,6 +1843,25 @@ function openDeveloper(back) {
         });
     }).catch(() => { btn.disabled = false; toast('No connection. Try again.'); });
   };
+  // TCP bridge switch: read the server's state, then a confirm before turning it on or off.
+  const tcpShow = r => {
+    const st = $('#dTcpState'), b = $('#dTcp');
+    if (!st || !b) return;
+    if (!r.ok) { st.textContent = 'Unknown'; b.textContent = r.msg || 'Could not check'; return; }
+    st.textContent = r.on ? 'On' : 'Off'; st.style.color = r.on ? 'var(--green)' : 'var(--muted)';
+    b.disabled = !r.on && !r.allowed;
+    b.className = 'bigset' + (r.on ? ' red' : ' green');
+    b.textContent = r.on ? 'Turn off TCP bridge' : r.allowed ? 'Turn on TCP bridge' : 'Bridge not enabled in the code';
+    if (r.on && r.only && r.only.length) $('#dTcpNote').textContent = 'Testing: only ' + r.only.join(', ') + '. Off: punches go into TCP by hand, and any still waiting are skipped.';
+    b.onclick = () => confirmBox(r.on ? 'Turn off the TCP bridge?' : 'Turn on the TCP bridge?',
+      r.on ? 'New punches stop going to TCP. Any punch still waiting is skipped and must be entered in TCP by hand.' : 'Punches start going to TCP through the base laptop again. Keep the TCP tab open there.',
+      r.on ? 'Turn off' : 'Turn on', r.on ? 'red' : 'green', () => {
+        b.disabled = true;
+        call('api_tcpBridge', AUTH.token, !r.on).then(x => { openDeveloper(back); if (x.ok) toast('TCP bridge ' + (x.on ? 'on' : 'off') + (x.skipped ? '. ' + x.skipped + ' waiting punch' + (x.skipped === 1 ? '' : 'es') + ' skipped.' : '.'), 4000); else toast(x.msg || 'Nothing changed.'); })
+          .catch(() => { b.disabled = false; toast('No connection. Try again.'); });
+      });
+  };
+  call('api_tcpBridge', AUTH.token, null).then(tcpShow).catch(() => tcpShow({ ok: false, msg: 'No connection' }));
   $('#dFlagsRemove').onclick = e => flagsClear('remove', e.currentTarget);
   $('#dFlagsWipe').onclick = e => flagsClear('wipe', e.currentTarget);
   $('#dStatsReset').onclick = () => confirmBox('Reset ID scan stats?', 'The counts on this device start again from zero.', 'Reset', 'red', () => { store.set(ID_STATS, null); openDeveloper(back); });
