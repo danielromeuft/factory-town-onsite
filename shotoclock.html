@@ -259,6 +259,8 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .card h3{margin:0 0 4px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .card .v{font-size:24px;font-weight:800;margin-top:6px}
 .card .d{font-size:16px;color:var(--muted);margin-top:4px;line-height:1.45}
+.tcpprobs summary{list-style:none;cursor:pointer;margin-top:12px;font-size:16px;font-weight:800;color:var(--red);text-decoration:underline;text-underline-offset:4px;padding:6px 0}
+.tcpprobs summary::-webkit-details-marker{display:none}
 .bigset{display:flex;align-items:center;gap:16px;width:100%;text-align:left;border-radius:24px;padding:20px;color:#fff;min-height:100px}
 .bigset svg{width:36px;height:36px;flex:none}
 .bigset .a{font-size:24px;font-weight:900}
@@ -519,7 +521,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '39';
+const BUILT_VERSION = '40';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -1694,6 +1696,7 @@ document.addEventListener('click', e => {
 
 /* ============ settings ============ */
 let bridgeSeen = '', bridgeAsked = 0;
+let tcpProbsOpen = false;   // the problem list stays folded until tapped (Daniel, 10/31); kept across redraws
 function tcpCard(tcp) {
   if (!tcp || tcp.off) return '';   // bridge switched off in Code.gs: show nothing
   if (!tcp || !tcp.enabled) return `<div class="card"><h3>TCP Bridge</h3><div class="d">Not set up yet. Run setupBridge in the script editor and install the Chrome extension on the base laptop.</div></div>`;
@@ -1703,7 +1706,7 @@ function tcpCard(tcp) {
   return `<div class="card"><h3>TCP Bridge</h3>
     <div class="v" style="color:var(--${live ? 'green' : 'red'})">${live ? 'Connected' : 'Not connected'}</div>
     <div class="d">${live ? 'The base laptop is sending punches to TCP.' : 'Open the TCP webclock tab on the base laptop with the extension on.'} Last seen ${bridgeSeen ? fmtDT(bridgeSeen) : 'never'}.<br>Waiting: ${tcp.pending + tcp.sending} · Sent: ${tcp.done} · Need attention: ${(tcp.problems || []).length}</div>
-    ${probs ? `<div class="times" style="margin-top:12px">${probs}</div><div class="d" style="margin-top:8px">Fix these in TCP by hand. They will not be resent.</div>` : ''}</div>`;
+    ${probs ? `<details class="tcpprobs" ${tcpProbsOpen ? 'open' : ''} data-n="${(tcp.problems || []).length}" ontoggle="tcpProbsOpen = this.open; this.firstElementChild.textContent = (this.open ? 'Hide ' : 'Show ') + this.dataset.n + ' to check in TCP'"><summary>${tcpProbsOpen ? 'Hide' : 'Show'} ${(tcp.problems || []).length} to check in TCP</summary><div class="times" style="margin-top:12px">${probs}</div><div class="d" style="margin-top:8px">Fix these in TCP by hand. They will not be resent.</div></details>` : ''}</div>`;
 }
 /** Show days: which day the app is on. Switching hides the other day's sheets (radios and scanners must be at base). */
 function daysCard(st) {
