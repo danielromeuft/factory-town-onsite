@@ -95,6 +95,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
 .pill.ringdue::after{background:var(--red);animation:ringdue 1.2s ease-in-out infinite}
 .pill.in.ring .st,.pill.in.ring .st.ret,.pill.in.ring .st.ret1{color:#c2410c;font-weight:800}.pill.in.ringdue .st,.pill.in.ringdue .st.ret,.pill.in.ringdue .st.ret1{color:var(--red)}
+.offnote{grid-column:1/-1;text-align:center;color:var(--muted);font-size:15px;padding:10px 12px 4px}
 .empty{border:2px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;color:var(--muted);font-size:19px;line-height:1.5}
 .empty b{color:var(--ink)}
 
@@ -521,7 +522,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '40';
+const BUILT_VERSION = '41';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -820,6 +821,28 @@ function renderAll() {
 }
 
 /* ============ render: time tracking ============ */
+/* Daniel (10/31): no-shows come off the check-in list. Gates and Oasis staff work from tonight's schedule grid, so one who
+ * is not on it (and has no shift open or punched tonight) is not working tonight. Leads, supervisors and Box Office are never
+ * on the grid and always show. A grid name that matches no one (a typo like "AlLison") keeps the look-alike person listed.
+ * Typing a name in the search still finds a hidden person. Returns { id: 1 } for the people to hide. */
+function offTonight(st, now) {
+  const night = nightOf(now);
+  const teams = (st.pairs || []).filter(p => p.kind !== 'lead');
+  if (st.activeDay !== night || !(st.event || {}).scheduleTab || !teams.length) return {};
+  const on = {};
+  teams.forEach(p => (p.members || []).forEach(m => { if (m.id) on[m.id] = 1; }));
+  const sq = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '').replace(/(.)\1+/g, '$1');
+  const loose = (st.unmatched || []).map(sq).filter(Boolean);
+  const out = {};
+  st.people.forEach(p => {
+    if (on[p.id] || callExempt(p) || !/gates|oasis/i.test(p.group || '')) return;
+    if (p.t.in && (p.night === night || !p.t.out)) return;   // clocked in tonight, or a shift still open
+    const names = [p.first, p.name, p.name.split(' ')[0]].map(sq);
+    if (loose.some(u => names.indexOf(u) >= 0)) return;
+    out[p.id] = 1;
+  });
+  return out;
+}
 let timeBuilt = false;
 function renderTime(st) {
   const root = $('#timeView');
@@ -834,13 +857,15 @@ function renderTime(st) {
     timeBuilt = true;
   }
   const now = Date.now();
-  const people = st.people.slice().sort((a, b) => (a.first || a.name).localeCompare(b.first || b.name) || a.name.localeCompare(b.name));
+  const q = S.q.trim().toLowerCase();
+  const off = offTonight(st, now), hidden = Object.keys(off).length;
+  const people = st.people.filter(p => !off[p.id] || (q && p.name.toLowerCase().includes(q)))
+    .sort((a, b) => (a.first || a.name).localeCompare(b.first || b.name) || a.name.localeCompare(b.name));
   const cls = p => { const s = statusOf(p.t); return s === 'break' && lateMinutes(p.t, now) >= graceMin() ? 'late' : s; };
   const counts = { all: people.length, none: 0, in: 0, break: 0, out: 0 };
   people.forEach(p => { const s = statusOf(p.t); counts[s]++; });
   const F = [['all','All'],['none','Not In'],['in','In'],['break','Break'],['out','Out']];
   $('#fchips').innerHTML = F.map(([k, l]) => `<button class="fchip ${S.filter === k ? 'on' : ''}" data-f="${k}">${l}<b>${counts[k]}</b></button>`).join('');
-  const q = S.q.trim().toLowerCase();
   const list = people.filter(p => (S.filter === 'all' || statusOf(p.t) === S.filter) && (!q || p.name.toLowerCase().includes(q)));
   const g = $('#pgrid');
   if (!st.people.length) {
@@ -849,6 +874,7 @@ function renderTime(st) {
   }
   if (!list.length) { g.innerHTML = `<div class="empty">No one matches.</div>`; return; }
   g.className = 'grid';
+  const offNote = hidden && !q ? `<div class="offnote">${hidden} not on tonight's schedule ${hidden === 1 ? 'is' : 'are'} hidden. Search a name to find them.</div>` : '';
   g.innerHTML = list.map(p => {
     const s = statusOf(p.t), c = cls(p);
     let sub = 'Tap to clock in';
@@ -864,8 +890,9 @@ function renderTime(st) {
     if (s === 'out') sub = 'Out · ' + fmtT(p.t.out);
     const due = s === 'in' ? schedDue(st, p) : 0;
     const ring = s === 'break' ? ` bring" data-bd="${+dueAt(p.t)}` : due ? `" data-due="${due}" data-sub="${esc(sub)}` : '';
+    if (off[p.id] && s === 'none') sub = 'Not on tonight\'s schedule';
     return `<button class="pill ${c === 'none' ? '' : c}${ring}" data-id="${esc(p.id)}"><span class="nm fit">${esc(p.name)}</span><span class="st fit${ret ? ' ' + ret : ''}">${esc(sub)}</span></button>`;
-  }).join('');
+  }).join('') + offNote;
   updatePillRings();
 }
 function breakSub(t, now) {
