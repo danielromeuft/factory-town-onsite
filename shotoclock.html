@@ -551,7 +551,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '46';
+const BUILT_VERSION = '47';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -2013,7 +2013,11 @@ document.addEventListener('click', e => {
 let bridgeSeen = '', bridgeAsked = 0;
 let tcpProbsOpen = false;   // the problem list stays folded until tapped (Daniel, 10/31); kept across redraws
 function tcpCard(tcp) {
-  if (!tcp || tcp.off) return '';   // bridge switched off in Code.gs: show nothing
+  // Switched off (11/15: the switch is here too): say so, and offer to turn it back on.
+  if (tcp && tcp.off) return `<div class="card"><h3>TCP Bridge</h3><div class="v" style="color:var(--red)">Off</div>
+    <div class="d">Punches made while it is off are NOT sent to TimeClock Plus, not even after it is turned back on. Enter those in TCP by hand.</div>
+    ${VIEW_ONLY ? '' : `<button class="pbtn" style="margin-top:12px" data-sact="bridgeon">Turn on TCP bridge</button>`}</div>`;
+  if (!tcp) return '';
   if (!tcp || !tcp.enabled) return `<div class="card"><h3>TCP Bridge</h3><div class="d">Not set up yet. Run setupBridge in the script editor and install the Chrome extension on the base laptop.</div></div>`;
   if (Date.now() - bridgeAsked > 10000) { bridgeAsked = Date.now(); call('api_bridgeStatus').then(r => { const was = bridgeSeen; bridgeSeen = (r && r.lastSeen) || ''; if (was !== bridgeSeen && S.settingsOpen) renderSettings(V()); }).catch(() => {}); }
   const live = bridgeSeen && Date.now() - new Date(bridgeSeen) < 30000;
@@ -2021,7 +2025,8 @@ function tcpCard(tcp) {
   return `<div class="card"><h3>TCP Bridge</h3>
     <div class="v" style="color:var(--${live ? 'green' : 'red'})">${live ? 'Connected' : 'Not connected'}</div>
     <div class="d">${live ? 'The base laptop is sending punches to TCP.' : 'Open the TCP webclock tab on the base laptop with the extension on.'} Last seen ${bridgeSeen ? fmtDT(bridgeSeen) : 'never'}.<br>Waiting: ${tcp.pending + tcp.sending} · Sent: ${tcp.done} · Need attention: ${(tcp.problems || []).length}</div>
-    ${probs ? `<details class="tcpprobs" ${tcpProbsOpen ? 'open' : ''} data-n="${(tcp.problems || []).length}" ontoggle="tcpProbsOpen = this.open; this.firstElementChild.textContent = (this.open ? 'Hide ' : 'Show ') + this.dataset.n + ' to check in TCP'"><summary>${tcpProbsOpen ? 'Hide' : 'Show'} ${(tcp.problems || []).length} to check in TCP</summary><div class="times" style="margin-top:12px">${probs}</div><div class="d" style="margin-top:8px">Fix these in TCP by hand. They will not be resent.</div></details>` : ''}</div>`;
+    ${probs ? `<details class="tcpprobs" ${tcpProbsOpen ? 'open' : ''} data-n="${(tcp.problems || []).length}" ontoggle="tcpProbsOpen = this.open; this.firstElementChild.textContent = (this.open ? 'Hide ' : 'Show ') + this.dataset.n + ' to check in TCP'"><summary>${tcpProbsOpen ? 'Hide' : 'Show'} ${(tcp.problems || []).length} to check in TCP</summary><div class="times" style="margin-top:12px">${probs}</div><div class="d" style="margin-top:8px">Fix these in TCP by hand. They will not be resent.</div></details>` : ''}${VIEW_ONLY ? '' : `<button class="pbtn" style="margin-top:12px;color:var(--red);border-color:#fecaca" data-sact="bridgeoff">Turn off TCP bridge</button>
+    <div class="d" style="margin-top:8px">Off: punches made in that time are not sent to TimeClock Plus, and any still waiting are skipped. Enter those in TCP by hand.</div>`}</div>`;
 }
 /** Show days: which day the app is on. Switching hides the other day's sheets (radios and scanners must be at base). */
 function daysCard(st) {
@@ -2080,6 +2085,8 @@ document.addEventListener('click', async e => {
       if (confirm('Close out ' + ((st.event || {}).name || 'this show') + '?\n\nThis hides every sheet in the Shot O\'clock file except the day timesheets (' + days.map(d => d.label).join(', ') + '). Placements, radio and scanner sheets are hidden.\n\nFirst, every punch is synced to the FT Master Timesheet as the final stamp.'))
         runRefresh('api_closeOut', 'Closing out the show…');
     }
+    if (a.dataset.sact === 'bridgeoff' && confirm('Turn off the TCP bridge?\n\nPunches made from now on are NOT sent to TimeClock Plus, not even after you turn it back on, and any punch still waiting is skipped. Enter those in TCP by hand.')) bridgeSwitch(false);
+    if (a.dataset.sact === 'bridgeon' && confirm('Turn on the TCP bridge?\n\nNew punches start going to TimeClock Plus through the base laptop again. Punches made while it was off are not sent.')) bridgeSwitch(true);
     if (a.dataset.sact === 'schedule') runRefresh('api_refreshSchedule', 'Refreshing partners from the Master Timesheet…');
     if (a.dataset.sact === 'clear' && confirm('Move every team back to Available?')) runRefresh('api_clearPlacements', 'Clearing placements…');
     if (a.dataset.sact === 'radiobase' && confirm('Return all 25 radios to base? Use this at the start or end of the night.')) runRefresh('api_radiosToBase', 'Returning radios…');
@@ -2104,6 +2111,22 @@ document.addEventListener('click', async e => {
 document.addEventListener('change', e => {
   if (e.target.id === 'schedSel') runRefresh('api_saveSettings', 'Saving…', { scheduleTab: e.target.value }).then(() => runRefresh('api_refreshSchedule', 'Pulling partner pairs…'));
 });
+/** Settings > TCP Bridge: the same switch as OnSite Settings (OnSite's api_tcpBridge, leads only). */
+async function bridgeSwitch(on) {
+  if (VIEW_ONLY) return roNote();
+  if (TEST_MODE || !IN_ONSITE) return toast('Sample data: the real TCP bridge was not changed.');
+  if (S.pending.length) await flush();
+  $('#busyText').textContent = on ? 'Turning the TCP bridge on…' : 'Turning the TCP bridge off…'; $('#busy').classList.remove('hidden');
+  try {
+    const r = await postJson(ONSITE_API_URL, 'api_tcpBridge', [(onsiteAuth() || {}).token || '', on]);
+    if (r && r.ok) toast('TCP bridge ' + (r.on ? 'on' : 'off') + (r.skipped ? '. ' + r.skipped + ' waiting punch' + (r.skipped === 1 ? '' : 'es') + ' skipped: enter in TCP by hand.' : '.'));
+    else toast((r && r.msg) || 'Nothing changed.', true);
+    const st = await call('api_getState', '');
+    if (st && !st.same) setServer(st);
+  } catch (e) { toast('Could not reach Google. Check the connection and try again.', true); }
+  $('#busy').classList.add('hidden');
+  renderAll();
+}
 async function runRefresh(fn, text, arg) {
   if (VIEW_ONLY) return roNote();
   if (S.pending.length) await flush();
