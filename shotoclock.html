@@ -207,8 +207,9 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .chip{touch-action:pan-x pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;transition:transform .15s,box-shadow .15s;display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:8px 16px 8px 8px;border-radius:999px;background:#fff;border:2px solid #bfdbfe;font-size:17px;font-weight:800;color:var(--ink);box-shadow:0 2px 6px rgba(37,99,235,.10);cursor:grab;max-width:100%}
 .chip .n{min-width:36px;height:36px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:16px;flex:none;padding:0 6px}
 .chip .x{min-width:0;flex:1}
-.chip .rd{flex:none;display:grid;place-items:center;color:var(--purple);margin:0 -4px}
-.chip .rd svg{width:22px;height:22px}
+.chip .nm{white-space:nowrap}
+.chip .rd{display:inline-block;color:var(--purple);margin-left:2px;vertical-align:-.2em}
+.chip .rd svg{width:1.15em;height:1.15em;display:block}
 .chip.grey .rd{color:#a1a1aa}
 .chip.lead{border-color:#fbcfe8;box-shadow:0 2px 6px rgba(236,72,153,.12)}
 .chip.lead .n{background:var(--pink)}
@@ -252,7 +253,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .zone .zb{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;flex:1}
 /* Narrow zones (Oasis, stages on a phone): badge on top, name gets the chip's full width, wrapped by word and shrunk only if one word still won't fit. */
 .zone{container-type:inline-size}
-@container (max-width:120px){.zone .chip{flex-direction:column;align-items:center;gap:2px;padding:4px 3px;border-radius:14px}.zone .chip .x{flex:none;width:100%;text-align:center;line-height:1.15}.zone .chip .rd{position:absolute;top:4px;right:4px;margin:0}}
+@container (max-width:120px){.zone .chip{flex-direction:column;align-items:center;gap:2px;padding:4px 3px;border-radius:14px}.zone .chip .x{flex:none;width:100%;text-align:center;line-height:1.15}}
 .zone.stage{border-color:#c4b5fd;background:#faf8ff;color:#5b21b6}.zone.stage .zc{background:var(--purple)}
 .zone.gallery{border-color:#f9a8d4;background:#fff7fb;color:#9d174d}.zone.gallery .zc{background:var(--pink)}
 .zone.roam{border-color:#86efac;background:#f5fef8;color:#166534;min-height:120px}.zone.roam .zc{background:var(--green)}
@@ -407,7 +408,6 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   .zone .zc{position:absolute;top:-9px;right:-7px;min-width:22px;height:22px;font-size:12px;border:2px solid #fff;padding:0 5px}
   .zone .chip{padding:4px 6px 4px 4px;gap:5px;min-height:36px}
   .zone .chip .n{min-width:22px;height:22px;font-size:12px;padding:0 4px}
-  .zone .chip .rd{margin:0 -2px}.zone .chip .rd svg{width:15px;height:15px}
   .tray{max-height:24vh;padding:10px}
   .map{border-radius:20px}
   .zone.gate{min-height:150px}.zone.dir{min-height:130px}
@@ -555,7 +555,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '48';
+const BUILT_VERSION = '49';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -1266,7 +1266,7 @@ function chipHtml(it) {
   const bl = it.grey ? backLabel(it.back, Date.now()) : null;
   const back = bl ? `<span class="bk ${bl.late ? 'late' : ''}">${esc(bl.txt)}</span>` : '';
   const mv = it.mv ? ` data-mv="${it.mv.at}" data-mvto="${esc(it.mv.to)}"` : '';
-  return `<div class="chip ${it.kind === 'lead' ? 'lead' : ''} ${it.grey ? 'grey' : ''} ${it.mv ? 'hasmv' : ''} ${S.selKey === it.key ? 'sel' : ''}" data-chip="${esc(it.key)}"${mv}${it.grey ? ' data-grey="1"' : ''}${it.due ? ` data-due="${it.due}"` : ''}${it.grey && it.back ? ` data-back="${it.back}"` : ''}><span class="n">${it.kind === 'lead' ? 'L' : esc(badge(it.num) || '•')}</span>${it.rad ? `<span class="rd" title="On radio: ${esc(it.rad)}">${I.radio}</span>` : ''}<span class="x fit">${esc(it.label)}</span>${back}${it.mv ? `<span class="mv">${esc(moveText(it.mv.to, it.mv.at, Date.now()))}</span>` : ''}</div>`;
+  return `<div class="chip ${it.kind === 'lead' ? 'lead' : ''} ${it.grey ? 'grey' : ''} ${it.mv ? 'hasmv' : ''} ${S.selKey === it.key ? 'sel' : ''}" data-chip="${esc(it.key)}"${mv}${it.grey ? ' data-grey="1"' : ''}${it.due ? ` data-due="${it.due}"` : ''}${it.grey && it.back ? ` data-back="${it.back}"` : ''}><span class="n">${it.kind === 'lead' ? 'L' : esc(badge(it.num) || '•')}</span><span class="x fit">${it.lab || esc(it.label)}</span>${back}${it.mv ? `<span class="mv">${esc(moveText(it.mv.to, it.mv.at, Date.now()))}</span>` : ''}</div>`;
 }
 
 /** Countdown for someone on break: "12:34" left, "back now" once due, "late X min" at 3+ minutes over. */
@@ -1314,7 +1314,9 @@ function placeItems(st) {
       label: members.length ? members.map(m => m.n).join(' & ') : p.label, due: 0, back: 0, mv: null,
       mem: members, col: team ? team.key : '' };
     const who = members.length ? members : p.kind === 'lead' && leadId[normKey(p.label)] ? [{ id: leadId[normKey(p.label)], n: p.label }] : [];
-    it.rad = who.filter(m => m.id && onRadio[m.id]).map(m => m.n + ': ' + onRadio[m.id].join(', ')).join(' · ');
+    // The radio mark sits right after the name of whoever is carrying it, so partners can be told apart.
+    if (who.some(m => m.id && onRadio[m.id])) it.lab = who.map(m => (m.id && onRadio[m.id])
+      ? `<span class="nm">${esc(m.n)}<span class="rd" title="${esc(onRadio[m.id].join(', '))}">${I.radio}</span></span>` : esc(m.n)).join(' &amp; ');
     // Scheduled to change spots soon: only for a bubble that is working (someone in it is clocked in, not on break).
     if (!grey && team && members.some(m => stat(m.id) === 'in')) it.mv = moveFor(st, team, p.up || 0, Date.now());
     members.forEach(m => {
