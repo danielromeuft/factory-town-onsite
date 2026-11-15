@@ -95,6 +95,29 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
 .pill.ringdue::after{background:var(--red);animation:ringdue 1.2s ease-in-out infinite}
 .pill.in.ring .st,.pill.in.ring .st.ret,.pill.in.ring .st.ret1{color:#c2410c;font-weight:800}.pill.in.ringdue .st,.pill.in.ringdue .st.ret,.pill.in.ringdue .st.ret1{color:var(--red)}
+.pill{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.pill.holding{transform:scale(.97);border-color:var(--ink)}
+.hidsec{grid-column:1/-1;margin-top:18px;border-top:2px dashed var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
+.hidh{font-size:15px;font-weight:800;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:flex;gap:8px;align-items:center}
+.hidh b{background:var(--soft);border-radius:999px;padding:2px 10px;color:var(--ink);letter-spacing:0}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;border:2px dashed var(--line);border-radius:18px;background:var(--soft);padding:12px 16px;opacity:.85}
+.hrow .hn{font-size:18px;font-weight:800;min-width:0}
+.hrow .hw{font-size:14px;font-weight:700;color:var(--muted);text-align:right;flex:1;min-width:0;word-break:break-word}
+.hwhy{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
+.hwhy button{min-height:64px;border-radius:18px;border:2px solid var(--line);background:var(--soft);font-size:18px;font-weight:800}
+.hwhy button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.hnote input{width:100%;height:56px;border-radius:16px;border:2px solid var(--line);padding:0 16px;font-size:18px;font-weight:600}
+.sheet .retdone{padding:0}.sheet .retdone .badge{transform:scale(.6);margin:-18px auto -14px}.sheet .retdone h2{font-size:28px}.sheet .retdone .dtime{font-size:34px}.sheet .retdone .dt{font-size:17px;margin-top:2px}
+.retq{font-size:19px;font-weight:700;margin:18px 2px 2px;line-height:1.35;text-align:center}
+.retgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.retgrid button{min-height:58px;border-radius:16px;border:2px solid var(--line);background:var(--soft);font-size:16px;font-weight:800;padding:6px 8px}
+.retgrid button.on{background:var(--green);border-color:var(--green);color:#fff}
+.psub{font-size:15px;color:var(--muted);font-weight:600;margin:8px 4px 0;line-height:1.4}
+.big:disabled{opacity:.4}
+.chip.hasmv{flex-wrap:wrap;row-gap:2px}
+.chip .mv{flex-basis:100%;text-align:center;font-size:12px;font-weight:900;color:#c2410c;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip.ringdue .mv{color:var(--red)}
+.zone .chip .mv{flex:none;flex-basis:auto;width:100%;white-space:normal;font-size:11px;line-height:1.15;overflow-wrap:anywhere}
 .offnote{grid-column:1/-1;text-align:center;color:var(--muted);font-size:15px;padding:10px 12px 4px}
 .empty{border:2px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;color:var(--muted);font-size:19px;line-height:1.5}
 .empty b{color:var(--ink)}
@@ -399,6 +422,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
     <h1 id="evName" class="fit">Loading…</h1>
     <div class="hsub" id="evSub"></div>
   </div>
+  <button class="iconbtn hidden" id="homeBtn" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></button>
   <button class="iconbtn" id="gearBtn" aria-label="Settings"></button>
 </header>
 
@@ -522,7 +546,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '42';
+const BUILT_VERSION = '43';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -571,7 +595,7 @@ const Mock = (() => {
       const a = 6 + i * 2, b = 7 + i * 2;
       pairs.push({ key:'team:' + (i+1), label: FIRST[a] + ' & ' + FIRST[b], kind:'team', num:String(i+1), zone:'', parent:'',
         members: [{ n: FIRST[a], id: people[a].id, tag:'A' }, { n: FIRST[b], id: people[b].id, tag:'B' }],
-        breaks: { A: [nowMin + 1 + i * 2], B: [nowMin + 4 + i * 2] } });
+        breaks: Object.assign({ A: [nowMin + 1 + i * 2], B: [nowMin + 4 + i * 2] }, i === 2 ? { mv: [[nowMin + 2, 'South Gate']] } : i === 3 ? { mv: [[nowMin + 4, 'VIP Directional']] } : {}) });
     }
     ['Alex','Brianna','Carlos','Dani'].forEach(n => pairs.push({ key:'lead:' + n, label:n, kind:'lead', num:'', zone:'' }));
     return { version: String(Date.now()), event: { name:'Demo Night 🐠', tab:'Sample Roster 9/25', scheduleTab:'Staff Schedule' },
@@ -584,12 +608,12 @@ const Mock = (() => {
     const lbl = (key, name) => { const d = new Date(key + 'T12:00'); return (name ? name + ' · ' : '') + d.toLocaleDateString([], { weekday: 'short' }) + ' ' + (d.getMonth() + 1) + '/' + d.getDate(); };
     return [{ key: k(-1), name: 'Eli Brown', label: lbl(k(-1), 'Eli Brown') }, { key: k(0), name: 'Fisher', label: lbl(k(0), 'Fisher') }];
   }
-  let db = LS.get('shotMockDb3', null) || seed();
-  const save = () => { db.version = String(Date.now()); LS.set('shotMockDb3', db); };
+  let db = LS.get('shotMockDb4', null) || seed();
+  const save = () => { db.version = String(Date.now()); LS.set('shotMockDb4', db); };
   const clone = o => JSON.parse(JSON.stringify(o));
   const rej = msg => ({ ok:false, msg, state: clone(db) });
   const api = {
-    api_getState(v) { db = LS.get('shotMockDb3', db); return v === db.version ? { same:true } : clone(db); },
+    api_getState(v) { db = LS.get('shotMockDb4', db); return v === db.version ? { same:true } : clone(db); },
     api_punch(op) {
       const p = db.people.find(x => x.id === op.id); if (!p) return rej('Not found');
       const t = curShift(p, new Date(op.ts)).t, st = statusOf(t);
@@ -604,6 +628,9 @@ const Mock = (() => {
     api_editTimes(op) { if (op.token !== 'demo') return rej('Manager code expired.'); applyOp(db, op); save(); return { ok:true, state: clone(db) }; },
     api_checkPin(pin) { return pin === '123456' ? { ok:true, name:'Daniel', token:'demo' } : { ok:false, msg:'Wrong code. (Demo code is 123456.)' }; },
     api_place(op) { applyOp(db, { type:'place', key: op.key, zone: op.zone || '' }); save(); return { ok:true, state: clone(db) }; },
+    api_moveOff(op) { applyOp(db, Object.assign({}, op, { type:'moveoff' })); save(); return { ok:true, state: clone(db) }; },
+    api_hide(op) { applyOp(db, Object.assign({}, op, { type:'hide' })); db.hidden[op.id].by = 'Demo'; save(); return { ok:true, state: clone(db) }; },
+    api_unhide(op) { applyOp(db, Object.assign({}, op, { type:'unhide' })); save(); return { ok:true, state: clone(db) }; },
     api_clearPlacements() { db.pairs.forEach(p => p.zone = ''); save(); return { ok:true, state: clone(db) }; },
     api_refreshRoster() { const keep = db.people; db = Object.assign(seed(), { pairs: db.pairs }); db.people.forEach(p => { const k = keep.find(x => x.id === p.id); if (k) p.shifts = k.shifts || []; }); save(); return { ok:true, state: clone(db), msg:'Roster updated: ' + db.event.name + ' (' + db.people.length + ' staff)' }; },
     api_refreshSchedule() { const z = {}; db.pairs.forEach(p => z[p.key] = p.zone); db.pairs = seed().pairs.map(p => Object.assign(p, { zone: z[p.key] || '' })).concat(db.pairs.filter(p => p.kind === 'solo')); save(); return { ok:true, state: clone(db), msg:'Loaded 12 teams from "Staff Schedule"' }; },
@@ -636,9 +663,10 @@ const S = {
   view: LS.get('shotView', 'time'),
   settingsOpen: false,
   filter: 'all', q: '',
-  modal: null, selKey: null,
+  modal: null, selKey: null, pop: null,
   online: true, flushing: false, polling: false,
 };
+let VIEW_ONLY = false;   // set at start from the OnSite sign-in (ftos.auth.role)
 function setServer(st) {
   if (!st || st.same) return;
   S.server = st; LS.set('shotServer', st);
@@ -687,7 +715,13 @@ function applyOp(st, op) {
     if (op.tcp) s.tcp = Object.assign({}, op.tcp);
     reconcile(st.pairs || [], op.id, id => personStatus(st, id));
   } else if (op.type === 'place') {
-    const it = st.pairs.find(x => x.key === op.key); if (it) { it.zone = op.zone; rejoinOnPlace(st.pairs, it); }
+    const it = st.pairs.find(x => x.key === op.key); if (it) { it.zone = op.zone; it.up = Date.now(); rejoinOnPlace(st.pairs, it); }
+  } else if (op.type === 'moveoff') {
+    st.moveOff = st.moveOff || {}; st.moveOff[op.key + '@' + op.m] = 1;
+  } else if (op.type === 'hide') {
+    st.hidden = st.hidden || {}; st.hidden[op.id] = { why: op.why, note: op.note, by: '', at: new Date().toISOString() };
+  } else if (op.type === 'unhide') {
+    if (st.hidden) delete st.hidden[op.id];
   } else if (op.type === 'radio' || op.type === 'scanner') {
     // Same as kitHand_ in Code.gs: the device goes to that person (or back to base). A person can hold several.
     const k = op.type === 'radio' ? { st: 'radios', blank: blankRadios } : { st: 'scanners', blank: blankScanners };
@@ -716,7 +750,8 @@ function reconcile(pairs, actor, statusFn) {
   const solos = () => pairs.filter(p => p.kind === 'solo' && p.parent === team.key);
   const splits = () => pairs.filter(p => p.kind === 'split' && p.parent === team.key);   // Edit Partners: never rejoin on their own
   const attached = () => { const ids = solos().concat(splits()).map(s => s.members[0].id); return team.members.filter(m => !(m.id && ids.indexOf(m.id) >= 0)); };
-  const detach = m => pairs.push({ key: 'solo:' + m.id, label: m.n, kind: 'solo', num: team.num, zone: '', members: [m], breaks: {}, parent: team.key });
+  const detach = m => pairs.push({ key: 'solo:' + m.id, label: m.n, kind: 'solo', num: team.num, zone: '', members: [m], breaks: team.zone ? { pz: team.zone } : {}, parent: team.key });
+  const leave = x => { if (x.zone) x.breaks = Object.assign({}, x.breaks, { pz: x.zone }); x.zone = ''; };   // pz = zone before the break
   let att = attached();
   const brk = att.filter(onB), act = att.filter(m => !onB(m));
   if (brk.length && act.length) {
@@ -724,8 +759,8 @@ function reconcile(pairs, actor, statusFn) {
     leave.filter(m => m.id).forEach(detach);
   }
   att = attached();
-  if (att.length && att.every(onB)) team.zone = '';
-  solos().concat(splits()).forEach(s => { if (onB(s.members[0])) s.zone = ''; });
+  if (att.length && att.every(onB)) leave(team);
+  solos().concat(splits()).forEach(s => { if (onB(s.members[0])) leave(s); });
   if (!team.zone) {
     att = attached();
     let teamBrk = att.length ? att.every(onB) : null;
@@ -748,11 +783,12 @@ function rejoinOnPlace(pairs, it) {
   }
 }
 function queue(op) {
+  if (VIEW_ONLY) return roNote();
   op.opId = uid();
   S.pending.push(op); LS.set('shotPending', S.pending);
   flush();
 }
-const FN = { punch:'api_punch', edit:'api_editTimes', place:'api_place', radio:'api_radio', scanner:'api_scanner', partners:'api_setPartners' };
+const FN = { punch:'api_punch', edit:'api_editTimes', place:'api_place', radio:'api_radio', scanner:'api_scanner', partners:'api_setPartners', moveoff:'api_moveOff', hide:'api_hide', unhide:'api_unhide' };
 async function flush() {
   if (S.flushing || !S.pending.length) return;
   S.flushing = true; syncDot();
@@ -796,7 +832,10 @@ function renderAll() {
   const st = V();
   $('#evName').textContent = st.event && st.event.name ? st.event.name : 'No event loaded';
   const today = (st.days || []).find(d => d.key === st.activeDay);
-  $('#evSub').textContent = (S.settingsOpen ? 'Settings' : S.view === 'time' ? 'Time Tracking' : S.view === 'radio' ? 'Radios' : S.view === 'scanner' ? 'Scanners' : 'Staff Placements') + (today ? ' · ' + today.label : '');
+  if (VIEW_ONLY) S.settingsOpen = false;
+  $('#gearBtn').classList.toggle('hidden', VIEW_ONLY);
+  document.body.classList.toggle('viewonly', VIEW_ONLY);
+  $('#evSub').textContent = (VIEW_ONLY ? 'View only · ' : '') + (S.settingsOpen ? 'Settings' : S.view === 'time' ? 'Time Tracking' : S.view === 'radio' ? 'Radios' : S.view === 'scanner' ? 'Scanners' : 'Staff Placements') + (today ? ' · ' + today.label : '');
   $('#dayNote').textContent = st.dayBlocked || '';
   $('#dayNote').classList.toggle('hidden', !st.dayBlocked || S.settingsOpen);
   $('#gearBtn').innerHTML = S.settingsOpen ? I.back : I.gear;
@@ -860,7 +899,8 @@ function renderTime(st) {
   const now = Date.now();
   const q = S.q.trim().toLowerCase();
   const off = offTonight(st, now), hidden = Object.keys(off).length;
-  const people = st.people.filter(p => !off[p.id] || (q && p.name.toLowerCase().includes(q)))
+  const hid = st.hidden || {};   // hidden by a lead (No-show, Dropped out, Other): off the list and the counts, listed under Hidden
+  const people = st.people.filter(p => !hid[p.id] && (!off[p.id] || (q && p.name.toLowerCase().includes(q))))
     .sort((a, b) => (a.first || a.name).localeCompare(b.first || b.name) || a.name.localeCompare(b.name));
   const cls = p => { const s = statusOf(p.t); return s === 'break' && lateMinutes(p.t, now) >= graceMin() ? 'late' : s; };
   const counts = { all: people.length, none: 0, in: 0, break: 0, out: 0 };
@@ -873,12 +913,12 @@ function renderTime(st) {
     g.innerHTML = `<div class="empty"><b>No roster loaded yet.</b><br>Tap the gear at the top right, then <b>Refresh Roster</b>.</div>`;
     return;
   }
-  if (!list.length) { g.innerHTML = `<div class="empty">No one matches.</div>`; return; }
   g.className = 'grid';
+  if (!list.length) { g.innerHTML = `<div class="empty" style="grid-column:1/-1">No one matches.</div>` + (q ? '' : hiddenHtml(st)); return; }
   const offNote = hidden && !q ? `<div class="offnote">${hidden} not on tonight's schedule ${hidden === 1 ? 'is' : 'are'} hidden. Search a name to find them.</div>` : '';
   g.innerHTML = list.map(p => {
     const s = statusOf(p.t), c = cls(p);
-    let sub = 'Tap to clock in';
+    let sub = VIEW_ONLY ? 'Not in' : 'Tap to clock in';
     let ret = '';
     if (s === 'in') {   // after a break, the return time is what matters
       const back = p.t.b2i || p.t.b1i;
@@ -893,7 +933,7 @@ function renderTime(st) {
     const ring = s === 'break' ? ` bring" data-bd="${+dueAt(p.t)}` : due ? `" data-due="${due}" data-sub="${esc(sub)}` : '';
     if (off[p.id] && s === 'none') sub = 'Not on tonight\'s schedule';
     return `<button class="pill ${c === 'none' ? '' : c}${ring}" data-id="${esc(p.id)}"><span class="nm fit">${esc(p.name)}</span><span class="st fit${ret ? ' ' + ret : ''}">${esc(sub)}</span></button>`;
-  }).join('') + offNote;
+  }).join('') + offNote + (S.filter === 'all' || q ? hiddenHtml({ people: st.people.filter(p => !q || p.name.toLowerCase().includes(q)), hidden: hid }) : '');
   updatePillRings();
 }
 function breakSub(t, now) {
@@ -941,6 +981,7 @@ document.addEventListener('click', e => {
 let modalTimer = null, idleTimer = null;
 function person(id) { return V().people.find(p => p.id === id); }
 function openPerson(id) {
+  if (VIEW_ONLY) return;
   const p = person(id);
   S.modal = { id, step: 'actions', tcp: p && statusOf(p.t) !== 'none' ? tcpDefault(p.tcp) : 'ok' };
   renderModal();
@@ -958,7 +999,10 @@ function renderModal() {
   const close = `<button class="close" data-act="close" aria-label="Close">${I.x}</button>`;
   const head = sub => `<div class="mname fit">${esc(p.name)}</div><div class="msub">${sub}</div>`;
 
-  if (m.step === 'actions') {
+  if (m.step === 'where') {
+    armIdle(60000);
+    body = whereHtml(m, p);
+  } else if (m.step === 'actions') {
     armIdle(45000);
     if (s === 'none') {
       const st0 = V(), call = callAt(st0, p, now), early = call - now;
@@ -1082,10 +1126,11 @@ function punch(action) {
   }
   const lateBy = action === 'return' ? lateMinutes(p.t, new Date(ts)) : 0;
   const ts2 = action === 'out' ? m.outTs : ts;
+  const plan = action === 'return' ? returnPlan(V(), p, Date.parse(ts)) : null;   // read before the punch: it needs their on-break bubble
   queue({ type: 'punch', id: p.id, action, ts: ts2, tcp: m.tcp || 'ok' });
-  showDone(action, ts2, lateBy, p);
+  showDone(action, ts2, lateBy, p, plan);
 }
-function showDone(action, ts, lateBy, p) {
+function showDone(action, ts, lateBy, p, plan) {
   let html = '';
   const badge = (c, ic) => `<div class="badge" style="background:var(--${c})">${ic}</div>`;
   if (action === 'in') {
@@ -1104,6 +1149,7 @@ function showDone(action, ts, lateBy, p) {
   }
   if (action === 'out' || action === 'editOut') html = badge('green', I.check) + `<h2>You're clocked out</h2><div class="dtime">${fmtT(ts)}</div><div class="dt">Thanks for tonight, ${esc(p.first || p.name)}!</div>`;
   if (action === 'saved') html = badge('green', I.check) + `<h2>Times saved</h2><div class="dt">${esc(p.name)}</div>`;
+  if (plan) { go('where', { done: { html }, plan }); return; }   // back from break: where do they go now?
   go('done', { done: { html } });
 }
 
@@ -1131,6 +1177,9 @@ document.addEventListener('click', e => {
   if (act === 'tcp') { m.tcp = TCP_NEXT[m.tcp || 'ok']; renderModal(); return; }
   if (act === 'close') closeModal();
   else if (act === 'in' || act === 'break' || act === 'return') punch(act);
+  else if (act === 'retGo') sendBack(a.dataset.zone);
+  else if (act === 'retMore') { m.more = true; renderModal(); }
+  else if (act === 'retSkip') closeModal();
   else if (act === 'outReview') go('review', { outTs: new Date().toISOString() });
   else if (act === 'outConfirm') punch('out');
   else if (act === 'editStart') go('pin', { pin: '', clockingOut: m.step === 'review', outTs: m.outTs });
@@ -1198,7 +1247,8 @@ const ALL_ZONES = [].concat(ZONES.top, ZONES.mid, [ZONES.roam], [ZONES.gs], ZONE
 function chipHtml(it) {
   const bl = it.grey ? backLabel(it.back, Date.now()) : null;
   const back = bl ? `<span class="bk ${bl.late ? 'late' : ''}">${esc(bl.txt)}</span>` : '';
-  return `<div class="chip ${it.kind === 'lead' ? 'lead' : ''} ${it.grey ? 'grey' : ''} ${S.selKey === it.key ? 'sel' : ''}" data-chip="${esc(it.key)}"${it.grey ? ' data-grey="1"' : ''}${it.due ? ` data-due="${it.due}"` : ''}${it.grey && it.back ? ` data-back="${it.back}"` : ''}><span class="n">${it.kind === 'lead' ? 'L' : esc(badge(it.num) || '•')}</span><span class="x fit">${esc(it.label)}</span>${back}</div>`;
+  const mv = it.mv ? ` data-mv="${it.mv.at}" data-mvto="${esc(it.mv.to)}"` : '';
+  return `<div class="chip ${it.kind === 'lead' ? 'lead' : ''} ${it.grey ? 'grey' : ''} ${it.mv ? 'hasmv' : ''} ${S.selKey === it.key ? 'sel' : ''}" data-chip="${esc(it.key)}"${mv}${it.grey ? ' data-grey="1"' : ''}${it.due ? ` data-due="${it.due}"` : ''}${it.grey && it.back ? ` data-back="${it.back}"` : ''}><span class="n">${it.kind === 'lead' ? 'L' : esc(badge(it.num) || '•')}</span><span class="x fit">${esc(it.label)}</span>${back}${it.mv ? `<span class="mv">${esc(moveText(it.mv.to, it.mv.at, Date.now()))}</span>` : ''}</div>`;
 }
 
 /** Countdown for someone on break: "12:34" left, "back now" once due, "late X min" at 3+ minutes over. */
@@ -1236,8 +1286,10 @@ function placeItems(st) {
   });
   const make = (p, key, members, grey, team) => {
     const it = { key, kind: p.kind === 'lead' ? 'lead' : 'team', num: p.num, zone: grey ? '' : p.zone, grey,
-      label: members.length ? members.map(m => m.n).join(' & ') : p.label, due: 0, back: 0,
+      label: members.length ? members.map(m => m.n).join(' & ') : p.label, due: 0, back: 0, mv: null,
       mem: members, col: team ? team.key : '' };
+    // Scheduled to change spots soon: only for a bubble that is working (someone in it is clocked in, not on break).
+    if (!grey && team && members.some(m => stat(m.id) === 'in')) it.mv = moveFor(st, team, p.up || 0, Date.now());
     members.forEach(m => {
       const per = m.id && byId[m.id]; if (!per) return;
       if (grey) { const d = dueAt(per.t); if (d && +d > it.back) it.back = +d; }
@@ -1279,6 +1331,16 @@ function updateRings() {
     el.classList.toggle('ringdue', !!(r && r.due));
     if (r && !r.due) { el.style.setProperty('--rc', r.c); el.style.setProperty('--rp', (r.p * 360).toFixed(1) + 'deg'); }
   });
+  // Scheduled move: same ring (a break ring that is already showing wins) and "Moving to South in 3:23".
+  document.querySelectorAll('[data-mv]').forEach(el => {
+    const at = Number(el.dataset.mv), r = ringState(at, now);
+    if (r && !(el.dataset.due && ringState(Number(el.dataset.due), now))) {
+      el.classList.add('ring'); el.classList.toggle('ringdue', !!r.due);
+      if (!r.due) { el.style.setProperty('--rc', r.c); el.style.setProperty('--rp', (r.p * 360).toFixed(1) + 'deg'); }
+    }
+    const t = el.querySelector('.mv'), txt = moveText(el.dataset.mvto, at, now, el.clientWidth < 130);
+    if (t && t.textContent !== txt) t.textContent = txt;
+  });
   // On break (greyed): purple ring empties over the 30 minutes with a timer; past due it goes solid red.
   document.querySelectorAll('[data-back]').forEach(el => {
     const back = Number(el.dataset.back), left = back - now;
@@ -1296,7 +1358,7 @@ function zoneHtml([name, sub, cls], items, html) {
 }
 // Department heads float and are never placed.
 const NEVER_PLACE = /\b(daniel|aria)\b/i;
-const efab = () => `<button class="efab ${S.edit ? 'save' : ''}" id="efab">${S.edit ? I.check + 'Save' : I.pair + 'Edit Partners'}</button>`;
+const efab = () => VIEW_ONLY ? '' : `<button class="efab ${S.edit ? 'save' : ''}" id="efab">${S.edit ? I.check + 'Save' : I.pair + 'Edit Partners'}</button>`;
 function mapHtml(items, html) {
   const z = zz => zoneHtml(zz, items, html);
   return `<div class="map">
@@ -1467,7 +1529,7 @@ function renderPlace(st) {
   const resting = unplaced.filter(i => i.grey).sort(byNum);
   $('#placeView').innerHTML = `
     <div class="ptool">
-      <div class="lbl">Schedule: <b>${esc(st.event.scheduleTab || 'not loaded')}</b><br>Drag a team onto the map, or tap a team, then tap a spot.</div>
+      <div class="lbl">Schedule: <b>${esc(st.event.scheduleTab || 'not loaded')}</b><br>${VIEW_ONLY ? 'View only. Leads place the teams.' : 'Drag a team onto the map, or tap a team, then tap a spot.'}</div>
     </div>
     <div class="tray" data-drop="">
       <div class="th"><span>Available · ${unplaced.length - resting.length}</span><span>${items.length - unplaced.length} placed${resting.length ? ' · ' + resting.length + ' on break' : ''}</span></div>
@@ -1497,6 +1559,7 @@ function cancelHold() {
   drag = null;
 }
 document.addEventListener('pointerdown', e => {
+  if (VIEW_ONLY || S.pop) return;
   const chip = e.target.closest('[data-chip]'); if (!chip || chip.dataset.grey || (S.view !== 'place' && !kitView()) || S.settingsOpen) return;
   const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
   drag = { key: chip.dataset.chip, chip, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, started: false, ghost: null, hot: null, touch, lifted: !touch, holdT: 0 };
@@ -1545,6 +1608,7 @@ function endDrag(e, cancel) {
   if (cancel) { renderAll(); return; }
   if (d.started) { if (d.hot) dropOn(d.key, d.hot.dataset.drop); else renderAll(); }
   else if (S.edit && S.selKey && S.selKey !== d.key) editDrop(S.selKey, d.key);   // tap a person, then tap who to partner with
+  else if (!S.edit && !S.selKey && !kitView() && d.chip.dataset.mv) { suppressClick = true; setTimeout(() => suppressClick = false, 50); openMove(d.key); return; }
   else { S.selKey = S.selKey === d.key ? null : d.key; renderAll(); }
   suppressClick = true; setTimeout(() => suppressClick = false, 50);
 }
@@ -1559,7 +1623,7 @@ function autoScroll() {
   raf = requestAnimationFrame(autoScroll);
 }
 document.addEventListener('click', e => {
-  if (suppressClick || (S.view !== 'place' && !kitView()) || S.settingsOpen) return;
+  if (suppressClick || VIEW_ONLY || S.pop || (S.view !== 'place' && !kitView()) || S.settingsOpen) return;
   if (S.view === 'place' && e.target.closest('#efab')) { if (S.edit) savePartners(); else startEdit(); return; }
   if (S.selKey && !e.target.closest('[data-chip]') && !e.target.closest('.rsearch')) {
     const z = e.target.closest('[data-drop]');
@@ -1659,6 +1723,7 @@ function kitDrop(key, drop) {
 }
 document.addEventListener('click', e => {
   const x = e.target.closest('[data-rret]'), k = kitView(); if (!x || !k || S.settingsOpen) return;
+  if (VIEW_ONLY) { e.stopPropagation(); return roNote(); }
   e.stopPropagation();
   const r = kitList(V(), k).find(y => y.name === x.dataset.rret);
   if (r && r.person && confirm('Return ' + r.name + ' to base? ' + cap(r.person) + ' no longer has it.')) giveKit(k, r.name, '');
@@ -1722,6 +1787,203 @@ document.addEventListener('click', e => {
   else if (act === 'retry') loadHistory();
 });
 
+/* ============ back from break: "Return to North Gate" / "Send to South Gate" / redeploy (11/15) ============
+ * Right after Return from Break is recorded, the pop-up asks where they go now:
+ *  - scheduled back to the spot they left: "Return to <that spot>", or pick any other zone (a better need);
+ *  - scheduled to a different spot now: "Send to <the new spot>", with their old spot as the second choice.
+ * Nothing picked (closed, or 60 seconds pass): they wait in Available, as before. The break time is already saved.
+ * The spot before the break is remembered on their bubble (pz, set by reconcile); the schedule's spot for a
+ * time comes from the grid read by Refresh Partners (p0 = where the column starts, mv = each change). */
+const zoneKey = s => normKey(String(s || '').replace(/\bgs\b/i, 'guest services'));
+/** The map zone a schedule cell means ("South Gate", "Roaming" = General Roaming, "GS Container"), or ''. */
+function zoneFor(text) {
+  const k = zoneKey(text);
+  if (!k) return '';
+  return ALL_ZONES.find(z => zoneKey(z) === k) || ALL_ZONES.find(z => zoneKey(z).indexOf(k) >= 0 || k.indexOf(zoneKey(z)) >= 0) || '';
+}
+/** What the schedule says this team's spot is at that time: the cell text, or ''. */
+function schedSpot(st, team, now) {
+  const b = (team && team.breaks) || {};
+  const list = (b.p0 ? [b.p0] : []).concat(b.mv || []);
+  const [y, mo, d] = (st.activeDay || nightOf(now)).split('-').map(Number);
+  const base = new Date(y, mo - 1, d, 12, 0, 0).getTime();
+  let spot = '';
+  list.forEach(([mins, to]) => { if (base + mins * 60000 <= now + 5 * 60000) spot = to; });   // a move in the next 5 minutes counts
+  return spot;
+}
+/** { prev, sched, schedText } for someone about to return from break, or null when they are not on tonight's placements. */
+function returnPlan(st, p, now) {
+  if (VIEW_ONLY) return null;
+  const pairs = st.pairs || [];
+  const own = pairs.find(x => (x.kind === 'solo' || x.kind === 'split') && x.members && x.members[0] && x.members[0].id === p.id);
+  const team = own ? pairs.find(x => x.kind === 'team' && x.key === own.parent) : pairs.find(x => x.kind === 'team' && (x.members || []).some(m => m.id === p.id));
+  if (!team) return null;
+  const bub = own || team;
+  const prev = bub.zone || (bub.breaks || {}).pz || (own && team.zone) || (team.breaks || {}).pz || '';
+  const schedText = schedSpot(st, team, now), sched = zoneFor(schedText);
+  return { prev: ALL_ZONES.indexOf(prev) >= 0 ? prev : '', sched, schedText };
+}
+function whereHtml(m, p) {
+  const pl = m.plan, first = esc(p.first || p.name);
+  const moved = pl.sched && pl.sched !== pl.prev;
+  const main = moved ? pl.sched : pl.prev;
+  const zb = (z, cls, label) => `<button class="big ${cls}" data-act="retGo" data-zone="${esc(z)}">${label}</button>`;
+  let html = `<div class="done retdone">${m.done.html}</div>`;
+  if (m.more || !main) {
+    html += `<div class="retq">${main ? 'Send ' + first + ' where?' : 'Where does ' + first + ' go now?'}</div><div class="retgrid">${ALL_ZONES.map(z => `<button class="${z === main ? 'on' : ''}" data-act="retGo" data-zone="${esc(z)}">${esc(z)}</button>`).join('')}</div>`;
+  } else {
+    html += `<div class="retq">${moved ? 'The schedule has ' + first + ' at <b>' + esc(pl.sched) + '</b> now' + (pl.prev ? ' (was at ' + esc(pl.prev) + ')' : '') + '.' : 'Before the break: <b>' + esc(pl.prev) + '</b>. Still needed there?'}</div>`
+      + zb(main, 'green', I.check + (moved ? 'Send to ' : 'Return to ') + esc(main))
+      + (moved && pl.prev ? zb(pl.prev, 'ghost', 'Return to ' + esc(pl.prev)) : '')
+      + `<button class="big ghost" data-act="retMore">${I.map}Redeploy somewhere else</button>`;
+  }
+  if (!pl.sched && pl.schedText && !m.more) html += `<div class="psub">Schedule now: ${esc(pl.schedText)} (not a spot on the map).</div>`;
+  return html + `<button class="linkbtn" data-act="retSkip">Leave in Available</button>`;
+}
+/** Places the bubble that person is in now (their own, or the team's if they rejoined it) in that zone. */
+function sendBack(zone) {
+  const m = S.modal; if (!m) return;
+  const id = m.id, it = placeItems(V()).find(x => !x.grey && (x.mem || []).some(mm => mm.id === id));
+  closeModal();
+  if (!it) return toast('They are not on tonight\'s placements.', true);
+  if ((it.zone || '') !== zone) queue({ type: 'place', key: it.key, zone: zone });
+  renderAll();
+  toast(cap(it.label) + ' to ' + zone);
+}
+
+/* ============ v43 (11/15): view only, pop-ups, "Moving to ..." warnings, hidden staff ============ */
+// View only: everyone on the roster can open Shot O'clock; only leads can change anything. The server enforces
+// it too (LEAD_ONLY in ShotOclock.gs); these checks just keep a view-only device from trying.
+const roNote = () => toast('View only. Ask a lead to do this.', true);
+
+/* One small pop-up at a time (move warning, hide a person, hidden person). Buttons carry data-pact. */
+function popOpen(html, onAct) {
+  S.pop = { onAct };
+  $('#modalRoot').innerHTML = `<div class="overlay" data-pact="bg"><div class="sheet"><button class="close" data-pact="close" aria-label="Close">${I.x}</button>${html}</div></div>`;
+}
+function popClose() { S.pop = null; $('#modalRoot').innerHTML = ''; }
+document.addEventListener('click', e => {
+  if (!S.pop) return;
+  const a = e.target.closest('[data-pact]'); if (!a) return;
+  const act = a.dataset.pact;
+  if (act === 'bg' && e.target !== a) return;
+  if (act === 'bg' || act === 'close') return popClose();
+  S.pop.onAct(act, a);
+});
+
+/* ---- "Moving to South in 3:23": a team scheduled to change spots gets the same ring as a break, for the 5 minutes
+ * before the move, then "Move to South now" until someone taps it and picks Disregard (they are staying, or were
+ * already called in), the team is placed somewhere else, or 20 minutes pass. Moves come from tonight's schedule
+ * grid (Refresh Partners): every slot where a column's position changes. ---- */
+const MOVE_KEEP_MS = 20 * 60000;
+const shortSpot = s => String(s || '').replace(/\s+gate$/i, '');
+function moveFor(st, team, placedAt, now) {
+  const list = (team && team.breaks && team.breaks.mv) || [];
+  if (!list.length) return null;
+  const off = st.moveOff || {};
+  const [y, mo, d] = (st.activeDay || nightOf(now)).split('-').map(Number);
+  const base = new Date(y, mo - 1, d, 12, 0, 0).getTime();
+  for (const [mins, to] of list) {
+    const at = base + mins * 60000;
+    if (now > at + MOVE_KEEP_MS || now < at - RING_MS) continue;
+    if (off[team.key + '@' + mins]) continue;
+    if (placedAt && placedAt > at - RING_MS) continue;   // already moved on the board since the warning started
+    return { at, m: mins, to: shortSpot(to), team: team.key };
+  }
+  return null;
+}
+// Small bubbles on the map (phones) get the short form: "South 3:23", then "South now".
+const moveText = (to, at, now, small) => at > now ? (small ? to + ' ' : 'Moving to ' + to + ' in ') + mmss(at - now) : small ? to + ' now' : 'Move to ' + to + ' now';
+function openMove(chipKey) {
+  const it = placeItems(V()).find(x => x.key === chipKey);
+  if (!it || !it.mv) return;
+  const mv = it.mv;
+  popOpen(`<div class="mname">${esc(it.label)}</div><div class="msub">Scheduled to move to <b>${esc(mv.to)}</b> at ${fmtT(new Date(mv.at).toISOString())}${it.zone ? ' · now at ' + esc(it.zone) : ''}</div>
+    <button class="big ghost" data-pact="off">Disregard</button>
+    <div class="psub">Removes this warning on every device. Use it when they are staying where they are, or were already called in.</div>
+    <button class="big blue" data-pact="place">${I.map}Place this team</button>`,
+    act => {
+      popClose();
+      if (act === 'off') { queue({ type: 'moveoff', key: mv.team, m: mv.m }); renderAll(); }
+      if (act === 'place') { S.selKey = chipKey; renderAll(); }
+    });
+}
+
+/* ---- Hidden staff: long-press a person on Time Tracking > No-show, Dropped out or Other (description needed).
+ * They leave the list and counts and show under Hidden at the bottom with the reason; tap one there to unhide. ---- */
+const HIDE_WHY = ['No-show', 'Dropped out', 'Other'];
+function openHide(id) {
+  const p = person(id); if (!p) return;
+  const h = { why: '', note: '' };
+  const draw = () => {
+    const ready = h.why && (h.why !== 'Other' || h.note.trim());
+    popOpen(`<div class="mname">${esc(p.name)}</div><div class="msub">Hide from the clock-in page. Why are they not here?</div>
+      <div class="hwhy">${HIDE_WHY.map(w => `<button class="${h.why === w ? 'on' : ''}" data-pact="why" data-why="${w}">${w}</button>`).join('')}</div>
+      <label class="hnote"><input id="hideNote" type="text" maxlength="200" placeholder="${h.why === 'Other' ? 'Description (required)' : 'Description (optional)'}" value="${esc(h.note)}" autocomplete="off"></label>
+      <button class="big red" data-pact="hide" id="hideGo" ${ready ? '' : 'disabled'}>Hide ${esc(p.first || p.name)}</button>
+      <div class="psub">They move to Hidden at the bottom of this page with this note. ${h.why === 'Dropped out' ? 'Dropped out stays hidden for the rest of the show.' : 'Tap them there to bring them back.'}</div>`,
+      (act, el) => {
+        if (act === 'why') { h.why = el.dataset.why; draw(); if (h.why === 'Other') setTimeout(() => { const i = $('#hideNote'); if (i) i.focus(); }, 50); return; }
+        if (act === 'hide') {
+          if (!h.why) return;
+          if (h.why === 'Other' && !h.note.trim()) return toast('Add a description for Other.', true);
+          popClose();
+          queue({ type: 'hide', id: p.id, why: h.why, note: h.note.trim() });
+          renderAll(); toast(p.name + ' hidden: ' + h.why);
+        }
+      });
+    const inp = $('#hideNote');
+    if (inp) inp.oninput = () => { h.note = inp.value; const b = $('#hideGo'); if (b) b.disabled = !(h.why && (h.why !== 'Other' || h.note.trim())); };
+  };
+  draw();
+}
+function openHidden(id) {
+  const st = V(), p = st.people.find(x => x.id === id), h = (st.hidden || {})[id];
+  if (!p || !h) return;
+  popOpen(`<div class="mname">${esc(p.name)}</div><div class="msub">Hidden · <b>${esc(h.why)}</b>${h.note ? ' · ' + esc(h.note) : ''}<br>${h.by ? 'By ' + esc(h.by) + ' · ' : ''}${fmtDT(h.at)}</div>
+    ${VIEW_ONLY ? '' : `<button class="big green" data-pact="unhide">Unhide ${esc(p.first || p.name)}</button><div class="psub">Puts them back on the clock-in list.</div>`}`,
+    act => { if (act === 'unhide') { popClose(); queue({ type: 'unhide', id: id }); renderAll(); toast(p.name + ' is back on the list'); } });
+}
+/** The Hidden list under the clock-in grid. */
+function hiddenHtml(st) {
+  const hid = st.hidden || {};
+  const list = st.people.filter(p => hid[p.id]).sort((a, b) => (a.first || a.name).localeCompare(b.first || b.name));
+  if (!list.length) return '';
+  return `<div class="hidsec"><div class="hidh">Hidden<b>${list.length}</b></div>${list.map(p => {
+    const h = hid[p.id];
+    return `<button class="hrow" data-hid="${esc(p.id)}"><span class="hn fit">${esc(p.name)}</span><span class="hw">${esc(h.why)}${h.note ? ' · ' + esc(h.note) : ''}</span></button>`;
+  }).join('')}</div>`;
+}
+// Long-press (0.6 s) on a person pill opens Hide. The tap that follows is swallowed.
+const PILL_HOLD_MS = 600;
+let pillHold = null, pillHeld = false;
+function pillHoldCancel() { if (pillHold) { clearTimeout(pillHold.t); pillHold.el.classList.remove('holding'); pillHold = null; } }
+document.addEventListener('pointerdown', e => {
+  const el = e.target.closest('.pill');
+  pillHeld = false;
+  if (!el || VIEW_ONLY || S.settingsOpen || S.view !== 'time' || S.modal || S.pop) return;
+  pillHoldCancel();
+  el.classList.add('holding');
+  pillHold = { el, x: e.clientX, y: e.clientY, t: setTimeout(() => {
+    const id = el.dataset.id;
+    pillHoldCancel();
+    pillHeld = true;
+    if (navigator.vibrate) navigator.vibrate(15);
+    openHide(id);
+  }, PILL_HOLD_MS) };
+});
+document.addEventListener('pointermove', e => { if (pillHold && Math.hypot(e.clientX - pillHold.x, e.clientY - pillHold.y) > 10) pillHoldCancel(); });
+document.addEventListener('pointerup', pillHoldCancel);
+document.addEventListener('pointercancel', pillHoldCancel);
+addEventListener('scroll', pillHoldCancel, { passive: true });
+document.addEventListener('contextmenu', e => { if (e.target.closest('.pill')) e.preventDefault(); });
+// The tap that ends a long-press must not also open the person or close the pop-up.
+document.addEventListener('click', e => { if (pillHeld) { pillHeld = false; e.stopPropagation(); e.preventDefault(); } }, true);
+document.addEventListener('click', e => {
+  const h = e.target.closest('[data-hid]');
+  if (h && !S.pop && !S.modal) openHidden(h.dataset.hid);
+});
+
 /* ============ settings ============ */
 let bridgeSeen = '', bridgeAsked = 0;
 let tcpProbsOpen = false;   // the problem list stays folded until tapped (Daniel, 10/31); kept across redraws
@@ -1757,7 +2019,6 @@ function renderSettings(st) {
   const tabs = set.scheduleTabs || [];
   const when = iso => iso ? new Date(iso).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : 'never';
   $('#setView').innerHTML = `<div class="set">
-    ${IN_ONSITE ? `<button class="bigset dark" data-sact="onsite">${I.back}<div><div class="a">Return to OnSite</div><div class="b">Back to the OnSite home screen (Sell, Scan, Flag). Everything here keeps syncing to the Shot O'clock sheet.</div></div></button>` : ''}
     <div class="card"><h3>Current event</h3><div class="v">${esc(ev.name || 'None loaded')}</div>
       <div class="d">Roster tab: ${esc(ev.tab || '-')} · ${st.people.length} staff<br>Schedule tab: ${esc(ev.scheduleTab || '-')} · ${st.pairs.filter(p => p.kind !== 'lead').length} teams<br>Roster refreshed ${when(ev.rosterRefreshedAt)}</div></div>
     ${daysCard(st)}
@@ -1783,7 +2044,6 @@ document.addEventListener('click', async e => {
   if (!S.settingsOpen) return;
   const a = e.target.closest('[data-sact]');
   if (a) {
-    if (a.dataset.sact === 'onsite') return returnToOnsite();
     if (a.dataset.sact === 'roster' && confirm('Are you sure?\n\nThis re-pulls the latest show roster from the Master Timesheet. If there is a more current event, the app will switch over to that event and hide the current show\'s sheets.'))
       runRefresh('api_refreshRoster', 'Pulling the roster from the Master Timesheet…');
     if (a.dataset.sact === 'signout' && confirm('Are you ready to print out your Sign Out sheet for the night?\n\nIt will be emailed to Aria and Gabriel as an Excel file.'))
@@ -1820,6 +2080,7 @@ document.addEventListener('change', e => {
   if (e.target.id === 'schedSel') runRefresh('api_saveSettings', 'Saving…', { scheduleTab: e.target.value }).then(() => runRefresh('api_refreshSchedule', 'Pulling partner pairs…'));
 });
 async function runRefresh(fn, text, arg) {
+  if (VIEW_ONLY) return roNote();
   if (S.pending.length) await flush();
   $('#busyText').textContent = text; $('#busy').classList.remove('hidden');
   try {
@@ -1888,20 +2149,32 @@ addEventListener('online', () => { S.online = true; flush(); poll(); });
 addEventListener('offline', () => { S.online = false; syncDot(); });
 if (!HAS_GAS && !IN_ONSITE) $('#demoNote').classList.remove('hidden');
 
-/* ============ inside OnSite: lead code gate, Return to OnSite, updates ============ */
-// Opening Shot O'clock needs a device signed in to OnSite with a lead or manager code (ftos.auth, same origin).
-// Leaving only happens from Settings > Return to OnSite; reopening the app starts on the OnSite home (start_url).
+/* ============ inside OnSite: sign-in gate, Home button, view only, updates ============ */
+// Opening Shot O'clock needs a device signed in to OnSite (ftos.auth, same origin). Since v43 anyone on the roster can
+// sign in; non-leads are view only. The Home button (top right, same as every OnSite page) goes back to the OnSite
+// home screen; reopening the app also starts there (start_url).
 function onsiteAuth() { try { return JSON.parse(localStorage.getItem('ftos.auth') || 'null'); } catch (e) { return null; } }
 function returnToOnsite() { if (S.edit) savePartners(); location.replace('./'); }
+$('#homeBtn').onclick = returnToOnsite;
 if (IN_ONSITE) {
   const a = onsiteAuth();
+  $('#homeBtn').classList.remove('hidden');
+  VIEW_ONLY = !!a && a.role === 'view';
   if (!a || !a.token) location.replace('./');
   else postJson(ONSITE_API_URL, 'api_info', [a.token]).then(r => {
-    if (r && r.auth === false) { try { localStorage.removeItem('ftos.auth'); } catch (e) {} location.replace('./'); }
+    if (r && r.auth === false) { try { localStorage.removeItem('ftos.auth'); } catch (e) {} location.replace('./'); return; }
+    // Lead or view only can change while signed in (moved into or out of the LEADS section): follow the server.
+    if (r && r.ok && r.role) {
+      const view = r.role === 'view';
+      try { const cur = onsiteAuth(); if (cur) { cur.role = view ? 'view' : 'lead'; cur.dev = !!r.dev; cur.notify = !!r.bandNotify; localStorage.setItem('ftos.auth', JSON.stringify(cur)); } } catch (e) {}
+      if (view !== VIEW_ONLY) { VIEW_ONLY = view; if (view) { S.pending = []; LS.set('shotPending', S.pending); S.selKey = null; S.edit = null; popClose(); } renderAll(); }
+    }
   }).catch(() => {});
+  // A notification tap while this page is open: go to that request on the OnSite Wristbands screen.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const d = e.data || {}; if (d.band) { if (S.edit) savePartners(); location.href = './?band=' + encodeURIComponent(d.band); } });
   // A new OnSite build reloads this page when nothing is open (never mid-punch, mid-drag or in Settings).
   setInterval(() => {
-    if (document.hidden || S.modal || S.hist || drag || S.settingsOpen || S.edit) return;
+    if (document.hidden || S.modal || S.hist || S.pop || drag || S.settingsOpen || S.edit) return;
     fetch('version.txt?ts=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
       v = String(v || '').trim();
       if (v && BUILT_VERSION && v !== BUILT_VERSION) location.reload();
@@ -1913,6 +2186,8 @@ renderAll();
 flush(); poll();
 setInterval(poll, 3000);
 setInterval(() => { if (!S.modal && !drag && !S.settingsOpen && S.view === 'time') { renderTime(V()); fitText(); } }, 15000);
+// Placements: a "Moving to ..." warning starts 5 minutes before its time, so the board redraws itself when idle.
+setInterval(() => { if (!S.modal && !S.pop && !drag && !S.settingsOpen && !S.edit && !S.selKey && S.view === 'place') { renderPlace(V()); fitText($('#placeView')); } }, 20000);
 </script>
 </body>
 </html>

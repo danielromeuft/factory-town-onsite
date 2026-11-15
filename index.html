@@ -242,6 +242,20 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .wb-acts .big{margin-top:0;min-height:76px;font-size:22px;border-radius:22px}
 .wb-acts .big.amber{background:#b45309;grid-column:1/-1;min-height:96px;font-size:28px}
 .big.amber{background:#b45309}
+.bigset.amber{background:#b45309;color:#fff;border-color:#b45309}
+button.wb-area{width:100%;font:inherit;color:inherit;cursor:pointer} button.wb-area:active{transform:scale(.98)}
+.wb-area .ask{display:inline-block;margin-top:8px;font-size:13px;font-weight:800;color:#92400e;background:#fde68a;border-radius:999px;padding:4px 10px}
+.wb-area.zero .ask{background:#e4e4e7;color:#3f3f46}
+.wb-area.wait{border-color:#b45309;border-style:dashed} .wb-area.wait .ask{background:#b45309;color:#fff}
+.wb-req .st{color:var(--fc);font-weight:800} .wb-req em{font-size:20px} .wb-req em svg{width:26px;height:26px}
+.wb-req.open{border-color:#b45309;background:#fffbeb}
+.wb-rq{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 10px}
+.wb-rq button{min-height:64px;border-radius:18px;border:2px solid var(--line);background:var(--soft);font-size:22px;font-weight:900}
+.wb-rq button.on{background:#b45309;border-color:#b45309;color:#fff}
+.wb-view{border:2px dashed var(--line);border-radius:20px;padding:14px 16px;margin-top:14px;font-size:16px;font-weight:700;color:var(--muted);text-align:center}
+.wb-push{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:2px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:20px;padding:12px 16px;margin-top:12px;font-size:16px;font-weight:800}
+.hero .vo{display:inline-block;margin-left:8px;background:#3f3f46;color:#fff;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800;letter-spacing:.04em}
+.hero .hout{display:block;margin:10px auto 0;background:transparent;border:1px solid #52525b;color:#d4d4d8;border-radius:999px;padding:7px 16px;font-size:14px;font-weight:700}
 .wb-h{display:flex;justify-content:space-between;align-items:baseline;margin:26px 2px 10px;font-size:22px;font-weight:900;letter-spacing:-.01em}
 .wb-h small{font-size:15px;font-weight:700;color:var(--muted)}
 .wb-areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
@@ -457,7 +471,8 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '42';
+const APP_VERSION = '43';
+const BAND_PARAM = HOSTED ? Number(new URLSearchParams(location.search).get('band')) || 0 : 0;   // from a notification tap
 
 /* ============ icons ============ */
 const I = {
@@ -535,12 +550,16 @@ const store = {
   get(k) { try { return JSON.parse(localStorage.getItem('ftos.' + k) || 'null'); } catch (e) { return null; } },
   set(k, v) { try { v == null ? localStorage.removeItem('ftos.' + k) : localStorage.setItem('ftos.' + k, JSON.stringify(v)); } catch (e) {} },
 };
-let AUTH = store.get('auth');   // { token, name, dev }
+let AUTH = store.get('auth');   // { token, name, dev, role, notify }
+/** Leads get the whole app. Everyone else on the roster is view only: they can look at every page and add a flag.
+ *  A device signed in before roles existed (v42 and older) has no role and is a lead: only leads had codes then. */
+const isLead = () => !!(AUTH && AUTH.role !== 'view');
+const VIEW_ONLY_MSG = 'View only. Ask a lead to do this.';
 /** Sell and Scan are hidden (10/8). A developer code can turn them back on for this device in Settings > Developer Settings. */
-const sellScanOn = () => !!(AUTH && AUTH.dev && store.get('devSellScan'));
+const sellScanOn = () => !!(AUTH && AUTH.dev && isLead() && store.get('devSellScan'));
 
 function signedOut() {
-  AUTH = null; store.set('auth', null);
+  AUTH = null; store.set('auth', null); swCfg();
   stopCamera();
   mode = 'home'; render();
   toast('You were signed out. Enter your code again.');
@@ -553,7 +572,7 @@ function requireLogin(then) {
   const draw = (err, shake) => {
     $('#modal').innerHTML = '<div class="overlay"><div class="sheet">' +
       '<button class="close" id="kx">' + I.x + '</button>' +
-      '<div class="mname">Enter your code</div><div class="msub">Last 6 of your SSN. This device stays signed in until you tap Sign Out in Settings.</div>' +
+      '<div class="mname">Enter your code</div><div class="msub">Last 6 of your SSN. This device stays signed in until you sign out.</div>' +
       '<div class="dots' + (shake ? ' shake' : '') + '">' + [0, 1, 2, 3, 4, 5].map(i => '<i class="' + (i < code.length ? 'on' : '') + '"></i>').join('') + '</div>' +
       padHtml() + '<div class="perr">' + esc(err || '') + '</div></div></div>';
     $('#kx').onclick = () => { $('#modal').innerHTML = ''; };
@@ -565,9 +584,12 @@ function requireLogin(then) {
         const tried = code; code = '';
         call('api_login', tried).then(r => {
           if (!r.ok) return draw(r.msg, true);
-          AUTH = { token: r.token, name: r.name, dev: !!r.dev }; store.set('auth', AUTH);
+          AUTH = { token: r.token, name: r.name, dev: !!r.dev, role: r.role === 'view' ? 'view' : 'lead' }; store.set('auth', AUTH);
+          swCfg();
           $('#modal').innerHTML = '';
-          toast('Signed in as ' + r.name);
+          toast('Signed in as ' + r.name + (isLead() ? '' : ' (view only)'));
+          if (mode === 'home') render();
+          call('api_info', AUTH.token).then(x => { if (x.ok) setAccess(x); }).catch(() => {});
           then();
         }).catch(() => draw('No connection. Try again.', true));
       }
@@ -599,6 +621,7 @@ function render() {
   document.body.classList.toggle('onhome', mode === 'home');
   $('#nav').classList.toggle('hidden', mode !== 'scan');
   $('#homeBtn').classList.toggle('hidden', mode === 'home');
+  $('#gearBtn').classList.toggle('hidden', !!AUTH && !isLead());   // view only: no Settings
   document.body.classList.toggle('locked', mode === 'sell' && sale && (sale.step === 'customer' || sale.step === 'checkmail'));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   if (mode === 'home') { stopCamera(); (HAS_GAS && APP_URL) ? renderMoved() : renderHome(); }
@@ -621,14 +644,16 @@ function renderHome() {
   setTitle('OnSite');
   $('#main').innerHTML = '<div class="home">' +
     '<div class="hero"><img src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE &middot; ONSITE</div>' +
-    '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' : 'Tap any button and enter your code') + '</div></div>' +
+    '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' + (isLead() ? '' : '<span class="vo">VIEW ONLY</span>') : 'Tap any button and enter your code') + '</div>' +
+    (AUTH && !isLead() ? '<button class="hout" id="hOut">Sign out</button>' : '') + '</div>' +
     '<button class="mode shot" id="goShot">' + I.clock + '<div><b>Shot O\'clock</b><span>Time tracking, placements, radios and scanners</span></div></button>' +
     (sellScanOn() ? '<button class="mode sell" id="goSell">' + I.sell + '<div><b>Sell</b><span>Log a sale and send the customer their QR</span></div></button>' +
       '<button class="mode scan" id="goScan">' + I.scan + '<div><b>Scan</b><span>Check tickets at the gate</span></div></button>' : '') +
     '<button class="mode flag" id="goFlag">' + I.alert + '<div><b>Flag</b><span>Flag or check a guest: Under 21 VIP, Third Party Ticket, No re-entry, Ejected</span></div></button>' +
     '<button class="mode bands" id="goBands">' + I.band + '<div><b>Wristbands</b><span>VIP bands: received from BOH, issued to gates and staff, on hand at Base</span></div></button>' +
     '</div>';
-  // Shot O'clock lives in shotoclock.html on the same site; it only opens on a device signed in with a lead code.
+  // Shot O'clock lives in shotoclock.html on the same site; it opens on any signed-in device (view only for non-leads).
+  if ($('#hOut')) $('#hOut').onclick = signOutAsk;
   $('#goShot').onclick = () => { requireLogin(() => { location.href = 'shotoclock.html'; }); };
   if ($('#goSell')) $('#goSell').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'sell'; sale = { step: 'type' }; render(); }); };
   if ($('#goScan')) $('#goScan').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'scan'; tab = 'scan'; render(); poll(true); }); };
@@ -1598,8 +1623,8 @@ function flagCard(f, i, opts) {
     (f.note ? '<div class="fl-note">' + esc(f.note) + '</div>' : '') +
     '<div class="fl-by">Flagged by ' + esc(f.by) + ' &middot; ' + esc(fmtWhenMs(f.at)) + (f.event ? ' &middot; ' + esc(f.event) : '') + '</div>' +
     (f.photo ? '<button class="bigset" data-photo="' + i + '">' + I.camera + 'View ID photo</button>' : '') +
-    (opts.link ? '<button class="bigset" data-link="' + i + '">Add the scanned ticket to this flag</button>' : '') +
-    '<div class="row2"><button class="bigset" data-edit="' + i + '">Edit</button><button class="bigset red" data-rm="' + i + '">Remove</button></div></div>';
+    (opts.link && isLead() ? '<button class="bigset" data-link="' + i + '">Add the scanned ticket to this flag</button>' : '') +
+    (isLead() ? '<div class="row2"><button class="bigset" data-edit="' + i + '">Edit</button><button class="bigset red" data-rm="' + i + '">Remove</button></div>' : '') + '</div>';
 }
 /** The ID photo waiting to be saved with a flag, as a small preview. */
 const idThumb = () => '<div class="idthumb"><img src="' + fl.photo + '" alt="">ID photo will be saved with the flag</div>';
@@ -1872,6 +1897,14 @@ function openSettings() {
       (AUTH ? '<div class="setrow" style="margin-top:14px"><span>TCP bridge</span><b id="sTcpState" style="color:var(--muted)">Checking…</b></div>' +
         '<button class="bigset" id="sTcp" disabled>TCP bridge</button>' +
         '<div class="msub" id="sTcpNote" style="margin:8px 4px 0;font-size:15px">Sends Shot O\'clock punches to TimeClock Plus through the base laptop. Off: punches go into TCP by hand, and any still waiting are skipped.</div>' : '') +
+      (AUTH ? (() => {
+        const ps = pushState();
+        return '<div class="setrow" style="margin-top:14px"><span>Notifications</span><b style="color:' + (ps === 'on' ? 'var(--green)' : 'var(--muted)') + '">' + (ps === 'on' ? 'On' : ps === 'blocked' ? 'Blocked' : ps === 'none' ? 'Not available' : 'Off') + '</b></div>' +
+          (ps === 'on' || ps === 'off' ? '<button class="bigset' + (ps === 'on' ? '' : ' green') + '" id="sPush">' + (ps === 'on' ? 'Turn off notifications' : 'Turn on notifications') + '</button>' : '') +
+          '<div class="msub" style="margin:8px 4px 0;font-size:15px">' + (ps === 'none' ? 'On iPhone and iPad, notifications only work when OnSite is opened from its Home Screen icon.'
+            : ps === 'blocked' ? 'Notifications for OnSite are turned off in this device\'s settings. Turn them on there, then come back.'
+            : 'Wristband requests go to Daniel, Aria and Gabriel. Everyone else is told when their own request is acknowledged. This device only.') + '</div>';
+      })() : '') +
       (AUTH && AUTH.dev ? '<button class="bigset" id="sDev">Developer Settings</button>' : '') +
       (mode !== 'home' ? '<button class="bigset" id="sHome">Back to Home</button>' : '') +
       (AUTH ? '<button class="bigset red" id="sOut">Sign out</button>' : '') +
@@ -1886,14 +1919,17 @@ function openSettings() {
       call('api_refreshEvent', AUTH.token).then(r => { toast(r.msg || (r.ok ? 'Done' : 'Could not refresh'), 5000); return call('api_info', AUTH.token); })
         .then(r => { if (r && r.ok && $('#setSheet')) draw(r); }).catch(() => { toast('No connection. Try again.'); if ($('#sEvent')) draw(null); });
     };
-    const o = $('#sOut'); if (o) o.onclick = () => confirmBox('Sign out ' + AUTH.name + '?', 'This device will ask for a code next time.', 'Sign out', 'red', () => {
-      call('api_logout', AUTH.token).catch(() => {});
-      AUTH = null; store.set('auth', null); goHome(); toast('Signed out');
-    });
+    const o = $('#sOut'); if (o) o.onclick = signOutAsk;
+    const pb = $('#sPush'); if (pb) pb.onclick = () => {
+      const on = pushState() === 'on';
+      pb.disabled = true; pb.textContent = on ? 'Turning off…' : 'Turning on…';
+      (on ? pushTurnOff() : pushTurnOn()).then(() => { toast(on ? 'Notifications off on this device.' : 'Notifications are on for this device.', 4000); if ($('#setSheet')) draw(lastInfo); })
+        .catch(err => { toast(String((err && err.message) || 'Could not change notifications.'), 6000); if ($('#setSheet')) draw(lastInfo); });
+    };
   };
   draw(null);
   if (AUTH) tcpRead();
-  if (AUTH) call('api_info', AUTH.token).then(r => { if (r.ok) setDev(r.dev); if (r.ok) { lastInfo = r; if ($('#setSheet')) draw(r); } }).catch(() => {});
+  if (AUTH) call('api_info', AUTH.token).then(r => { if (r.ok) setAccess(r); if (r.ok) { lastInfo = r; if ($('#setSheet')) draw(r); } }).catch(() => {});
 }
 
 /** Settings > Developer Settings (developer codes only): Sell and Scan, ID scan diagnostics and stats, Reset flags. The TCP bridge switch is in Settings. */
@@ -1947,11 +1983,23 @@ function openDeveloper(back) {
     openDeveloper(back);
   };
 }
-/** Keeps AUTH.dev current for devices that signed in before developer codes existed. */
-function setDev(dev) {
-  if (!AUTH || !!AUTH.dev === !!dev) return;
-  AUTH.dev = !!dev; store.set('auth', AUTH);
-  if (mode === 'home' || ((mode === 'sell' || mode === 'scan') && !sellScanOn())) goHome();
+/** Keeps this device's access current from the server's api_info reply: developer code, lead or view only
+ *  (someone moved into or out of the LEADS section), and whether band requests are sent to them. */
+function setAccess(info) {
+  if (!AUTH || !info) return;
+  const role = info.role === 'view' ? 'view' : 'lead';
+  if (!!AUTH.dev === !!info.dev && AUTH.role === role && !!AUTH.notify === !!info.bandNotify) return;
+  const was = isLead();
+  AUTH.dev = !!info.dev; AUTH.role = role; AUTH.notify = !!info.bandNotify; store.set('auth', AUTH);
+  if (!isLead() && was) $('#modal').innerHTML = '';
+  if (mode === 'home' || ((mode === 'sell' || mode === 'scan') && !sellScanOn())) goHome(); else render();
+}
+function signOutAsk() {
+  confirmBox('Sign out ' + AUTH.name + '?', 'This device will ask for a code next time.', 'Sign out', 'red', () => {
+    const token = AUTH.token;
+    pushTurnOff().then(() => call('api_logout', token)).catch(() => {});
+    AUTH = null; store.set('auth', null); swCfg(); $('#modal').innerHTML = ''; goHome(); toast('Signed out');
+  });
 }
 function goHome() {
   if (mode === 'sell' && sale && (sale.step === 'customer' || sale.step === 'checkmail')) return;
@@ -2020,13 +2068,18 @@ function renderBands() {
   if (wb.step === 'home') {
     setTitle('Wristbands');
     if (!wb.data) { m.innerHTML = wb.failed ? '<div class="wb"><div class="empty"><b>No connection.</b><br>Check the internet and try again.</div><button class="big dark" id="wbRetry">Try again</button></div>' : loadingHtml('Counting wristbands…'); if ($('#wbRetry')) $('#wbRetry').onclick = () => { wb.failed = false; render(); wbLoad(); }; return; }
-    if (!wbTimer) wbTimer = setInterval(() => { if (mode === 'bands' && wb && wb.step === 'home' && !$('#modal').innerHTML) wbLoad(); else if (mode !== 'bands') { clearInterval(wbTimer); wbTimer = 0; } }, 30000);
+    // Every 30 s; every 10 s while a request is waiting, so the asker sees the acknowledgement quickly.
+    if (!wbTimer) { let tick = 0; wbTimer = setInterval(() => { tick++; if (mode === 'bands' && wb && wb.step === 'home' && !$('#modal').innerHTML && !document.hidden) { if (tick % 3 === 0 || wbReqOpen().length) wbLoad(); } else if (mode !== 'bands') { clearInterval(wbTimer); wbTimer = 0; } }, 10000); }
     const d = wb.data, t = wbCount();
     const names = wbNames(), all = names.places.concat(names.people);
     const areaHtml = all.map(n => {
       const a = t.areas[n], held = a ? a.issued - a.returned : 0;
       const sub = a ? (a.returned ? wbFmt(a.issued) + ' issued, ' + wbFmt(a.returned) + ' back' : 'Last ' + fmtT(a.last) + ' by ' + a.lastBy) : 'None yet';
-      return '<div class="wb-area' + (held ? '' : ' zero') + '"><b>' + wbFmt(held) + '</b><div class="nm">' + esc(n) + '</div><small>' + esc(sub) + '</small></div>';
+      // Leads tap an area to ask for more bands (people cards are not areas).
+      const ask = isLead() && WB_PEOPLE.indexOf(n) < 0, waiting = wbReqOpen().some(q => q.area.toLowerCase() === n.toLowerCase());
+      const inner = '<b>' + wbFmt(held) + '</b><div class="nm">' + esc(n) + '</div><small>' + esc(sub) + '</small>';
+      return ask ? '<button class="wb-area' + (held ? '' : ' zero') + (waiting ? ' wait' : '') + '" data-area="' + esc(n) + '">' + inner + '<span class="ask">' + (waiting ? 'Request waiting' : 'Request bands') + '</span></button>'
+        : '<div class="wb-area' + (held ? '' : ' zero') + '">' + inner + '</div>';
     }).join('');
     const rows = d.rows;
     const logHtml = rows.length ? rows.map(r => {
@@ -2043,13 +2096,21 @@ function renderBands() {
         '<div class="wb-line">' + (t.base < 0 ? 'More issued than received. A delivery from BOH may not be logged yet. ' : '') +
           (t.returned ? wbFmt(t.returned) + ' returned to Base, so ' + wbFmt(t.issued - t.returned) + ' still out. ' : '') +
           'This show night only. It follows the day set in Shot O\'clock.</div></div>' +
-      '<div class="wb-acts"><button class="big amber" id="wbIssue">' + I.band + 'Issue bands</button>' +
+      (isLead() ? '<div class="wb-acts"><button class="big amber" id="wbIssue">' + I.band + 'Issue bands</button>' +
         '<button class="big green" id="wbRecv">' + I.inbox + 'From BOH</button><button class="big blue" id="wbRet">' + I.back + 'Return</button></div>' +
+        (pushState() === 'off' ? '<button class="wb-push" id="wbPush">' + I.alert + '<span>Turn on notifications on this device to hear about band requests</span></button>' : '')
+        : '<div class="wb-view">View only. A lead logs bands and sends requests.</div>') +
+      wbReqHtml(d) +
       '<div class="wb-h">Out with each area<small>' + wbFmt(t.out) + ' out</small></div><div class="wb-areas">' + areaHtml + '</div>' +
       '<div class="wb-h">Log<small>' + rows.length + ' ' + (rows.length === 1 ? 'entry' : 'entries') + '</small></div><div class="wb-log">' + logHtml + '</div></div>';
-    $('#wbIssue').onclick = () => wbGo('Issued');
-    $('#wbRecv').onclick = () => wbGo('Received');
-    $('#wbRet').onclick = () => wbGo('Returned');
+    if ($('#wbIssue')) {
+      $('#wbIssue').onclick = () => wbGo('Issued');
+      $('#wbRecv').onclick = () => wbGo('Received');
+      $('#wbRet').onclick = () => wbGo('Returned');
+    }
+    if ($('#wbPush')) $('#wbPush').onclick = e => { const b = e.currentTarget; b.disabled = true; pushTurnOn().then(() => { toast('Notifications are on for this device.', 4000); render(); }).catch(err => { b.disabled = false; toast(String((err && err.message) || 'Could not turn on notifications.'), 6000); }); };
+    m.querySelectorAll('[data-area]').forEach(b => { b.onclick = () => wbRequest(b.dataset.area); });
+    m.querySelectorAll('[data-req]').forEach(b => { b.onclick = () => wbReqDetail((d.requests || []).find(q => q.n === Number(b.dataset.req))); });
     m.querySelectorAll('[data-n]').forEach(b => { b.onclick = () => wbDetail(d.rows.find(r => r.n === Number(b.dataset.n))); });
     wb.fresh = 0;
     return;
@@ -2124,7 +2185,7 @@ function renderBands() {
   }
 }
 
-function wbGo(kind) { wb = { step: 'qty', kind, data: wb.data, opId: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }; render(); }
+function wbGo(kind) { if (!isLead()) return toast(VIEW_ONLY_MSG); wb = { step: 'qty', kind, data: wb.data, opId: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }; render(); }
 function wbAfterQty() { wb.step = wb.kind === 'Received' ? 'confirm' : 'place'; }
 
 function wbSave(btn) {
@@ -2146,7 +2207,7 @@ function wbDetail(r) {
     '<div class="kv"><div class="tr"><span>From</span><b>' + esc(r.from) + '</b></div><div class="tr"><span>To</span><b>' + esc(r.to) + '</b></div>' +
     '<div class="tr"><span>When</span><b>' + esc(fmtWhenMs(r.at)) + '</b></div><div class="tr"><span>Logged by</span><b>' + esc(r.by) + '</b></div>' +
     (r.note ? '<div class="tr"><span>Note</span><b>' + esc(r.note) + '</b></div>' : '') + (r.voided ? '<div class="tr"><span>Voided</span><b>' + esc(r.voided) + '</b></div>' : '') + '</div>' +
-    (r.status === 'Void' ? '' : '<button class="bigset red" id="wbVoid">Void this entry</button><div class="msub" style="margin:8px 4px 0;font-size:15px">For a mistake. It stays on the sheet marked Void and drops out of the counts.</div>') +
+    (r.status === 'Void' || !isLead() ? '' : '<button class="bigset red" id="wbVoid">Void this entry</button><div class="msub" style="margin:8px 4px 0;font-size:15px">For a mistake. It stays on the sheet marked Void and drops out of the counts.</div>') +
     '</div></div>';
   $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
   $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
@@ -2154,6 +2215,154 @@ function wbDetail(r) {
   if (v) v.onclick = () => confirmBox('Void entry #' + r.n + '?', wbFmt(r.qty) + ' bands, ' + r.from + ' to ' + r.to + '. The counts go back as if it never happened.', 'Void', 'red', () => {
     call('api_bandVoid', AUTH.token, r.n).then(x => { if (!x.ok) return toast(x.msg || 'Nothing changed.'); wb.data = x; render(); toast('Entry #' + r.n + ' voided.'); })
       .catch(() => toast('No connection. Try again.'));
+  });
+}
+
+/* ============ wristbands: Request Bands + notifications (v43) ============
+ * A lead taps an area card and asks for more bands (api_bandRequest). Daniel, Aria and Gabriel get a push
+ * notification on their signed-in devices; tapping it opens this screen on the request, where one of them taps
+ * Acknowledge (api_bandAck). The asker sees who acknowledged and when (and gets a push back). No email. */
+const wbReqOpen = () => ((wb && wb.data && wb.data.requests) || []).filter(q => q.status === 'Open');
+function wbReqHtml(d) {
+  const list = d.requests || [];
+  if (!list.length) return '';
+  return '<div class="wb-h">Band requests<small>' + (wbReqOpen().length ? wbReqOpen().length + ' waiting' : 'All acknowledged') + '</small></div><div class="wb-log">' +
+    list.map(q => '<button class="wb-row wb-req' + (q.status === 'Open' ? ' open' : '') + '" data-req="' + q.n + '" style="--fc:' + (q.status === 'Open' ? '#b45309' : '#16a34a') + '"><i></i><div><b>' +
+      esc(q.area) + ' needs ' + wbFmt(q.qty) + '</b><span>' + esc('Asked ' + fmtT(q.at) + ' by ' + q.by + (q.note ? ' · ' + q.note : '')) + '</span>' +
+      '<span class="st">' + (q.status === 'Open' ? 'Waiting for Daniel, Aria or Gabriel' : esc('Acknowledged by ' + q.ackBy + ' at ' + fmtT(q.ackAt))) + '</span></div>' +
+      '<em>' + (q.status === 'Open' ? (AUTH && AUTH.notify ? 'Ack' : '…') : I.check) + '</em></button>').join('') + '</div>';
+}
+/** One request: its details, and Acknowledge for the people who are told about it. */
+function wbReqDetail(q) {
+  if (!q) return;
+  const open = q.status === 'Open', mine = AUTH && AUTH.notify;
+  $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet"><button class="close" id="mx">' + I.x + '</button>' +
+    '<div class="mname" style="color:' + (open ? '#b45309' : 'var(--green)') + '">' + esc(q.area) + ' needs ' + wbFmt(q.qty) + ' bands</div>' +
+    '<div class="msub">Request #' + q.n + ' · ' + (open ? 'Waiting' : 'Acknowledged') + '</div>' +
+    '<div class="kv"><div class="tr"><span>Area</span><b>' + esc(q.area) + '</b></div><div class="tr"><span>Bands</span><b>' + wbFmt(q.qty) + '</b></div>' +
+    '<div class="tr"><span>Asked by</span><b>' + esc(q.by) + '</b></div><div class="tr"><span>Asked at</span><b>' + esc(fmtWhenMs(q.at)) + '</b></div>' +
+    (q.note ? '<div class="tr"><span>Note</span><b>' + esc(q.note) + '</b></div>' : '') +
+    (open ? '' : '<div class="tr"><span>Acknowledged by</span><b>' + esc(q.ackBy) + '</b></div><div class="tr"><span>Acknowledged at</span><b>' + esc(fmtWhenMs(q.ackAt)) + '</b></div>') + '</div>' +
+    (open && mine ? '<button class="bigset green" id="wbAck">' + I.check + 'Acknowledge</button><div class="msub" style="margin:8px 4px 0;font-size:15px">Tells ' + esc(q.by) + ' you have it. Log the bands with Issue bands when you hand them over.</div>'
+      : open ? '<div class="msub" style="margin:14px 4px 0;font-size:16px">Daniel, Aria and Gabriel were notified. This shows who took it as soon as one of them acknowledges.</div>' : '') +
+    '</div></div>';
+  $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
+  $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
+  const a = $('#wbAck');
+  if (a) a.onclick = () => {
+    a.disabled = true; a.textContent = 'Saving…';
+    call('api_bandAck', AUTH.token, q.n).then(r => {
+      if (!r.ok) { a.disabled = false; a.innerHTML = I.check + 'Acknowledge'; return toast(r.msg || 'Not saved.', 4000); }
+      wb.data = r; $('#modal').innerHTML = ''; if (mode === 'bands' && wb.step === 'home') render();
+      beepOk(); toast('Acknowledged. ' + q.by + ' can see it.', 3500);
+    }).catch(() => { a.disabled = false; a.innerHTML = I.check + 'Acknowledge'; toast('No connection. Try again.', 4000); });
+  };
+}
+/** Tap an area card: how many bands, an optional note, Send. */
+function wbRequest(area) {
+  const waiting = wbReqOpen().find(q => q.area.toLowerCase() === area.toLowerCase());
+  if (waiting) return wbReqDetail(waiting);
+  const rq = { qty: 100, note: '', opId: 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) };
+  const draw = () => {
+    $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet"><button class="close" id="mx">' + I.x + '</button>' +
+      '<div class="mname">Request bands</div><div class="msub">' + esc(area) + ' · Daniel, Aria and Gabriel get a notification.</div>' +
+      '<div class="wb-rq">' + WB_QTY.map(n => '<button class="' + (rq.qty === n ? 'on' : '') + '" data-rq="' + n + '">' + n + '</button>').join('') +
+      '<button class="' + (WB_QTY.indexOf(rq.qty) < 0 ? 'on' : '') + '" data-rq="custom">' + (WB_QTY.indexOf(rq.qty) < 0 ? wbFmt(rq.qty) : 'Other') + '</button></div>' +
+      '<label class="wb-note"><input id="wbRqNote" type="text" maxlength="200" placeholder="Note (optional), e.g. almost out" value="' + esc(rq.note) + '"></label>' +
+      '<button class="bigset amber" id="wbRqSend">' + I.band + 'Request ' + wbFmt(rq.qty) + ' bands</button></div></div>';
+    $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
+    $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
+    $('#wbRqNote').oninput = e => { rq.note = e.target.value; };
+    document.querySelectorAll('[data-rq]').forEach(b => {
+      b.onclick = () => {
+        if (b.dataset.rq !== 'custom') { rq.qty = Number(b.dataset.rq); return draw(); }
+        promptBox('How many bands?', 'Up to 5,000.', '', 'number', 'OK', v => {
+          const n = Math.round(Number(v));
+          if (!(n >= 1 && n <= 5000)) { toast('Type a number from 1 to 5,000.'); return draw(); }
+          rq.qty = n; draw();
+        });
+      };
+    });
+    $('#wbRqSend').onclick = e => {
+      const b = e.currentTarget; b.disabled = true; b.textContent = 'Sending…';
+      call('api_bandRequest', AUTH.token, { area: area, qty: rq.qty, note: rq.note, opId: rq.opId }).then(r => {
+        if (r.rows) wb.data = r;
+        if (!r.ok) { $('#modal').innerHTML = ''; if (mode === 'bands' && wb.step === 'home') render(); return toast(r.msg || 'Not sent.', 5000); }
+        $('#modal').innerHTML = ''; if (mode === 'bands' && wb.step === 'home') render();
+        beepOk();
+        toast(r.pushed ? 'Request sent. You will see here when it is acknowledged.' : 'Request logged, but nobody has notifications on yet. Tell them by radio too.', 6000);
+      }).catch(() => { b.disabled = false; b.innerHTML = I.band + 'Request ' + wbFmt(rq.qty) + ' bands'; toast('No connection. Nothing was sent. Try again.', 4000); });
+    };
+  };
+  draw();
+}
+/** Opens Wristbands on one request (from a notification tap, or ?band=<n>). n < 1 just opens Wristbands. */
+function openBandReq(n) {
+  requireLogin(() => {
+    $('#modal').innerHTML = '';
+    stopCamera(); mode = 'bands'; wb = { step: 'home', data: (wb && wb.data) || null }; render();
+    wbLoad().then(() => { const q = wb && wb.data && (wb.data.requests || []).find(x => x.n === Number(n)); if (q) wbReqDetail(q); });
+  });
+}
+
+/* ---- push notifications: this device registers once (a tap is required by iOS), the server sends empty pushes,
+ * and sw.js asks the server what to show. On iPhone and iPad they only work from the Home Screen icon. ---- */
+const PUSH_OK = HOSTED && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+let swReg = null;
+/** Tells sw.js who is signed in on this device (it cannot read the app's storage). */
+function swCfg() {
+  if (!HOSTED || !('caches' in window)) return;
+  caches.open('ftos-cfg').then(c => c.put('cfg', new Response(JSON.stringify({ api: API_URL, token: AUTH ? AUTH.token : '' })))).catch(() => {});
+}
+const b64Bytes = s => { const b = atob(String(s).replace(/-/g, '+').replace(/_/g, '/')); const o = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) o[i] = b.charCodeAt(i); return o; };
+/** 'on' | 'off' | 'blocked' (turned off in the device's settings) | 'none' (this browser cannot do it). */
+function pushState() {
+  if (!PUSH_OK) return 'none';
+  if (Notification.permission === 'denied') return 'blocked';
+  return Notification.permission === 'granted' && store.get('pushOn') ? 'on' : 'off';
+}
+/** Registers this device's push address with the server under the signed-in name. */
+function pushSync() {
+  if (!PUSH_OK || !AUTH) return Promise.reject(new Error('Not available'));
+  return navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription().then(sub => {
+    if (sub) return sub;
+    return call('api_info', AUTH.token).then(info => {
+      if (!info.pushKey) throw new Error('The server is not ready for notifications yet.');
+      return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64Bytes(info.pushKey) });
+    });
+  })).then(sub => call('api_pushSub', AUTH.token, sub.endpoint)).then(r => {
+    if (!r.ok) throw new Error(r.msg || 'Not saved.');
+    store.set('pushOn', true); return r;
+  });
+}
+/** From a tap: asks the device for permission, then registers. */
+function pushTurnOn() {
+  if (!PUSH_OK) return Promise.reject(new Error('Notifications only work from the Home Screen icon on iPhone and iPad.'));
+  return Notification.requestPermission().then(p => {
+    if (p !== 'granted') throw new Error('Notifications are turned off for OnSite in this device\'s settings.');
+    return pushSync();
+  });
+}
+function pushTurnOff() {
+  store.set('pushOn', null);
+  if (!PUSH_OK) return Promise.resolve();
+  const token = AUTH ? AUTH.token : '';
+  return navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
+    if (!sub) return;
+    call('api_pushOff', token, sub.endpoint).catch(() => {});
+    return sub.unsubscribe();
+  }).catch(() => {});
+}
+function pushInit() {
+  if (!PUSH_OK) return;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    swReg = reg; swCfg();
+    if (AUTH && pushState() === 'on') pushSync().catch(() => {});   // keeps the address under whoever is signed in now
+  }).catch(() => {});
+  navigator.serviceWorker.addEventListener('message', e => {
+    const d = e.data || {};
+    if (d.band) openBandReq(d.band);
+    else if (d.bandsChanged && mode === 'bands' && wb && wb.step === 'home' && !$('#modal').innerHTML) wbLoad();
   });
 }
 
@@ -2227,6 +2436,7 @@ function liveTicketLoop() {
 $('#hlogo').src = LOGO;
 $('#gearBtn').onclick = openSettings;
 $('#homeBtn').onclick = goHome;
+pushInit();
 document.querySelectorAll('#nav button').forEach(b => { b.onclick = () => { tab = b.dataset.tab; render(); poll(false); }; });
 
 if (TICKET_PARAM && AUTH && AUTH.token) {
@@ -2240,7 +2450,8 @@ if (TICKET_PARAM && AUTH && AUTH.token) {
   liveTicketLoop();
 } else {
   render();
-  if (AUTH && AUTH.token && !HAS_GAS) call('api_info', AUTH.token).then(r => { if (r.ok) setDev(r.dev); }).catch(() => {});
+  if (AUTH && AUTH.token && !HAS_GAS) call('api_info', AUTH.token).then(r => { if (r.ok) setAccess(r); }).catch(() => {});
+  if (BAND_PARAM) { try { history.replaceState(null, '', location.pathname); } catch (e) {} openBandReq(BAND_PARAM); }
 }
 </script>
 </body>
