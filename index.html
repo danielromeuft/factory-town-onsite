@@ -472,7 +472,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '50';
+const APP_VERSION = '51';
 const BAND_PARAM = HOSTED ? Number(new URLSearchParams(location.search).get('band')) || 0 : 0;   // from a notification tap
 
 /* ============ icons ============ */
@@ -689,6 +689,20 @@ const TestApi = (() => {
       if (!q) return { ok: false, msg: 'That request is not on the page any more.' };
       if (q.status === 'Open') { q.status = 'Acknowledged'; q.ackBy = me(); q.ackAt = now(); save(); }
       return bands({ acked: q.n });
+    },
+    api_bandFulfill: (n, qty) => {
+      if (!lead()) return NO;
+      if (!(AUTH && AUTH.notify)) return { ok: false, msg: 'Only Daniel, Aria or Gabriel can mark a request fulfilled.' };
+      const q = db.requests.find(x => x.n === Number(n));
+      if (!q) return { ok: false, msg: 'That request is not on the page any more.' };
+      if (q.status === 'Fulfilled') return bands({ fulfilled: q.n, already: true });
+      const give = qty == null || qty === '' ? q.qty : Number(qty);
+      if (!(give >= 1 && give <= 5000 && Math.round(give) === give)) return { ok: false, msg: 'Enter a number of bands from 1 to 5000.' };
+      const ln = db.bands.reduce((m, b) => Math.max(m, b.n), 0) + 1;
+      db.bands.push({ n: ln, at: now(), type: 'Issued', qty: give, from: 'Base', to: q.area, by: me(), status: 'Active', note: 'Band request #' + q.n + ' (' + q.by + ')', voided: '' });
+      if (q.status === 'Open') { q.ackBy = me(); q.ackAt = now(); }
+      Object.assign(q, { status: 'Fulfilled', fulBy: me(), fulAt: now(), fulQty: give, logN: ln });
+      save(); return bands({ fulfilled: q.n, logged: ln });
     },
     api_flagList: () => ({ ok: true, flags: active().sort((a, b) => b.at - a.at).map(pub) }),
     api_flagCheck: q => {
@@ -2407,25 +2421,48 @@ function wbReqHtml(d) {
   return '<div class="wb-h">Band requests<small>' + (wbReqOpen().length ? wbReqOpen().length + ' waiting' : 'All acknowledged') + '</small></div><div class="wb-log">' +
     list.map(q => '<button class="wb-row wb-req' + (q.status === 'Open' ? ' open' : '') + '" data-req="' + q.n + '" style="--fc:' + (q.status === 'Open' ? '#b45309' : '#16a34a') + '"><i></i><div><b>' +
       esc(q.area) + ' needs ' + wbFmt(q.qty) + '</b><span>' + esc('Asked ' + fmtT(q.at) + ' by ' + q.by + (q.note ? ' · ' + q.note : '')) + '</span>' +
-      '<span class="st">' + (q.status === 'Open' ? 'Waiting for Daniel, Aria or Gabriel' : esc('Acknowledged by ' + q.ackBy + ' at ' + fmtT(q.ackAt))) + '</span></div>' +
+      '<span class="st">' + (q.status === 'Open' ? 'Waiting for Daniel, Aria or Gabriel' : q.status === 'Fulfilled' ? esc('Fulfilled by ' + q.fulBy + ' at ' + fmtT(q.fulAt) + (q.fulQty && q.fulQty !== q.qty ? ' · ' + wbFmt(q.fulQty) + ' given' : '')) : esc('Acknowledged by ' + q.ackBy + ' at ' + fmtT(q.ackAt))) + '</span></div>' +
       '<em>' + (q.status === 'Open' ? (AUTH && AUTH.notify ? 'Ack' : '…') : I.check) + '</em></button>').join('') + '</div>';
 }
 /** One request: its details, and Acknowledge for the people who are told about it. */
 function wbReqDetail(q) {
   if (!q) return;
-  const open = q.status === 'Open', mine = AUTH && AUTH.notify;
+  const open = q.status === 'Open', done = q.status === 'Fulfilled', mine = AUTH && AUTH.notify;
   $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet"><button class="close" id="mx">' + I.x + '</button>' +
     '<div class="mname" style="color:' + (open ? '#b45309' : 'var(--green)') + '">' + esc(q.area) + ' needs ' + wbFmt(q.qty) + ' bands</div>' +
-    '<div class="msub">Request #' + q.n + ' · ' + (open ? 'Waiting' : 'Acknowledged') + '</div>' +
+    '<div class="msub">Request #' + q.n + ' · ' + (open ? 'Waiting' : done ? 'Fulfilled' : 'Acknowledged') + '</div>' +
     '<div class="kv"><div class="tr"><span>Area</span><b>' + esc(q.area) + '</b></div><div class="tr"><span>Bands</span><b>' + wbFmt(q.qty) + '</b></div>' +
     '<div class="tr"><span>Asked by</span><b>' + esc(q.by) + '</b></div><div class="tr"><span>Asked at</span><b>' + esc(fmtWhenMs(q.at)) + '</b></div>' +
     (q.note ? '<div class="tr"><span>Note</span><b>' + esc(q.note) + '</b></div>' : '') +
-    (open ? '' : '<div class="tr"><span>Acknowledged by</span><b>' + esc(q.ackBy) + '</b></div><div class="tr"><span>Acknowledged at</span><b>' + esc(fmtWhenMs(q.ackAt)) + '</b></div>') + '</div>' +
+    (open ? '' : '<div class="tr"><span>Acknowledged by</span><b>' + esc(q.ackBy) + '</b></div><div class="tr"><span>Acknowledged at</span><b>' + esc(fmtWhenMs(q.ackAt)) + '</b></div>') +
+    (done ? '<div class="tr"><span>Fulfilled by</span><b>' + esc(q.fulBy) + '</b></div><div class="tr"><span>Fulfilled at</span><b>' + esc(fmtWhenMs(q.fulAt)) + '</b></div>' +
+      '<div class="tr"><span>Bands given</span><b>' + wbFmt(q.fulQty || q.qty) + (q.logN ? ' · log #' + q.logN : '') + '</b></div>' : '') + '</div>' +
     (open && mine ? '<button class="bigset green" id="wbAck">' + I.check + 'Acknowledge</button><div class="msub" style="margin:8px 4px 0;font-size:15px">Tells ' + esc(q.by) + ' you have it. Log the bands with Issue bands when you hand them over.</div>'
-      : open ? '<div class="msub" style="margin:14px 4px 0;font-size:16px">Daniel, Aria and Gabriel were notified. This shows who took it as soon as one of them acknowledges.</div>' : '') +
+      : open ? '<div class="msub" style="margin:14px 4px 0;font-size:16px">Daniel, Aria and Gabriel were notified. This shows who took it as soon as one of them acknowledges.</div>'
+      : !done && mine ? '<button class="bigset green" id="wbFul">' + I.band + 'Fulfilled: give ' + wbFmt(q.qty) + ' to ' + esc(q.area) + '</button>' +
+        '<div class="msub" style="margin:8px 4px 0;font-size:15px">Logs ' + wbFmt(q.qty) + ' bands as Issued from Base to ' + esc(q.area) + ' in the wristband tracker. <a href="#" id="wbFulQty" style="color:var(--blue);font-weight:800">Gave a different amount?</a></div>' : '') +
     '</div></div>';
   $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
   $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
+  const f = $('#wbFul');
+  const fulfill = give => {
+    f.disabled = true; f.textContent = 'Saving…';
+    call('api_bandFulfill', AUTH.token, q.n, give).then(r => {
+      if (!r.ok) { f.disabled = false; f.innerHTML = I.band + 'Fulfilled: give ' + wbFmt(q.qty) + ' to ' + esc(q.area); return toast(r.msg || 'Not saved.', 4000); }
+      wb.data = r; $('#modal').innerHTML = ''; if (mode === 'bands' && wb.step === 'home') render();
+      beepOk(); toast(r.already ? 'That request was already fulfilled.' : wbFmt(give || q.qty) + ' bands logged to ' + q.area + '.', 3500);
+    }).catch(() => { f.disabled = false; f.innerHTML = I.band + 'Fulfilled: give ' + wbFmt(q.qty) + ' to ' + esc(q.area); toast('No connection. Nothing was logged. Try again.', 4000); });
+  };
+  if (f) f.onclick = () => fulfill(q.qty);
+  const fq = $('#wbFulQty');
+  if (fq) fq.onclick = e => {
+    e.preventDefault();
+    promptBox('How many bands went to ' + q.area + '?', 'They asked for ' + wbFmt(q.qty) + '. Up to 5,000.', String(q.qty), 'number', 'Fulfilled', v => {
+      const n = Math.round(Number(v));
+      if (!(n >= 1 && n <= 5000)) { toast('Type a number from 1 to 5,000.'); return wbReqDetail(q); }
+      wbReqDetail(q); fulfill(n);
+    }, 'green');
+  };
   const a = $('#wbAck');
   if (a) a.onclick = () => {
     a.disabled = true; a.textContent = 'Saving…';
