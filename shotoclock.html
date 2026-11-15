@@ -550,7 +550,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '44';
+const BUILT_VERSION = '45';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -1828,10 +1828,17 @@ function returnPlan(st, p, now) {
   if (!team) return null;
   const bub = own || team;
   const prev = bub.zone || (bub.breaks || {}).pz || (own && team.zone) || (team.breaks || {}).pz || '';
-  const schedText = schedSpot(st, team, now), sched = zoneFor(schedText);
+  // Went on break early (Daniel 11/15): what counts is where the schedule puts them AFTER their scheduled break, so
+  // the schedule is read at the end of that break slot, or now if that is later (back late, or no slot on the grid).
+  const me = (team.members || []).find(m => m.id === p.id) || {};
+  const b = team.breaks || {}, slots = b[me.tag] || b.X || b.A || [];
+  const slot = slots[Math.max(0, breaksTaken(p.t) - 1)];
+  const [y, mo, d] = (st.activeDay || nightOf(now)).split('-').map(Number);
+  const slotEnd = slot == null ? 0 : new Date(y, mo - 1, d, 12, 0, 0).getTime() + (slot + (st.breakMinutes || 30)) * 60000;
+  const schedText = schedSpot(st, team, Math.max(now, slotEnd)), sched = zoneFor(schedText);
   return { prev: ALL_ZONES.indexOf(prev) >= 0 ? prev : '', sched, schedText };
 }
-/** Where they are supposed to be: the schedule's spot now when it is on the map, else the spot they left. */
+/** Where they are supposed to be: the schedule's spot after this break when it is on the map, else the spot they left. */
 const whereMain = pl => !pl ? '' : pl.sched || pl.prev || '';
 function whereHtml(m, p) {
   const pl = m.plan, first = esc(p.first || p.name);
@@ -1842,7 +1849,7 @@ function whereHtml(m, p) {
   if (m.more || !main) {
     html += `<div class="retq">${main ? 'Send ' + first + ' where?' : 'Where does ' + first + ' go now?'}</div><div class="retgrid">${ALL_ZONES.map(z => `<button class="${z === main ? 'on' : ''}" data-act="retGo" data-zone="${esc(z)}">${esc(z)}</button>`).join('')}</div>`;
   } else {
-    html += `<div class="retq">${moved ? 'The schedule has ' + first + ' at <b>' + esc(pl.sched) + '</b> now' + (pl.prev ? ' (was at ' + esc(pl.prev) + ')' : '') + '.' : 'Before the break: <b>' + esc(pl.prev) + '</b>. Still needed there?'}</div>`
+    html += `<div class="retq">${moved ? 'The schedule has ' + first + ' at <b>' + esc(pl.sched) + '</b> after this break' + (pl.prev ? ' (was at ' + esc(pl.prev) + ')' : '') + '.' : 'Before the break: <b>' + esc(pl.prev) + '</b>. Still needed there?'}</div>`
       + zb(main, 'green', I.check + (moved ? 'Send to ' : 'Return to ') + esc(main))
       + (moved && pl.prev ? zb(pl.prev, 'ghost', 'Return to ' + esc(pl.prev)) : '')
       + `<button class="big ghost" data-act="retMore">${I.map}Redeploy somewhere else</button>`;
