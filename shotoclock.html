@@ -208,6 +208,8 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .chip .n{min-width:36px;height:36px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:16px;flex:none;padding:0 6px}
 .chip .x{min-width:0;flex:1}
 .chip .nm{white-space:nowrap}
+.rcard.landed{animation:landed 3s ease-out 1}
+@keyframes landed{0%,60%{box-shadow:0 0 0 4px #22c55e}100%{box-shadow:0 0 0 0 transparent}}
 .chip .rd{display:inline-block;color:var(--purple);margin-left:2px;vertical-align:-.2em}
 .chip .rd svg{width:1.15em;height:1.15em;display:block}
 .chip.grey .rd{color:#a1a1aa}
@@ -555,7 +557,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '49';
+const BUILT_VERSION = '50';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -1698,13 +1700,16 @@ function renderKit(st, k) {
   // Someone off the roster can still be holding a device (kept visible so it can be returned).
   Object.keys(held).forEach(id => { if (!people.some(p => p.id === id)) people.push({ id, name: cap(id), first: cap(id), group: '', t: {} }); });
   const holders = people.filter(p => held[p.id]).sort(az), rest = people.filter(p => !held[p.id]).sort(az);
-  const shown = holders.concat(rest).filter(p => !q || p.name.toLowerCase().includes(q));
+  let order = holders.concat(rest);
+  const hold = S.kitHold && S.kitHold.k === k.key && Date.now() < S.kitHold.until ? S.kitHold : null;
+  if (hold) { const at = {}; hold.ids.forEach((id, i) => { at[id] = i; }); const pos = p => (p.id in at ? at[p.id] : 1e6); order = order.slice().sort((a, b) => pos(a) - pos(b)); }
+  const shown = order.filter(p => !q || p.name.toLowerCase().includes(q));
   const clockedIn = p => { const s = statusOf(p.t || {}); return s === 'in' || s === 'break'; };
   const cards = shown.map(p => {
     const mine = held[p.id] || [];
     const num = teamNum[p.id], lead = /lead/i.test(p.group || '');
     const b = num ? esc(badge(num)) : lead ? 'L' : '•';
-    return `<div class="rcard pcard ${mine.length ? 'held' : ''} ${!mine.length && !clockedIn(p) ? 'dim' : ''} ${S.selKey ? 'armed' : ''}" data-drop="person:${esc(p.id)}">
+    return `<div class="rcard pcard ${hold && hold.to === p.id ? 'landed' : ''} ${mine.length ? 'held' : ''} ${!mine.length && !clockedIn(p) ? 'dim' : ''} ${S.selKey ? 'armed' : ''}" data-drop="person:${esc(p.id)}">
       <div class="rhead"><span class="pb ${lead && !num ? 'lead' : ''}">${b}</span><span class="rn fit">${esc(p.name)}</span>${mine.length > 1 ? `<span class="pcount">${mine.length}</span>` : ''}</div>
       ${mine.map(r => `<div class="hold">${devChip(k, r)}<button class="rx" data-rret="${esc(r.name)}" aria-label="Return ${esc(r.name)} to base">${I.x}</button></div>
         <div class="since">Out since ${r.since ? fmtT(r.since) : ''}</div>`).join('')}
@@ -1739,9 +1744,15 @@ function giveKit(k, item, person) {
   const r = kitList(V(), k).find(x => x.name === item);
   S.selKey = null;
   if (!r || r.person === (person || '')) { renderAll(); return; }
+  // Keep every card where it is for 3 seconds so you can see the device land, then re-sort (holders to the top).
+  const ids = [...document.querySelectorAll(k.root + ' [data-drop^="person:"]')].map(el => el.dataset.drop.slice(7));
+  S.kitHold = { k: k.key, ids, to: person || '', until: Date.now() + KIT_HOLD_MS };
+  clearTimeout(S.kitHoldT);
+  S.kitHoldT = setTimeout(() => { S.kitHold = null; renderAll(); }, KIT_HOLD_MS);
   queue({ type: k.key, [k.key]: item, person: person || '', ts: new Date().toISOString() });
   renderAll();
 }
+const KIT_HOLD_MS = 3000;
 /** Drop target on the Radios and Scanners pages: a person card gets the device, the At Base panel takes it back. */
 function kitDrop(key, drop) {
   const k = kitView();
