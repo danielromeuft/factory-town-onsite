@@ -223,6 +223,10 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
 .chip.ringdue::after{background:var(--red);animation:ringdue 1.2s ease-in-out infinite}
 @keyframes ringdue{50%{opacity:.55}}
+/* 11/15: "go now" (Break now, Move to X now) is ORANGE; red is only for someone late back from break. */
+.pill.ringdue.go::after,.chip.ringdue.go::after{background:#ea580c}
+.pill.in.ringdue.go .st,.pill.in.ringdue.go .st.ret,.pill.in.ringdue.go .st.ret1{color:#c2410c}
+.chip.ringdue.go .mv{color:#c2410c}
 /* touch press-and-hold: grows over the 0.3 second hold, then lifts */
 .chip.holding{transform:scale(1.12);box-shadow:0 10px 24px rgba(37,99,235,.28);transition:transform .3s ease-out,box-shadow .3s ease-out}
 .chip.lifted{transform:scale(1.16);box-shadow:0 16px 34px rgba(0,0,0,.28);transition:transform .12s ease-out;z-index:5;position:relative}
@@ -546,7 +550,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '43';
+const BUILT_VERSION = '44';
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -955,7 +959,7 @@ function updatePillRings() {
   document.querySelectorAll('.pill[data-due]').forEach(el => {
     const r = ringState(Number(el.dataset.due), now);
     el.classList.toggle('ring', !!r);
-    el.classList.toggle('ringdue', !!(r && r.due));
+    el.classList.toggle('ringdue', !!(r && r.due)); el.classList.toggle('go', !!(r && r.due));
     if (r && !r.due) { el.style.setProperty('--rc', r.c); el.style.setProperty('--rp', (r.p * 360).toFixed(1) + 'deg'); }
     const st = el.querySelector('.st');
     const txt = !r ? el.dataset.sub : r.due ? 'Break now' : 'Break in ' + mmss(Number(el.dataset.due) - now);
@@ -986,7 +990,11 @@ function openPerson(id) {
   S.modal = { id, step: 'actions', tcp: p && statusOf(p.t) !== 'none' ? tcpDefault(p.tcp) : 'ok' };
   renderModal();
 }
-function closeModal() { S.modal = null; clearInterval(modalTimer); clearTimeout(idleTimer); $('#modalRoot').innerHTML = ''; renderAll(); }
+function closeModal() {
+  // Back from break, closed without a choice (X, tap outside, or 60 s): they go to where they are supposed to be.
+  const w = S.modal;
+  if (w && w.step === 'where' && !w.decided) { const z = whereMain(w.plan); if (z) { sendBack(z); return; } }
+  S.modal = null; clearInterval(modalTimer); clearTimeout(idleTimer); $('#modalRoot').innerHTML = ''; renderAll(); }
 function go(step, extra) { S.modal = Object.assign({}, S.modal, { step }, extra || {}); renderModal(); }
 function armIdle(ms) { clearTimeout(idleTimer); idleTimer = setTimeout(closeModal, ms); }
 
@@ -1179,7 +1187,7 @@ document.addEventListener('click', e => {
   else if (act === 'in' || act === 'break' || act === 'return') punch(act);
   else if (act === 'retGo') sendBack(a.dataset.zone);
   else if (act === 'retMore') { m.more = true; renderModal(); }
-  else if (act === 'retSkip') closeModal();
+  else if (act === 'retSkip') { m.decided = true; closeModal(); }
   else if (act === 'outReview') go('review', { outTs: new Date().toISOString() });
   else if (act === 'outConfirm') punch('out');
   else if (act === 'editStart') go('pin', { pin: '', clockingOut: m.step === 'review', outTs: m.outTs });
@@ -1314,28 +1322,28 @@ function placeItems(st) {
   return out;
 }
 
-/* ring: fills over the 5 minutes before a scheduled break, yellow > orange > red, then solid red until they go */
+/* ring: fills over the 5 minutes before a scheduled break, yellow > amber > orange, then solid orange until they go (red = late from break only) */
 const RING_MS = 5 * 60000;
 function ringState(due, now) {
   if (!due) return null;
   const left = due - now;
   if (left > RING_MS) return null;
   if (left <= 0) return { due: true };
-  return { c: left > RING_MS * 2 / 3 ? '#facc15' : left > RING_MS / 3 ? '#f97316' : '#dc2626', p: 1 - left / RING_MS };
+  return { c: left > RING_MS * 2 / 3 ? '#facc15' : left > RING_MS / 3 ? '#fb923c' : '#ea580c', p: 1 - left / RING_MS };   // yellow > amber > orange; never red
 }
 function updateRings() {
   const now = Date.now();
   document.querySelectorAll('[data-due]').forEach(el => {
     const r = ringState(Number(el.dataset.due), now);
     el.classList.toggle('ring', !!r);
-    el.classList.toggle('ringdue', !!(r && r.due));
+    el.classList.toggle('ringdue', !!(r && r.due)); el.classList.toggle('go', !!(r && r.due));
     if (r && !r.due) { el.style.setProperty('--rc', r.c); el.style.setProperty('--rp', (r.p * 360).toFixed(1) + 'deg'); }
   });
   // Scheduled move: same ring (a break ring that is already showing wins) and "Moving to South in 3:23".
   document.querySelectorAll('[data-mv]').forEach(el => {
     const at = Number(el.dataset.mv), r = ringState(at, now);
     if (r && !(el.dataset.due && ringState(Number(el.dataset.due), now))) {
-      el.classList.add('ring'); el.classList.toggle('ringdue', !!r.due);
+      el.classList.add('ring'); el.classList.toggle('ringdue', !!r.due); el.classList.toggle('go', !!r.due);
       if (!r.due) { el.style.setProperty('--rc', r.c); el.style.setProperty('--rp', (r.p * 360).toFixed(1) + 'deg'); }
     }
     const t = el.querySelector('.mv'), txt = moveText(el.dataset.mvto, at, now, el.clientWidth < 130);
@@ -1345,7 +1353,7 @@ function updateRings() {
   document.querySelectorAll('[data-back]').forEach(el => {
     const back = Number(el.dataset.back), left = back - now;
     el.classList.add('ring');
-    el.classList.toggle('ringdue', left <= 0);
+    el.classList.toggle('ringdue', left <= 0); el.classList.remove('go');   // late back from break: red
     el.style.setProperty('--rc', 'var(--purple)');
     el.style.setProperty('--rp', (Math.max(0, Math.min(1, left / breakMs())) * 360).toFixed(1) + 'deg');
     const bl = backLabel(back, now), bk = el.querySelector('.bk');
@@ -1823,10 +1831,12 @@ function returnPlan(st, p, now) {
   const schedText = schedSpot(st, team, now), sched = zoneFor(schedText);
   return { prev: ALL_ZONES.indexOf(prev) >= 0 ? prev : '', sched, schedText };
 }
+/** Where they are supposed to be: the schedule's spot now when it is on the map, else the spot they left. */
+const whereMain = pl => !pl ? '' : pl.sched || pl.prev || '';
 function whereHtml(m, p) {
   const pl = m.plan, first = esc(p.first || p.name);
   const moved = pl.sched && pl.sched !== pl.prev;
-  const main = moved ? pl.sched : pl.prev;
+  const main = whereMain(pl);
   const zb = (z, cls, label) => `<button class="big ${cls}" data-act="retGo" data-zone="${esc(z)}">${label}</button>`;
   let html = `<div class="done retdone">${m.done.html}</div>`;
   if (m.more || !main) {
@@ -1838,12 +1848,14 @@ function whereHtml(m, p) {
       + `<button class="big ghost" data-act="retMore">${I.map}Redeploy somewhere else</button>`;
   }
   if (!pl.sched && pl.schedText && !m.more) html += `<div class="psub">Schedule now: ${esc(pl.schedText)} (not a spot on the map).</div>`;
-  return html + `<button class="linkbtn" data-act="retSkip">Leave in Available</button>`;
+  if (main) html += `<div class="psub" style="text-align:center">${first} goes to <b>${esc(main)}</b> if nothing else is picked.</div>`;
+  return html + `<button class="linkbtn" data-act="retSkip">Leave in Available instead</button>`;
 }
 /** Places the bubble that person is in now (their own, or the team's if they rejoined it) in that zone. */
 function sendBack(zone) {
   const m = S.modal; if (!m) return;
   const id = m.id, it = placeItems(V()).find(x => !x.grey && (x.mem || []).some(mm => mm.id === id));
+  m.decided = true;
   closeModal();
   if (!it) return toast('They are not on tonight\'s placements.', true);
   if ((it.zone || '') !== zone) queue({ type: 'place', key: it.key, zone: zone });
