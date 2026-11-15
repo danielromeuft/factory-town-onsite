@@ -242,6 +242,7 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .wb-acts .big{margin-top:0;min-height:76px;font-size:22px;border-radius:22px}
 .wb-acts .big.amber{background:#b45309;grid-column:1/-1;min-height:96px;font-size:28px}
 .big.amber{background:#b45309}
+#testStrip{position:fixed;left:50%;transform:translateX(-50%);top:calc(3px + env(safe-area-inset-top));z-index:200;background:#dc2626;color:#fff;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.08em;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .bigset.amber{background:#b45309;color:#fff;border-color:#b45309}
 button.wb-area{width:100%;font:inherit;color:inherit;cursor:pointer} button.wb-area:active{transform:scale(.98)}
 .wb-area .ask{display:inline-block;margin-top:8px;font-size:13px;font-weight:800;color:#92400e;background:#fde68a;border-radius:999px;padding:4px 10px}
@@ -471,7 +472,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '45';
+const APP_VERSION = '46';
 const BAND_PARAM = HOSTED ? Number(new URLSearchParams(location.search).get('band')) || 0 : 0;   // from a notification tap
 
 /* ============ icons ============ */
@@ -532,7 +533,8 @@ const HAS_GAS = !!(window.google && google.script && google.script.run);
 function call(fn, ...args) {
   setSync('busy');
   // GitHub copy: plain-text POST to the Apps Script web app (a "simple" request, so no CORS preflight)
-  const p = HAS_GAS
+  // Test mode (developer codes): sample data in this browser, nothing sent to the sheets.
+  const p = testOn() && TestApi.has(fn) ? TestApi.run(fn, args) : HAS_GAS
     ? new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args))
     : fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow' })
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -606,6 +608,165 @@ function bindPad(fn) {
   document.querySelectorAll('.pad button[data-k]').forEach(b => { b.onclick = () => fn(b.dataset.k); });
 }
 
+/* ============ test mode (v46, 11/15) ============
+ * Settings > Developer Settings > Test mode (developer codes, this device only). While it is on, Wristbands, band
+ * requests, Flags and Shot O'clock run on SAMPLE DATA kept in this browser, with the same rules as the real
+ * server, and nothing is read from or written to the sheets, TimeClock Plus or the Master Timesheet. Signing in
+ * and the notification switch still talk to the server (they do not touch the sheets). Sell and Scan are not part
+ * of test mode. A red strip across the top shows while it is on. */
+const testOn = () => !!(AUTH && AUTH.dev && store.get('testMode'));
+const TestApi = (() => {
+  const KEY = 'testDb1';
+  const now = () => Date.now();
+  const seed = () => {
+    const t = now();
+    return {
+      night: 'Test night', nextFlag: 4, bridge: true,
+      bands: [
+        { n: 1, at: t - 5400000, type: 'Received', qty: 600, from: 'BOH', to: 'Base', by: 'Sample', status: 'Active', note: 'Sample delivery', voided: '' },
+        { n: 2, at: t - 4800000, type: 'Issued', qty: 200, from: 'Base', to: 'VIP Gate', by: 'Sample', status: 'Active', note: '', voided: '' },
+        { n: 3, at: t - 4500000, type: 'Issued', qty: 100, from: 'Base', to: 'North Gate', by: 'Sample', status: 'Active', note: '', voided: '' },
+      ],
+      requests: [{ n: 1, at: t - 600000, area: 'South Gate', qty: 100, note: 'Sample request', by: 'Sample Lead', status: 'Open', ackBy: '', ackAt: 0 }],
+      flags: [
+        { n: 1, status: 'Active', type: 'No re-entry', name: 'SAMPLE GUEST', dob: '1995-04-12', note: 'Left and came back twice', at: t - 7200000, by: 'Sample', entry: 'Denied', platform: '', codes: [], photo: '' },
+        { n: 2, status: 'Active', type: 'Under 21 VIP', name: 'TEST PERSON', dob: '2007-09-30', note: '', at: t - 3600000, by: 'Sample', entry: 'Admitted', platform: '', codes: ['SAMPLE-TICKET-1'], photo: '' },
+        { n: 3, status: 'Active', type: 'Third Party Ticket', name: '', dob: '', note: '', at: t - 1800000, by: 'Sample', entry: 'Denied', platform: 'StubHub', codes: ['SAMPLE-TICKET-2'], photo: '' },
+      ],
+    };
+  };
+  let db = store.get(KEY) || seed();
+  const save = () => store.set(KEY, db);
+  const me = () => (AUTH && AUTH.name) || 'Tester';
+  const clean = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const validDob = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); if (!m) return false; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCMonth() === +m[2] - 1 && +m[1] > 1900 && d.getTime() < now(); };
+  const ageOn = dob => { const [y, m, d] = dob.split('-').map(Number), t = new Date(); return t.getFullYear() - y - ((t.getMonth() + 1 < m || (t.getMonth() + 1 === m && t.getDate() < d)) ? 1 : 0); };
+  const plain = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z\s-]/g, ' ').split(/[\s-]+/).filter(Boolean);
+  const nameKey = s => { const w = plain(s); return w.length ? w[0] + ' ' + w[w.length - 1] : ''; };
+  const pub = f => ({ n: f.n, status: f.status, type: f.type, name: f.name, dob: f.dob, age: validDob(f.dob) ? ageOn(f.dob) : null, ageThen: null, codes: f.codes.length,
+    note: f.note, at: f.at, by: f.by, event: 'TEST MODE', night: '', last: f.at, hist: '', entry: f.entry, platform: f.platform, photo: !!f.photo, tickets: f.codes.slice() });
+  const active = () => db.flags.filter(f => f.status === 'Active');
+  const bands = extra => Object.assign({ ok: true, event: 'TEST MODE', night: db.night, rows: db.bands.slice().sort((a, b) => b.at - a.at || b.n - a.n),
+    requests: db.requests.slice().sort((a, b) => b.at - a.at || b.n - a.n) }, extra || {});
+  const lead = () => AUTH && AUTH.role !== 'view';
+  const NO = { ok: false, readOnly: true, msg: 'View only. Ask a lead to do this.' };
+  const api = {
+    api_bands: () => bands(),
+    api_bandLog: op => {
+      if (!lead()) return NO;
+      op = op || {};
+      const type = String(op.type || ''), qty = Number(op.qty), place = clean(op.place, 40);
+      if (['Received', 'Issued', 'Returned'].indexOf(type) < 0) return { ok: false, msg: 'Pick Issue, Receive or Return.' };
+      if (!(qty >= 1 && qty <= 5000 && Math.round(qty) === qty)) return { ok: false, msg: 'Enter a number of bands from 1 to 5000.' };
+      if (type !== 'Received' && !place) return { ok: false, msg: type === 'Issued' ? 'Pick who gets the bands.' : 'Pick who is returning them.' };
+      if (/^(base|boh)$/i.test(place)) return { ok: false, msg: 'Pick an area or a person, not ' + place + '.' };
+      const n = db.bands.reduce((m, b) => Math.max(m, b.n), 0) + 1;
+      db.bands.push({ n: n, at: now(), type: type, qty: qty, from: type === 'Received' ? 'BOH' : type === 'Issued' ? 'Base' : place, to: type === 'Issued' ? place : 'Base', by: me(), status: 'Active', note: clean(op.note, 200), voided: '' });
+      save(); return bands({ logged: n });
+    },
+    api_bandVoid: n => {
+      if (!lead()) return NO;
+      const b = db.bands.find(x => x.n === Number(n));
+      if (!b) return { ok: false, msg: 'That entry is not on the page any more.' };
+      b.status = 'Void'; b.voided = me() + ', ' + fmtWhenMs(now()); save(); return bands();
+    },
+    api_bandRequest: op => {
+      if (!lead()) return NO;
+      op = op || {};
+      const area = clean(op.area, 40), qty = Number(op.qty);
+      if (!area || /^(base|boh)$/i.test(area)) return { ok: false, msg: 'Pick the area that needs bands.' };
+      if (!(qty >= 1 && qty <= 5000 && Math.round(qty) === qty)) return { ok: false, msg: 'Enter a number of bands from 1 to 5000.' };
+      const open = db.requests.find(q => q.status === 'Open' && q.area.toLowerCase() === area.toLowerCase());
+      if (open) return bands({ ok: false, msg: area + ' already has a request waiting (' + open.qty + ' bands, asked by ' + open.by + ').' });
+      const n = db.requests.reduce((m, q) => Math.max(m, q.n), 0) + 1;
+      db.requests.push({ n: n, at: now(), area: area, qty: qty, note: clean(op.note, 200), by: me(), status: 'Open', ackBy: '', ackAt: 0 });
+      save(); return bands({ requested: n, pushed: 1 });   // test mode: no notification is really sent
+    },
+    api_bandAck: n => {
+      if (!lead()) return NO;
+      if (!(AUTH && AUTH.notify)) return { ok: false, msg: 'Only Daniel, Aria or Gabriel can acknowledge a request.' };
+      const q = db.requests.find(x => x.n === Number(n));
+      if (!q) return { ok: false, msg: 'That request is not on the page any more.' };
+      if (q.status === 'Open') { q.status = 'Acknowledged'; q.ackBy = me(); q.ackAt = now(); save(); }
+      return bands({ acked: q.n });
+    },
+    api_flagList: () => ({ ok: true, flags: active().sort((a, b) => b.at - a.at).map(pub) }),
+    api_flagCheck: q => {
+      q = q || {};
+      if (!q.code && !(q.name && q.dob)) return { ok: false, msg: 'Scan a ticket or an ID first.' };
+      const key = q.code ? clean(q.code, 1000) : '', nk = q.name ? nameKey(q.name) : '', dob = validDob(q.dob) ? q.dob : '';
+      const hits = active().filter(f => (key && f.codes.indexOf(key) >= 0) || (nk && dob && f.dob === dob && nameKey(f.name) === nk)).sort((a, b) => b.at - a.at);
+      return { ok: true, flags: hits.map(pub), key: key };
+    },
+    api_flagSearch: q => {
+      q = q || {};
+      const words = plain(q.name), dob = validDob(q.dob) ? q.dob : '';
+      if (!words.length && !dob) return { ok: false, msg: 'Type part of a name or a date of birth.' };
+      const rank = { both: 0, name: 1, dob: 2 };
+      const hits = active().map(f => {
+        const have = plain(f.name), nm = words.length && words.every(w => have.some(h => h.indexOf(w) >= 0)), d = !!dob && f.dob === dob;
+        const match = nm && d ? 'both' : nm ? 'name' : d ? 'dob' : '';
+        return match ? Object.assign(pub(f), { match: match }) : null;
+      }).filter(Boolean).sort((a, b) => rank[a.match] - rank[b.match] || b.at - a.at).slice(0, 50);
+      return { ok: true, flags: hits, both: !!(words.length && dob) };
+    },
+    api_flagSave: op => {
+      op = op || {};
+      if (op.n && !lead()) return NO;
+      const type = String(op.type || '');
+      if (FLAG_TYPES.indexOf(type) < 0) return { ok: false, msg: 'Pick a flag type.' };
+      const name = clean(op.name, 80), dob = String(op.dob || '');
+      if (name || dob) { if (!name) return { ok: false, msg: 'Enter their name.' }; if (!validDob(dob)) return { ok: false, msg: 'Check the date of birth.' }; }
+      const note = clean(op.note, 300);
+      if (type === 'Other' && !note) return { ok: false, msg: 'Add a note for "Other".' };
+      const platform = type === 'Third Party Ticket' ? clean(op.platform, 60) : '';
+      if (type === 'Third Party Ticket' && !platform) return { ok: false, msg: 'Type the ticket platform.' };
+      const key = op.code ? clean(op.code, 1000) : '';
+      let f = op.n ? db.flags.find(x => x.n === Number(op.n)) : null;
+      if (op.n && !f) return { ok: false, msg: 'That flag was not found.' };
+      if (!name && !key && !(f && f.codes.length)) return { ok: false, msg: 'Scan their ticket or add their name and date of birth.' };
+      const entry = String(op.entry || '');
+      if (ENTRY.indexOf(entry) < 0 && !(f && !entry && !f.entry)) return { ok: false, msg: 'Pick Admit Entry or Deny Entry.' };
+      const created = !f;
+      if (!f) { f = { n: db.nextFlag++, status: 'Active', at: now(), by: me(), codes: [], photo: '' }; db.flags.push(f); }
+      Object.assign(f, { status: 'Active', type: type, name: name, dob: dob, note: note, entry: entry, platform: platform });
+      if (key && f.codes.indexOf(key) < 0) f.codes.push(key);
+      if (op.photo) f.photo = String(op.photo).slice(0, 400000);   // kept small: this is browser storage
+      save();
+      return created ? { ok: true, flag: pub(f), created: true } : { ok: true, flag: pub(f) };
+    },
+    api_flagRemove: n => {
+      if (!lead()) return NO;
+      const f = db.flags.find(x => x.n === Number(n));
+      if (!f) return { ok: false, msg: 'That flag was not found.' };
+      f.status = 'Removed'; save(); return { ok: true };
+    },
+    api_flagPhoto: n => { const f = db.flags.find(x => x.n === Number(n)); return f && f.photo ? { ok: true, photo: f.photo } : { ok: false, msg: 'This flag has no ID photo.' }; },
+    api_flagsClear: (how, dry) => {
+      const mine = db.flags.filter(f => how === 'wipe' || f.status === 'Active');
+      if (!dry) { if (how === 'wipe') db.flags = []; else mine.forEach(f => { f.status = 'Removed'; }); save(); }
+      return { ok: true, count: mine.length, event: 'TEST MODE' };
+    },
+    api_tcpBridge: on => { if (on === true || on === false) { db.bridge = on; save(); } return { ok: true, on: !!db.bridge, allowed: true, only: [], skipped: 0 }; },
+    api_refreshEvent: () => ({ ok: true, msg: 'Test mode: the Master Timesheet was not read.' }),
+    api_idTestFrame: () => ({ ok: false, msg: 'Test mode: nothing is saved to Drive.' }),
+    api_getState: () => ({ ok: true, me: me(), state: { version: 'test', night: 'test', nightLabel: 'Test night', tickets: [], build: 'test' } }),
+  };
+  ['api_startSale', 'api_finishSale', 'api_cancelSale', 'api_scan', 'api_void', 'api_resend'].forEach(fn => { api[fn] = () => ({ ok: false, result: 'offline', msg: 'Sell and Scan are not part of test mode.' }); });
+  return {
+    has: fn => !!api[fn],
+    run: (fn, args) => new Promise(res => setTimeout(() => { let out; try { out = api[fn].apply(null, args.slice(1)); } catch (err) { out = { ok: false, msg: 'Test mode error: ' + String((err && err.message) || err) }; } res(JSON.parse(JSON.stringify(out))); }, 180)),
+    reset: () => { db = seed(); save(); },
+  };
+})();
+/** The red strip that shows while test mode is on. */
+function testStrip() {
+  let el = $('#testStrip');
+  if (!testOn()) { if (el) el.remove(); document.body.classList.remove('testmode'); return; }
+  document.body.classList.add('testmode');
+  if (!el) { el = document.createElement('div'); el.id = 'testStrip'; el.textContent = 'TEST MODE · sample data · nothing is saved'; document.body.appendChild(el); }
+}
+
 /* ============ app state ============ */
 let mode = 'home';      // home | sell | scan | flag | bands
 let tab = 'scan';       // scan | list  (inside scan mode)
@@ -617,6 +778,7 @@ let seenLast = {};      // ticket id -> last activity, to flash changed cards
 function setTitle(t) { $('#title').textContent = t; }
 
 function render() {
+  testStrip();
   document.body.classList.toggle('hasnav', mode === 'scan');
   document.body.classList.toggle('onhome', mode === 'home');
   $('#nav').classList.toggle('hidden', mode !== 'scan');
@@ -1937,6 +2099,10 @@ function openDeveloper(back) {
   const on = sellScanOn();
   $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
     '<button class="close" id="mx">' + I.x + '</button><div class="mname">Developer Settings</div><div class="msub">Only developer codes see this.</div>' +
+    '<div class="setrow"><span>Test mode</span><b style="color:' + (testOn() ? 'var(--red)' : 'var(--muted)') + '">' + (testOn() ? 'On' : 'Off') + '</b></div>' +
+    '<button class="bigset' + (testOn() ? ' red' : ' green') + '" id="dTest">' + (testOn() ? 'Turn off test mode' : 'Turn on test mode') + '</button>' +
+    (testOn() ? '<button class="bigset" id="dTestReset">Reset the sample data</button>' : '') +
+    '<div class="msub" style="margin:8px 4px 14px;font-size:15px">This device only. Wristbands, band requests, Flags and Shot O\'clock run on sample data with the real rules. Nothing is read from or written to the sheets, TimeClock Plus or the Master Timesheet, and no notifications go out. Sell and Scan are not part of it. Shot O\'clock manager code in test mode: 123456.</div>' +
     '<div class="setrow"><span>Sell and Scan on Home</span><b style="color:' + (on ? 'var(--green)' : 'var(--muted)') + '">' + (on ? 'On' : 'Off') + '</b></div>' +
     '<button class="bigset' + (on ? '' : ' green') + '" id="dSS">' + (on ? 'Hide Sell and Scan' : 'Show Sell and Scan') + '</button>' +
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">This device only. They stay hidden for everyone else, and hide again if someone else signs in here.</div>' +
@@ -1951,6 +2117,18 @@ function openDeveloper(back) {
     '<button class="bigset red" id="dFlagsWipe">Reset flags</button>' +
     '<div class="msub" style="margin:8px 4px 0;font-size:15px">Empties this event\'s Flags page, active and removed, for a clean sheet after a day of testing. Flags from past events are not touched.</div>' +
     '<button class="bigset" id="dBack">Back to Settings</button></div></div>';
+  $('#dTest').onclick = () => {
+    const on = !testOn();
+    store.set('testMode', on ? true : null);
+    wb = null; fl = null; S = null; mode = 'home'; render();
+    toast(on ? 'Test mode is on. Sample data only; nothing is saved.' : 'Test mode is off. This device is back on the live show.', 4500);
+    openDeveloper(back);
+  };
+  if ($('#dTestReset')) $('#dTestReset').onclick = () => confirmBox('Reset the sample data?', 'Wristbands, requests and flags in test mode go back to the starting samples, and Shot O\'clock gets a fresh sample night. The live show is not touched.', 'Reset', 'red', () => {
+    TestApi.reset();
+    try { ['shotMockDb4', 'shotServerTest', 'shotPendingTest'].forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    wb = null; if (mode !== 'home') { mode = 'home'; } render(); toast('Sample data reset.'); openDeveloper(back);
+  });
   $('#dDiag').onclick = () => { store.set('devIdDiag', idDiag() ? null : true); if (mode === 'flag') render(); openDeveloper(back); };
   // Remove flags / Reset flags: ask the server how many it would touch, confirm with that number, then do it.
   const flagsClear = (how, btn) => {
@@ -1998,7 +2176,7 @@ function signOutAsk() {
   confirmBox('Sign out ' + AUTH.name + '?', 'This device will ask for a code next time.', 'Sign out', 'red', () => {
     const token = AUTH.token;
     pushTurnOff().then(() => call('api_logout', token)).catch(() => {});
-    AUTH = null; store.set('auth', null); swCfg(); $('#modal').innerHTML = ''; goHome(); toast('Signed out');
+    AUTH = null; store.set('auth', null); store.set('testMode', null); swCfg(); $('#modal').innerHTML = ''; goHome(); toast('Signed out');
   });
 }
 function goHome() {

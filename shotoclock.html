@@ -118,6 +118,7 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .chip .mv{flex-basis:100%;text-align:center;font-size:12px;font-weight:900;color:#c2410c;white-space:nowrap;font-variant-numeric:tabular-nums}
 .chip.ringdue .mv{color:var(--red)}
 .zone .chip .mv{flex:none;flex-basis:auto;width:100%;white-space:normal;font-size:11px;line-height:1.15;overflow-wrap:anywhere}
+#testStrip{position:fixed;left:50%;transform:translateX(-50%);top:calc(3px + env(safe-area-inset-top));z-index:200;background:#dc2626;color:#fff;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.08em;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .offnote{grid-column:1/-1;text-align:center;color:var(--muted);font-size:15px;padding:10px 12px 4px}
 .empty{border:2px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;color:var(--muted);font-size:19px;line-height:1.5}
 .empty b{color:var(--ink)}
@@ -550,7 +551,11 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '45';
+const BUILT_VERSION = '46';
+// Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
+// sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
+const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
+const SK = TEST_MODE ? 'Test' : '';   // test mode keeps its own saved state and queue, apart from the live show's
 const ONSITE_API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 // Every call carries this device's OnSite sign-in; the server needs it for Refresh Roster, Sync, Close Out and Sign Out.
@@ -558,6 +563,7 @@ const postJson = (url, fn, args) => fetch(url, { method: 'POST', body: JSON.stri
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(r => { if (r && r.error) throw new Error(r.error); return r; });
 function call(fn, ...args) {
+  if (TEST_MODE) return Mock.run(fn, args);
   if (IN_ONSITE) return postJson(ONSITE_API_URL, 'soc.' + fn, args);
   if (!HAS_GAS) return Mock.run(fn, args);
   return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
@@ -657,13 +663,13 @@ const Mock = (() => {
     api_setPartners(op) { applyOp(db, Object.assign({}, op, { type:'partners' })); (op.cols || []).forEach(w => console.log('[demo] schedule column', w.key, '->', w.names.join(' / '))); save(); return { ok:true, state: clone(db) }; },
     api_saveSettings(s) { if ('scheduleTab' in s) db.settings.scheduleTabOverride = s.scheduleTab; if ('maxBreaks' in s) { db.settings.maxBreaksOverride = s.maxBreaks ? String(s.maxBreaks) : ''; } db.maxBreaks = Number(db.settings.maxBreaksOverride) || 1; save(); return { ok:true, state: clone(db) }; },
   };
-  return { run(fn, args) { return new Promise(res => setTimeout(() => res(api[fn](...args)), 250)); } };
+  return { run(fn, args) { return new Promise(res => setTimeout(() => res(api[fn] ? api[fn](...args) : { ok: false, msg: 'Not available on sample data.' }), 250)); } };
 })();
 
 /* ============ state + offline queue ============ */
 const S = {
-  server: LS.get('shotServer', null),
-  pending: LS.get('shotPending', []),
+  server: LS.get('shotServer' + SK, null),
+  pending: LS.get('shotPending' + SK, []),
   view: LS.get('shotView', 'time'),
   settingsOpen: false,
   filter: 'all', q: '',
@@ -673,7 +679,7 @@ const S = {
 let VIEW_ONLY = false;   // set at start from the OnSite sign-in (ftos.auth.role)
 function setServer(st) {
   if (!st || st.same) return;
-  S.server = st; LS.set('shotServer', st);
+  S.server = st; LS.set('shotServer' + SK, st);
 }
 /** Server state + unsynced local changes. Each person gets .t/.night for the shift on screen now. */
 function V(raw) {
@@ -789,7 +795,7 @@ function rejoinOnPlace(pairs, it) {
 function queue(op) {
   if (VIEW_ONLY) return roNote();
   op.opId = uid();
-  S.pending.push(op); LS.set('shotPending', S.pending);
+  S.pending.push(op); LS.set('shotPending' + SK, S.pending);
   flush();
 }
 const FN = { punch:'api_punch', edit:'api_editTimes', place:'api_place', radio:'api_radio', scanner:'api_scanner', partners:'api_setPartners', moveoff:'api_moveOff', hide:'api_hide', unhide:'api_unhide' };
@@ -802,7 +808,7 @@ async function flush() {
       const res = await call(FN[op.type], op);
       S.online = true;
       if (res && res.ok === false) toast(res.msg || 'That punch was not saved.', true);
-      S.pending.shift(); LS.set('shotPending', S.pending);
+      S.pending.shift(); LS.set('shotPending' + SK, S.pending);
       if (res && res.state) setServer(res.state);
     } catch (e) {
       S.online = false; syncDot();
@@ -2167,6 +2173,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { fl
 addEventListener('online', () => { S.online = true; flush(); poll(); });
 addEventListener('offline', () => { S.online = false; syncDot(); });
 if (!HAS_GAS && !IN_ONSITE) $('#demoNote').classList.remove('hidden');
+if (TEST_MODE) {
+  const n = $('#demoNote'); n.classList.remove('hidden');
+  n.textContent = 'Test mode: sample staff and schedule saved in this browser. Nothing is written to the sheets, TimeClock Plus or the Master Timesheet. Manager code for Edit Times: 123456. Turn it off in OnSite > Settings > Developer Settings.';
+  const b = document.createElement('div'); b.id = 'testStrip'; b.textContent = 'TEST MODE · sample data · nothing is saved'; document.body.appendChild(b);
+}
 
 /* ============ inside OnSite: sign-in gate, Home button, view only, updates ============ */
 // Opening Shot O'clock needs a device signed in to OnSite (ftos.auth, same origin). Since v43 anyone on the roster can
@@ -2186,7 +2197,7 @@ if (IN_ONSITE) {
     if (r && r.ok && r.role) {
       const view = r.role === 'view';
       try { const cur = onsiteAuth(); if (cur) { cur.role = view ? 'view' : 'lead'; cur.dev = !!r.dev; cur.notify = !!r.bandNotify; localStorage.setItem('ftos.auth', JSON.stringify(cur)); } } catch (e) {}
-      if (view !== VIEW_ONLY) { VIEW_ONLY = view; if (view) { S.pending = []; LS.set('shotPending', S.pending); S.selKey = null; S.edit = null; popClose(); } renderAll(); }
+      if (view !== VIEW_ONLY) { VIEW_ONLY = view; if (view) { S.pending = []; LS.set('shotPending' + SK, S.pending); S.selKey = null; S.edit = null; popClose(); } renderAll(); }
     }
   }).catch(() => {});
   // A notification tap while this page is open: go to that request on the OnSite Wristbands screen.
