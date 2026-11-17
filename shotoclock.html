@@ -83,6 +83,24 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .bigavbox{text-align:center;padding:20px}
 .bigav{display:block;width:min(78vw,78vh,460px);height:min(78vw,78vh,460px);border-radius:50%;object-fit:cover;margin:0 auto;background:#e4e4e7;border:6px solid #fff;box-shadow:0 20px 60px rgba(0,0,0,.35);-webkit-touch-callout:none;user-select:none}
 .bigavn{margin-top:18px;color:#fff;font-size:28px;font-weight:800;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.bigavwrap{position:relative;width:min(78vw,78vh,460px);margin:0 auto}
+.bigavi{display:flex;align-items:center;justify-content:center;color:#71717a;font-size:min(22vw,22vh,130px);font-weight:800;letter-spacing:.02em}
+/* New photo (11/17): pencil badge on the rim of the big photo, like a contact card */
+.bigaved{position:absolute;right:5%;bottom:5%;width:72px;height:72px;padding:0;border-radius:50%;border:4px solid #fff;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(0,0,0,.4);cursor:pointer}
+.bigaved svg{width:30px;height:30px}
+.bigaved:active{transform:scale(.92)}
+.bigavh{margin-top:6px;color:rgba(255,255,255,.72);font-size:16px;font-weight:600}
+.overlay.cropov{flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;background:#0b0b10}
+.croph{color:#fff;font-size:26px;font-weight:800;text-align:center}
+.crops{color:rgba(255,255,255,.65);font-size:16px;margin-top:-10px;text-align:center}
+.cropst{position:relative;width:min(88vw,58vh,520px);height:min(88vw,58vh,520px);overflow:hidden;touch-action:none;background:#000;border-radius:14px;cursor:grab}
+.cropst img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.cropmask{position:absolute;inset:0;border-radius:50%;pointer-events:none;box-shadow:0 0 0 2000px rgba(11,11,16,.62);border:3px solid rgba(255,255,255,.92)}
+.cropzoom{width:min(88vw,58vh,520px);accent-color:#fff}
+.cropbtns{display:flex;gap:12px;width:min(88vw,58vh,520px)}
+.cropbtns .big{flex:1;margin:0;min-height:76px;font-size:24px;border-radius:22px}
+.cropov .big.ghost{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.2)}
+.cropx{background:none;border:0;color:rgba(255,255,255,.7);font-size:18px;font-weight:700;padding:8px 16px}
 .mav{display:block;width:104px;height:104px;border-radius:50%;object-fit:cover;margin:0 auto 12px;background:#e4e4e7}
 .pill .st{font-size:16px;font-weight:600;color:var(--muted)}
 .pill.in{background:var(--blue-t);border-color:#bfdbfe}.pill.in::before{background:var(--blue)}.pill.in .st{color:var(--blue)}
@@ -495,6 +513,7 @@ const I = {
   outIcon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>',
   pair:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2a5 5 0 0 1 6 4.8"/></svg>',
   north:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12 4 4l4 8-4 8z"/></svg>',
+  pencil:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
 };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -575,7 +594,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '56';
+const BUILT_VERSION = '57';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -663,6 +682,7 @@ const Mock = (() => {
     api_checkPin(pin) { return pin === '123456' ? { ok:true, name:'Daniel', token:'demo' } : { ok:false, msg:'Wrong code. (Demo code is 123456.)' }; },
     api_place(op) { applyOp(db, { type:'place', key: op.key, zone: op.zone || '' }); save(); return { ok:true, state: clone(db) }; },
     api_moveOff(op) { applyOp(db, Object.assign({}, op, { type:'moveoff' })); save(); return { ok:true, state: clone(db) }; },
+    api_savePhoto() { return { ok:true, id:'' }; },
     api_hide(op) { applyOp(db, Object.assign({}, op, { type:'hide' })); db.hidden[op.id].by = 'Demo'; save(); return { ok:true, state: clone(db) }; },
     api_unhide(op) { applyOp(db, Object.assign({}, op, { type:'unhide' })); save(); return { ok:true, state: clone(db) }; },
     api_clearPlacements() { db.pairs.forEach(p => p.zone = ''); save(); return { ok:true, state: clone(db) }; },
@@ -707,7 +727,9 @@ function setServer(st) {
 }
 /** Server state + unsynced local changes. Each person gets .t/.night for the shift on screen now. */
 /** Staff photo from the tracker's Profile Pictures folder (server sends { roster name: file id }), or '' (11/17). */
+const localPhotos = {};   // photos taken on this device (11/17): shown at once, before Drive serves the new file
 function photoUrl(p, size) {
+  if (localPhotos[p.id]) return localPhotos[p.id];
   const id = ((S.server || {}).photos || {})[p.id];
   return id ? 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=s' + (size || 160) : '';
 }
@@ -2057,7 +2079,7 @@ let pillHold = null, pillHeld = false;
 function pillHoldCancel() { if (pillHold) { clearTimeout(pillHold.t); pillHold.el.classList.remove('holding'); pillHold = null; } }
 document.addEventListener('pointerdown', e => {
   const el = e.target.closest('.pill');
-  const onPhoto = !!e.target.closest('.pill .av');   // 11/17: long-press on the photo = big photo, anywhere else = Hide
+  const onPhoto = !!e.target.closest('.pill .av, .pill .avi');   // 11/17: long-press on the photo (or initials) = big photo, anywhere else = Hide
   pillHeld = false;
   if (!el || (VIEW_ONLY && !onPhoto) || S.settingsOpen || S.view !== 'time' || S.modal || S.pop) return;
   pillHoldCancel();
@@ -2070,14 +2092,101 @@ document.addEventListener('pointerdown', e => {
     if (onPhoto) openPhoto(id); else openHide(id);
   }, PILL_HOLD_MS) };
 });
-/** Big round staff photo with the name under it. Tap anywhere to close. */
+/** Big round staff photo with the name under it. Tap anywhere to close. Leads get a pencil on the rim: new photo. */
 function openPhoto(id) {
   const p = person(id); if (!p) return;
-  const u = photoUrl(p, 900); if (!u) return;
-  S.pop = { onAct: () => {} };
-  $('#modalRoot').innerHTML = `<div class="overlay bigavov" data-pact="close"><div class="bigavbox">`
-    + `<img class="bigav" src="${esc(u)}" alt="" referrerpolicy="no-referrer" draggable="false">`
-    + `<div class="bigavn">${esc(p.name)}</div></div></div>`;
+  const u = photoUrl(p, 900);
+  if (!u && VIEW_ONLY) return;
+  S.pop = { onAct: act => { if (act === 'edit') pickPhoto(id); } };
+  $('#modalRoot').innerHTML = `<div class="overlay bigavov" data-pact="close"><div class="bigavbox"><div class="bigavwrap">`
+    + (u ? `<img class="bigav" src="${esc(u)}" alt="" referrerpolicy="no-referrer" draggable="false">` : `<div class="bigav bigavi">${esc(initials(p.name))}</div>`)
+    + (VIEW_ONLY ? '' : `<button class="bigaved" data-pact="edit" aria-label="Take a new photo">${I.pencil}</button>`)
+    + `</div><div class="bigavn">${esc(p.name)}</div>`
+    + (VIEW_ONLY ? '' : `<div class="bigavh">${u ? 'Tap the pencil for a new photo' : 'No photo yet. Tap the pencil to take one'}</div>`)
+    + `</div></div>`;
+}
+/* ---- New staff photo (11/17): pencil > camera > move and scale inside the circle > Save photo.
+ * Saved by the server to the tracker's Profile Pictures folder as "First Last.jpg", 800 x 800 JPEG. ---- */
+const PHOTO_OUT = 800;
+function pickPhoto(id) {
+  document.querySelectorAll('input.photopick').forEach(x => x.remove());
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.className = 'photopick';
+  inp.setAttribute('capture', 'environment');   // straight to the back camera; the camera's own button flips it
+  inp.style.cssText = 'position:fixed;left:-9999px;opacity:0';
+  document.body.appendChild(inp);
+  inp.onchange = () => { const f = inp.files && inp.files[0]; inp.remove(); if (f) openCrop(id, f); };
+  inp.click();
+}
+function openCrop(id, file) {
+  const p = person(id); if (!p) return;
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onerror = () => { URL.revokeObjectURL(url); toast('Could not open that photo. Try again.', true); };
+  img.onload = () => {
+    const done = () => { URL.revokeObjectURL(url); };
+    S.pop = { onAct: (act, btn) => {
+      if (act === 'cancel') { done(); popClose(); }
+      else if (act === 'retake') { done(); pickPhoto(id); }
+      else if (act === 'save') saveCrop(p, img, view, btn, done);
+    } };
+    $('#modalRoot').innerHTML = `<div class="overlay cropov"><div class="croph">${esc(p.name)}</div><div class="crops">Drag to move, pinch or slide to zoom</div>`
+      + `<div class="cropst"><img alt="" draggable="false"><div class="cropmask"></div></div>`
+      + `<input class="cropzoom" type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom">`
+      + `<div class="cropbtns"><button class="big ghost" data-pact="retake">Retake</button><button class="big green" data-pact="save">Save photo</button></div>`
+      + `<button class="cropx" data-pact="cancel">Cancel</button></div>`;
+    const st = $('.cropst'), im = st.querySelector('img'), zoom = $('.cropzoom');
+    const W = st.clientWidth, w = img.naturalWidth, h = img.naturalHeight, minS = W / Math.min(w, h);
+    im.src = url; im.style.width = w + 'px'; im.style.height = h + 'px';
+    const view = { W, s: minS, tx: (W - w * minS) / 2, ty: (W - h * minS) / 2 };
+    const clamp = () => {
+      view.s = Math.min(minS * 4, Math.max(minS, view.s));
+      view.tx = Math.min(0, Math.max(W - w * view.s, view.tx));
+      view.ty = Math.min(0, Math.max(W - h * view.s, view.ty));
+    };
+    const draw = () => { clamp(); im.style.transform = `translate(${view.tx}px,${view.ty}px) scale(${view.s})`; zoom.value = String(view.s / minS); };
+    const zoomAt = (ns, cx, cy) => { view.tx = cx - (cx - view.tx) * ns / view.s; view.ty = cy - (cy - view.ty) * ns / view.s; view.s = ns; draw(); };
+    draw();
+    const pts = new Map(); let g = null;
+    const mid = a => ({ x: a.reduce((t, q) => t + q.x, 0) / a.length, y: a.reduce((t, q) => t + q.y, 0) / a.length });
+    const dist = a => a.length > 1 ? Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) : 0;
+    const begin = () => { const a = [...pts.values()]; g = a.length ? { s: view.s, tx: view.tx, ty: view.ty, c: mid(a), d: dist(a) } : null; };
+    st.addEventListener('pointerdown', e => { e.preventDefault(); try { st.setPointerCapture(e.pointerId); } catch (x) {} pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); begin(); });
+    st.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId) || !g) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const a = [...pts.values()], c = mid(a), r = st.getBoundingClientRect();
+      const ns = Math.min(minS * 4, Math.max(minS, a.length > 1 && g.d ? g.s * dist(a) / g.d : g.s));
+      view.tx = (c.x - r.left) - (g.c.x - r.left - g.tx) * ns / g.s;
+      view.ty = (c.y - r.top) - (g.c.y - r.top - g.ty) * ns / g.s;
+      view.s = ns; draw();
+    });
+    const end = e => { pts.delete(e.pointerId); begin(); };
+    st.addEventListener('pointerup', end); st.addEventListener('pointercancel', end);
+    st.addEventListener('wheel', e => { e.preventDefault(); const r = st.getBoundingClientRect(); zoomAt(Math.min(minS * 4, Math.max(minS, view.s * Math.exp(-e.deltaY / 400))), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+    zoom.addEventListener('input', () => zoomAt(minS * Number(zoom.value), W / 2, W / 2));
+  };
+  img.src = url;
+}
+async function saveCrop(p, img, view, btn, done) {
+  if (btn.disabled) return;
+  const cv = document.createElement('canvas'); cv.width = cv.height = PHOTO_OUT;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, PHOTO_OUT, PHOTO_OUT);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, -view.tx / view.s, -view.ty / view.s, view.W / view.s, view.W / view.s, 0, 0, PHOTO_OUT, PHOTO_OUT);
+  const data = cv.toDataURL('image/jpeg', 0.86);
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await call('api_savePhoto', p.name, data);
+    if (!r || !r.ok) throw new Error((r && (r.msg || r.error)) || 'Photo not saved.');
+    localPhotos[p.id] = data;
+    if (S.server) { S.server.photos = S.server.photos || {}; if (r.id) S.server.photos[p.id] = r.id; }
+    done(); popClose(); renderAll();
+    toast('New photo saved for ' + (p.first || p.name));
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'Save photo';
+    toast(/fetch|network|load/i.test(String(err && err.message)) ? 'No connection. Photo not saved. Try again.' : String((err && err.message) || err), true);
+  }
 }
 document.addEventListener('pointermove', e => { if (pillHold && Math.hypot(e.clientX - pillHold.x, e.clientY - pillHold.y) > 10) pillHoldCancel(); });
 document.addEventListener('pointerup', pillHoldCancel);
