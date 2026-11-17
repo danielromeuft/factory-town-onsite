@@ -58,13 +58,19 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 /* home */
 .home{display:flex;flex-direction:column;gap:18px;max-width:640px;margin:4vh auto 0}
 .hero{background:var(--brand);border-radius:28px;padding:28px 26px 24px;color:#fff}
-.hero img{width:min(320px,80%);display:block}
+.hero img{width:100%;max-width:560px;display:block;margin:0 auto}
 .hero .bo{margin-top:14px;font-size:13px;font-weight:800;letter-spacing:.22em;color:#a1a1aa}
-.hero .who{margin-top:14px;font-size:16px;color:#d4d4d8;font-weight:600}
+.hero .who{margin-top:16px;font-size:17px;color:#d4d4d8;font-weight:600;text-align:center}
 .mode{display:flex;align-items:center;gap:20px;width:100%;min-height:150px;border-radius:28px;padding:24px 26px;text-align:left;color:#fff;transition:transform .08s}
 .mode:active{transform:scale(.985)}
 .mode svg{width:54px;height:54px;flex:none}
 .mode b{display:block;font-size:40px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
+.home .mode{position:relative}
+.home .mode b{flex:1;min-width:0;white-space:nowrap;font-size:clamp(30px,10vw,62px)}
+.home .mode{min-height:132px} .home .mode svg{width:60px;height:60px}
+.home .mode .lk{position:absolute;top:12px;right:12px;display:flex;width:34px;height:34px;border-radius:999px;background:rgba(0,0,0,.22);align-items:center;justify-content:center} .home .mode .lk svg{width:18px;height:18px}
+.home.out .mode{opacity:.55}
+.hero .hin{display:block;width:100%;margin:16px 0 0;background:#fff;color:#111;border-radius:20px;min-height:64px;font-size:24px;font-weight:900}
 .mode span{display:block;font-size:17px;font-weight:600;opacity:.85;margin-top:4px}
 .mode.shot{background:#7c3aed} .mode.sell{background:var(--pink)} .mode.scan{background:var(--blue)} .mode.flag{background:#b91c1c}
 
@@ -220,6 +226,11 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .bigset.red{background:var(--red);color:#fff;border-color:var(--red)}
 .bigset.green{background:var(--green);color:#fff;border-color:var(--green)}
 .bigset.dark{background:var(--brand);color:#fff;border-color:var(--brand)}
+.sgrp{border:2px solid var(--line);border-radius:24px;padding:16px 18px 18px;margin-top:16px}
+.sgrp h3{margin:0 0 2px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.sgrp .setrow{padding:12px 2px}
+.sgrp .bigset{margin-top:10px}
+.snote{margin:8px 2px 0;font-size:15px;color:var(--muted);line-height:1.4}
 .setrow{display:flex;justify-content:space-between;align-items:center;padding:14px 4px;border-top:1px solid var(--line);font-size:18px}
 .setrow:first-of-type{border-top:0}
 .setrow span{color:var(--muted);font-weight:600}
@@ -418,7 +429,7 @@ body.ticketpage header,body.ticketpage nav{display:none}
 .live .lstate.in{background:var(--green);color:#fff}
 .live .lstate.void{background:var(--red);color:#fff}
 .center{text-align:center}
-@media (max-width:520px){h1{font-size:21px} main{padding:14px 14px 30px} .mode{min-height:124px} .mode b{font-size:34px}}
+@media (max-width:520px){h1{font-size:21px} main{padding:14px 14px 30px} .mode{min-height:124px} .mode b{font-size:34px} .home .mode{min-height:108px;gap:16px;padding:20px} .home .mode svg{width:48px;height:48px} .hero{padding:22px 20px 20px}}
 /* Name + DOB screen on phones: everything down to Back and Search fits an iPhone screen (10/9: they sat below
    the keypad, out of view). Only this screen; the code keypad and other screens keep their size. */
 @media (max-width:520px){
@@ -429,6 +440,13 @@ body.ticketpage header,body.ticketpage nav{display:none}
   .manstep .perr{min-height:0;margin-top:6px;font-size:15px}
   .manstep .row2 .big{min-height:60px;font-size:22px;border-radius:20px;margin-top:6px}
 }
+/* Pop-ups keep their scrolling to themselves (11/15): the page behind is locked while one is open (body.mlock,
+   see lockScroll), a scroll that hits the end of a pop-up never passes to the page, and a swipe on the dimmed
+   edge around a pop-up does nothing. Before this, on iPhone a swipe near the edge scrolled the page behind and
+   the pop-up then stopped scrolling. */
+.overlay{overscroll-behavior:contain;touch-action:none}
+.overlay .sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+body.mlock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 </style>
 </head>
 <body>
@@ -472,11 +490,13 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '51';
+const APP_VERSION = '52';
 const BAND_PARAM = HOSTED ? Number(new URLSearchParams(location.search).get('band')) || 0 : 0;   // from a notification tap
 
 /* ============ icons ============ */
 const I = {
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 21v-5h-5"/></svg>',
+  padlock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
   band: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="4"/><circle cx="16.5" cy="12" r="1.6"/><path d="M7 10.5v3M10 10.5v3"/></svg>',
   inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M7.5 9.5L12 14l4.5-4.5"/><path d="M3 14v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg>',
   list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.3"/><circle cx="4" cy="12" r="1.3"/><circle cx="4" cy="18" r="1.3"/></svg>',
@@ -797,7 +817,7 @@ function render() {
   document.body.classList.toggle('onhome', mode === 'home');
   $('#nav').classList.toggle('hidden', mode !== 'scan');
   $('#homeBtn').classList.toggle('hidden', mode === 'home');
-  $('#gearBtn').classList.toggle('hidden', !!AUTH && !isLead());   // view only: no Settings
+  $('#gearBtn').classList.toggle('hidden', !AUTH || !isLead());   // signed out or view only: no Settings
   document.body.classList.toggle('locked', mode === 'sell' && sale && (sale.step === 'customer' || sale.step === 'checkmail'));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   if (mode === 'home') { stopCamera(); (HAS_GAS && APP_URL) ? renderMoved() : renderHome(); }
@@ -818,23 +838,28 @@ function renderMoved() {
 }
 function renderHome() {
   setTitle('OnSite');
-  $('#main').innerHTML = '<div class="home">' +
-    '<div class="hero"><img src="' + LOGO + '" alt="Factory Town"><div class="bo">BOX OFFICE &middot; ONSITE</div>' +
-    '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' + (isLead() ? '' : '<span class="vo">VIEW ONLY</span>') : 'Tap any button and enter your code') + '</div>' +
-    (AUTH && !isLead() ? '<button class="hout" id="hOut">Sign out</button>' : '') + '</div>' +
-    '<button class="mode shot" id="goShot">' + I.clock + '<div><b>Shot O\'clock</b><span>Time tracking, placements, radios and scanners</span></div></button>' +
-    (sellScanOn() ? '<button class="mode sell" id="goSell">' + I.sell + '<div><b>Sell</b><span>Log a sale and send the customer their QR</span></div></button>' +
-      '<button class="mode scan" id="goScan">' + I.scan + '<div><b>Scan</b><span>Check tickets at the gate</span></div></button>' : '') +
-    '<button class="mode flag" id="goFlag">' + I.alert + '<div><b>Flag</b><span>Flag or check a guest: Under 21 VIP, Third Party Ticket, No re-entry, Ejected</span></div></button>' +
-    '<button class="mode bands" id="goBands">' + I.band + '<div><b>Wristbands</b><span>VIP bands: received from BOH, issued to gates and staff, on hand at Base</span></div></button>' +
+  // 11/15 (v52): no descriptions under the tiles, bigger titles, no "Box Office" line. Signed out, nothing opens:
+  // the tiles are locked and every tap (tile or Sign in) asks for the code first.
+  const tile = (cls, id, icon, name) => '<button class="mode ' + cls + '" id="' + id + '">' + icon + '<b>' + name + '</b>' + (AUTH ? '' : '<i class="lk">' + I.padlock + '</i>') + '</button>';
+  $('#main').innerHTML = '<div class="home' + (AUTH ? '' : ' out') + '">' +
+    '<div class="hero"><img src="' + LOGO + '" alt="Factory Town">' +
+    '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' + (isLead() ? '' : '<span class="vo">VIEW ONLY</span>') : 'Signed out') + '</div>' +
+    (AUTH ? (!isLead() ? '<button class="hout" id="hOut">Sign out</button>' : '') : '<button class="hin" id="hIn">Sign in</button>') + '</div>' +
+    tile('shot', 'goShot', I.clock, 'Shot O\'clock') +
+    (sellScanOn() ? tile('sell', 'goSell', I.sell, 'Sell') + tile('scan', 'goScan', I.scan, 'Scan') : '') +
+    tile('flag', 'goFlag', I.alert, 'Flag') +
+    tile('bands', 'goBands', I.band, 'Wristbands') +
     '</div>';
   // Shot O'clock lives in shotoclock.html on the same site; it opens on any signed-in device (view only for non-leads).
   if ($('#hOut')) $('#hOut').onclick = signOutAsk;
-  $('#goShot').onclick = () => { requireLogin(() => { location.href = 'shotoclock.html'; }); };
-  if ($('#goSell')) $('#goSell').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'sell'; sale = { step: 'type' }; render(); }); };
-  if ($('#goScan')) $('#goScan').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'scan'; tab = 'scan'; render(); poll(true); }); };
-  $('#goFlag').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'flag'; flagStart(); }); };
-  $('#goBands').onclick = () => { unlockAudio(); requireLogin(() => { mode = 'bands'; bandsStart(); }); };
+  if ($('#hIn')) $('#hIn').onclick = () => requireLogin(() => {});
+  // Signed out, a tile asks for the code first and opens only after a good sign-in.
+  const go = fn => () => { unlockAudio(); requireLogin(fn); };
+  $('#goShot').onclick = go(() => { location.href = 'shotoclock.html'; });
+  if ($('#goSell')) $('#goSell').onclick = go(() => { mode = 'sell'; sale = { step: 'type' }; render(); });
+  if ($('#goScan')) $('#goScan').onclick = go(() => { mode = 'scan'; tab = 'scan'; render(); poll(true); });
+  $('#goFlag').onclick = go(() => { mode = 'flag'; flagStart(); });
+  $('#goBands').onclick = go(() => { mode = 'bands'; bandsStart(); });
 }
 
 /* ============ sell ============ */
@@ -2037,6 +2062,16 @@ function promptBox(title, sub, value, type, okText, onOk, color) {
 }
 
 /* ============ settings ============ */
+/** One Settings group: an uppercase header and its rows and buttons in a card (same look as Shot O'clock Settings). */
+const grp = (title, body) => body ? '<section class="sgrp"><h3>' + esc(title) + '</h3>' + body + '</section>' : '';
+/** A Shot O'clock server call from OnSite's screens: {fn: 'soc.<name>', args, token}, like shotoclock.html sends. */
+function callSoc(fn, ...args) {
+  setSync('busy');
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: 'soc.' + fn, args: args, token: AUTH ? AUTH.token : '' }), redirect: 'follow' })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(r => { setSync('ok'); if (r && r.error) throw new Error(r.error); if (r && r.auth === false) { signedOut(); throw new Error(r.msg || 'Signed out'); } return r; },
+      err => { setSync('off'); throw err; });
+}
 function openSettings() {
   // The server reply (event, version) redraws Settings only if Settings is still the open screen: tapping Developer
   // Settings before it arrived used to get covered by the redraw (10/9). lastInfo keeps the reply for Back.
@@ -2062,39 +2097,45 @@ function openSettings() {
   };
   const draw = info => {
     if (info) lastInfo = info;
+    // 11/15 (v52): one card per group (Account, Event, TCP Bridge, This device, Developer), same look as Shot O'clock
+    // Settings. Refresh Event is gone: Refresh Roster is the one button for the show, here and in Shot O'clock.
+    const ps = pushState();
     $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet" id="setSheet">' +
       '<button class="close" id="mx">' + I.x + '</button><div class="mname">Settings</div><div class="msub">Factory Town OnSite</div>' +
-      '<div class="setrow"><span>Signed in as</span><b>' + esc(AUTH ? AUTH.name : 'Nobody') + '</b></div>' +
-      '<div class="setrow"><span>Event</span><b>' + esc(info ? (info.event || 'Not set') : '…') + '</b></div>' +
-      '<div class="setrow"><span>Tonight</span><b>' + esc(info ? info.night : (S ? S.nightLabel : '…')) + '</b></div>' +
-      '<div class="setrow"><span>Emails left today</span><b style="' + (info && info.emailsLeft < 15 ? 'color:var(--red)' : '') + '">' + (info ? info.emailsLeft : '…') + '</b></div>' +
-      '<div class="setrow"><span>Version</span><b>App ' + esc(APP_VERSION) + (info ? ' &middot; Server ' + esc(info.build) : '') + '</b></div>' +
-      (AUTH ? '<button class="bigset" id="sEvent">Refresh Event</button><div class="msub" style="margin:8px 4px 0;font-size:15px">Reads the current event from the Master Timesheet. A new event gets its own flags page; flags from past events stay active.</div>' : '') +
-      (AUTH ? '<div class="setrow" style="margin-top:14px"><span>TCP bridge</span><b id="sTcpState" style="color:var(--muted)">Checking…</b></div>' +
+      grp('Account',
+        '<div class="setrow"><span>Signed in as</span><b>' + esc(AUTH ? AUTH.name : 'Nobody') + '</b></div>' +
+        (AUTH ? '<button class="bigset red" id="sOut">Sign out</button>' : '')) +
+      grp('Event',
+        '<div class="setrow"><span>Current event</span><b>' + esc(info ? (info.event || 'Not set') : '…') + '</b></div>' +
+        '<div class="setrow"><span>Tonight</span><b>' + esc(info ? info.night : (S ? S.nightLabel : '…')) + '</b></div>' +
+        (AUTH ? '<button class="bigset" id="sRoster">' + I.refresh + 'Refresh Roster</button>' +
+          '<div class="snote">Same button as in Shot O\'clock Settings. Pulls the current show from the Master Timesheet: roster, event name, and new Flags and Wristbands pages for a new show. Flags from past events stay active.</div>' : '')) +
+      (AUTH ? grp('TCP Bridge',
+        '<div class="setrow"><span>Status</span><b id="sTcpState" style="color:var(--muted)">Checking…</b></div>' +
         '<button class="bigset" id="sTcp" disabled>TCP bridge</button>' +
-        '<div class="msub" id="sTcpNote" style="margin:8px 4px 0;font-size:15px">Sends Shot O\'clock punches to TimeClock Plus through the base laptop. Off: punches go into TCP by hand, and any still waiting are skipped.</div>' : '') +
-      (AUTH ? (() => {
-        const ps = pushState();
-        return '<div class="setrow" style="margin-top:14px"><span>Notifications</span><b style="color:' + (ps === 'on' ? 'var(--green)' : 'var(--muted)') + '">' + (ps === 'on' ? 'On' : ps === 'blocked' ? 'Blocked' : ps === 'none' ? 'Not available' : 'Off') + '</b></div>' +
+        '<div class="snote" id="sTcpNote">Sends Shot O\'clock punches to TimeClock Plus through the base laptop. Off: punches go into TCP by hand, and any still waiting are skipped.</div>') : '') +
+      grp('This device',
+        (AUTH ? '<div class="setrow"><span>Notifications</span><b style="color:' + (ps === 'on' ? 'var(--green)' : 'var(--muted)') + '">' + (ps === 'on' ? 'On' : ps === 'blocked' ? 'Blocked' : ps === 'none' ? 'Not available' : 'Off') + '</b></div>' +
           (ps === 'on' || ps === 'off' ? '<button class="bigset' + (ps === 'on' ? '' : ' green') + '" id="sPush">' + (ps === 'on' ? 'Turn off notifications' : 'Turn on notifications') + '</button>' : '') +
-          '<div class="msub" style="margin:8px 4px 0;font-size:15px">' + (ps === 'none' ? 'On iPhone and iPad, notifications only work when OnSite is opened from its Home Screen icon.'
+          '<div class="snote">' + (ps === 'none' ? 'On iPhone and iPad, notifications only work when OnSite is opened from its Home Screen icon.'
             : ps === 'blocked' ? 'Notifications for OnSite are turned off in this device\'s settings. Turn them on there, then come back.'
-            : 'Wristband requests go to Daniel, Aria and Gabriel. Everyone else is told when their own request is acknowledged. This device only.') + '</div>';
-      })() : '') +
-      (AUTH && AUTH.dev ? '<button class="bigset" id="sDev">Developer Settings</button>' : '') +
-      (mode !== 'home' ? '<button class="bigset" id="sHome">Back to Home</button>' : '') +
-      (AUTH ? '<button class="bigset red" id="sOut">Sign out</button>' : '') +
+            : 'Wristband requests go to Daniel, Aria and Gabriel. Everyone else is told when their own request is acknowledged. This device only.') + '</div>' : '') +
+        '<div class="setrow"><span>Version</span><b>App ' + esc(APP_VERSION) + (info ? ' &middot; Server ' + esc(info.build) : '') + '</b></div>' +
+        '<div class="setrow"><span>Emails left today</span><b style="' + (info && info.emailsLeft < 15 ? 'color:var(--red)' : '') + '">' + (info ? info.emailsLeft : '…') + '</b></div>') +
+      (AUTH && AUTH.dev ? grp('Developer', '<button class="bigset dark" id="sDev">Developer Settings</button><div class="snote">Test mode, Sell and Scan, ID scan tools, clearing flags.</div>') : '') +
       '</div></div>';
     const dv = $('#sDev'); if (dv) dv.onclick = () => openDeveloper(() => draw(lastInfo));
     if (lastTcp) tcpShow(lastTcp);
     $('#mx').onclick = () => { $('#modal').innerHTML = ''; };
     $('#ov').onclick = e => { if (e.target.id === 'ov') $('#modal').innerHTML = ''; };
-    const h = $('#sHome'); if (h) h.onclick = () => { $('#modal').innerHTML = ''; goHome(); };
-    const ev = $('#sEvent'); if (ev) ev.onclick = () => {
-      ev.disabled = true; ev.textContent = 'Reading the Master Timesheet…';
-      call('api_refreshEvent', AUTH.token).then(r => { toast(r.msg || (r.ok ? 'Done' : 'Could not refresh'), 5000); return call('api_info', AUTH.token); })
-        .then(r => { if (r && r.ok && $('#setSheet')) draw(r); }).catch(() => { toast('No connection. Try again.'); if ($('#sEvent')) draw(null); });
-    };
+    const rr = $('#sRoster'); if (rr) rr.onclick = () => confirmBox('Refresh Roster?',
+      'Re-pulls the latest show roster from the Master Timesheet. If a newer show is there, Shot O\'clock and OnSite switch over to it and the old show\'s sheets are hidden.',
+      'Refresh', 'dark', () => {
+        if (testOn()) return toast('Test mode: the live roster was not changed.');
+        draw(lastInfo); const b = $('#sRoster'); b.disabled = true; b.textContent = 'Reading the Master Timesheet…';
+        callSoc('api_refreshRoster').then(r => { toast(r.msg || (r.ok === false ? 'Could not refresh' : 'Done'), 6000); return call('api_info', AUTH.token); })
+          .then(r => { if (r && r.ok && $('#setSheet')) draw(r); }).catch(() => { toast('No connection. Try again.'); if ($('#setSheet')) draw(lastInfo); });
+      });
     const o = $('#sOut'); if (o) o.onclick = signOutAsk;
     const pb = $('#sPush'); if (pb) pb.onclick = () => {
       const on = pushState() === 'on';
@@ -2111,26 +2152,30 @@ function openSettings() {
 /** Settings > Developer Settings (developer codes only): Sell and Scan, ID scan diagnostics and stats, Reset flags. The TCP bridge switch is in Settings. */
 function openDeveloper(back) {
   const on = sellScanOn();
-  $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet">' +
+  // 11/15 (v52): grouped like Settings (Test mode, Home screen, ID scanning, Flags), one card each.
+  $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet" id="devSheet">' +
     '<button class="close" id="mx">' + I.x + '</button><div class="mname">Developer Settings</div><div class="msub">Only developer codes see this.</div>' +
-    '<div class="setrow"><span>Test mode</span><b style="color:' + (testOn() ? 'var(--red)' : 'var(--muted)') + '">' + (testOn() ? 'On' : 'Off') + '</b></div>' +
-    '<button class="bigset' + (testOn() ? ' red' : ' green') + '" id="dTest">' + (testOn() ? 'Turn off test mode' : 'Turn on test mode') + '</button>' +
-    (testOn() ? '<button class="bigset" id="dTestReset">Reset the sample data</button>' : '') +
-    '<div class="msub" style="margin:8px 4px 14px;font-size:15px">This device only. Wristbands, band requests, Flags and Shot O\'clock run on sample data with the real rules. Nothing is read from or written to the sheets, TimeClock Plus or the Master Timesheet, and no notifications go out. Sell and Scan are not part of it. Shot O\'clock manager code in test mode: 123456.</div>' +
-    '<div class="setrow"><span>Sell and Scan on Home</span><b style="color:' + (on ? 'var(--green)' : 'var(--muted)') + '">' + (on ? 'On' : 'Off') + '</b></div>' +
-    '<button class="bigset' + (on ? '' : ' green') + '" id="dSS">' + (on ? 'Hide Sell and Scan' : 'Show Sell and Scan') + '</button>' +
-    '<div class="msub" style="margin:8px 4px 0;font-size:15px">This device only. They stay hidden for everyone else, and hide again if someone else signs in here.</div>' +
-    '<div class="setrow" style="margin-top:14px"><span>ID scan diagnostics</span><b style="color:' + (idDiag() ? 'var(--green)' : 'var(--muted)') + '">' + (idDiag() ? 'On' : 'Off') + '</b></div>' +
-    '<button class="bigset' + (idDiag() ? '' : ' green') + '" id="dDiag">' + (idDiag() ? 'Turn off ID scan diagnostics' : 'Turn on ID scan diagnostics') + '</button>' +
-    '<div class="msub" style="margin:8px 4px 0;font-size:15px">Shows camera numbers on the ID scan screen and a Send frame button that saves what the reader sees to Drive.</div>' +
-    '<div class="setrow" style="margin-top:14px"><span>ID scan stats (this device)</span><b></b></div>' + idStatsHtml() +
-    '<button class="bigset" id="dStatsReset">Reset ID scan stats</button>' +
-    '<div class="setrow" style="margin-top:14px"><span>Flags</span><b></b></div>' +
-    '<button class="bigset" id="dFlagsRemove">Remove flags</button>' +
-    '<div class="msub" style="margin:8px 4px 0;font-size:15px">Marks every active flag for this event Removed. The rows stay on the sheet, with a note in History.</div>' +
-    '<button class="bigset red" id="dFlagsWipe">Reset flags</button>' +
-    '<div class="msub" style="margin:8px 4px 0;font-size:15px">Empties this event\'s Flags page, active and removed, for a clean sheet after a day of testing. Flags from past events are not touched.</div>' +
-    '<button class="bigset" id="dBack">Back to Settings</button></div></div>';
+    grp('Test mode',
+      '<div class="setrow"><span>Test mode</span><b style="color:' + (testOn() ? 'var(--red)' : 'var(--muted)') + '">' + (testOn() ? 'On' : 'Off') + '</b></div>' +
+      '<button class="bigset' + (testOn() ? ' red' : ' green') + '" id="dTest">' + (testOn() ? 'Turn off test mode' : 'Turn on test mode') + '</button>' +
+      (testOn() ? '<button class="bigset" id="dTestReset">Reset the sample data</button>' : '') +
+      '<div class="snote">This device only. Wristbands, band requests, Flags and Shot O\'clock run on sample data with the real rules. Nothing is read from or written to the sheets, TimeClock Plus or the Master Timesheet, and no notifications go out. Sell and Scan are not part of it. Shot O\'clock manager code in test mode: 123456.</div>') +
+    grp('Home screen',
+      '<div class="setrow"><span>Sell and Scan on Home</span><b style="color:' + (on ? 'var(--green)' : 'var(--muted)') + '">' + (on ? 'On' : 'Off') + '</b></div>' +
+      '<button class="bigset' + (on ? '' : ' green') + '" id="dSS">' + (on ? 'Hide Sell and Scan' : 'Show Sell and Scan') + '</button>' +
+      '<div class="snote">This device only. They stay hidden for everyone else, and hide again if someone else signs in here.</div>') +
+    grp('ID scanning',
+      '<div class="setrow"><span>Diagnostics</span><b style="color:' + (idDiag() ? 'var(--green)' : 'var(--muted)') + '">' + (idDiag() ? 'On' : 'Off') + '</b></div>' +
+      '<button class="bigset' + (idDiag() ? '' : ' green') + '" id="dDiag">' + (idDiag() ? 'Turn off ID scan diagnostics' : 'Turn on ID scan diagnostics') + '</button>' +
+      '<div class="snote">Shows camera numbers on the ID scan screen and a Send frame button that saves what the reader sees to Drive.</div>' +
+      '<div class="setrow" style="margin-top:6px"><span>Stats (this device)</span><b></b></div>' + idStatsHtml() +
+      '<button class="bigset" id="dStatsReset">Reset ID scan stats</button>') +
+    grp('Flags',
+      '<button class="bigset" id="dFlagsRemove">Remove flags</button>' +
+      '<div class="snote">Marks every active flag for this event Removed. The rows stay on the sheet, with a note in History.</div>' +
+      '<button class="bigset red" id="dFlagsWipe">Reset flags</button>' +
+      '<div class="snote">Empties this event\'s Flags page, active and removed, for a clean sheet after a day of testing. Flags from past events are not touched.</div>') +
+    '<button class="bigset" id="dBack" style="margin-top:18px">Back to Settings</button></div></div>';
   $('#dTest').onclick = () => {
     const on = !testOn();
     store.set('testMode', on ? true : null);
@@ -2668,6 +2713,18 @@ if (TICKET_PARAM && AUTH && AUTH.token) {
   if (AUTH && AUTH.token && !HAS_GAS) call('api_info', AUTH.token).then(r => { if (r.ok) setAccess(r); }).catch(() => {});
   if (BAND_PARAM) { try { history.replaceState(null, '', location.pathname); } catch (e) {} openBandReq(BAND_PARAM); }
 }
+/* Locks the page behind while a pop-up is open (modal has content) and puts it back where it was after. */
+(function lockScroll() {
+  const root = document.getElementById('modal'); if (!root) return;
+  let y = 0, locked = false;
+  new MutationObserver(() => {
+    const open = !!root.querySelector('.overlay');
+    if (open === locked) return;
+    locked = open;
+    if (open) { y = window.scrollY || 0; document.body.style.top = -y + 'px'; document.body.classList.add('mlock'); }
+    else { document.body.classList.remove('mlock'); document.body.style.top = ''; window.scrollTo(0, y); }
+  }).observe(root, { childList: true, subtree: true });
+})();
 </script>
 </body>
 </html>

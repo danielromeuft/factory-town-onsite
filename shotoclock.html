@@ -423,6 +423,13 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
   .ebanner{font-size:14px;padding:10px 12px}
   .done .dtime,.backby .t{font-size:44px}
 }
+/* Pop-ups keep their scrolling to themselves (11/15): the page behind is locked while one is open (body.mlock,
+   see lockScroll), a scroll that hits the end of a pop-up never passes to the page, and a swipe on the dimmed
+   edge around a pop-up does nothing. Before this, on iPhone a swipe near the edge scrolled the page behind and
+   the pop-up then stopped scrolling. */
+.overlay{overscroll-behavior:contain;touch-action:none}
+.overlay .sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+body.mlock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 </style>
 </head>
 <body>
@@ -557,7 +564,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '51';
+const BUILT_VERSION = '52';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -1384,7 +1391,8 @@ function updateRings() {
   });
 }
 function zoneHtml([name, sub, cls], items, html) {
-  const here = items.filter(i => i.zone === name);
+  // Leads always sit at the top of the zone they are placed in (Daniel 11/15); everyone else keeps their order.
+  const here = items.filter(i => i.zone === name).map((it, n) => [it, n]).sort((a, b) => ((b[0].kind === 'lead') - (a[0].kind === 'lead')) || a[1] - b[1]).map(x => x[0]);
   return `<div class="zone ${cls} ${S.selKey ? 'armed' : ''}" data-drop="${esc(name)}"><div class="zh"><div><div class="zt fit">${esc(name)}</div>${sub ? `<div class="zs fit">${esc(sub)}</div>` : ''}</div>${here.length ? `<span class="zc">${here.length}</span>` : ''}</div><div class="zb">${here.map(html || chipHtml).join('')}</div></div>`;
 }
 // Department heads float and are never placed.
@@ -1558,6 +1566,7 @@ function renderPlace(st) {
   const byNum = (a, b) => (Number(a.num) || 99) - (Number(b.num) || 99);
   const teams = unplaced.filter(i => i.kind !== 'lead' && !i.grey).sort(byNum), leads = unplaced.filter(i => i.kind === 'lead');
   const resting = unplaced.filter(i => i.grey).sort(byNum);
+  const keep = placeAnchor();
   $('#placeView').innerHTML = `
     <div class="ptool">
       <div class="lbl">Schedule: <b>${esc(st.event.scheduleTab || 'not loaded')}</b><br>${VIEW_ONLY ? 'View only. Leads place the teams.' : 'Drag a team onto the map, or tap a team, then tap a spot.'}</div>
@@ -1567,7 +1576,23 @@ function renderPlace(st) {
       <div class="tb">${items.length ? leads.map(chipHtml).join('') + teams.map(chipHtml).join('') + resting.map(chipHtml).join('') || '<span style="color:var(--muted);font-weight:600;padding:12px">Everyone is placed.</span>' : '<span style="color:var(--muted);font-weight:600;padding:12px">No teams yet. Go to Settings (gear, top right) and tap Refresh Placements.</span>'}</div>
     </div>
     ${mapHtml(items)}`;
+  keep();
   updateRings();
+}
+/**
+ * Placing or re-placing someone redraws the whole Placements page. The Available list then lost its own scroll
+ * (back to the top every time) and could change height above the map, so the screen jumped (Daniel 11/15).
+ * Before the redraw this notes the list's scroll and where the map sits on screen; after it, both are put back.
+ * Zones growing inside the map are left alone (that is the person landing, not a jump).
+ */
+function placeAnchor() {
+  const view = $('#placeView'), tb = view.querySelector('.tray'), trayTop = tb ? tb.scrollTop : 0;
+  const map = view.querySelector('.map'), top = map && scrollY > 0 ? map.getBoundingClientRect().top : null;
+  return () => {
+    const t = view.querySelector('.tray'); if (t) t.scrollTop = trayTop;
+    const m = view.querySelector('.map');
+    if (top !== null && m) { const d = m.getBoundingClientRect().top - top; if (Math.abs(d) >= 1) window.scrollBy(0, d); }
+  };
 }
 function place(key, zone) {
   const it = placeItems(V()).find(x => x.key === key);
@@ -2093,14 +2118,14 @@ function renderSettings(st) {
     <button class="pbtn" style="align-self:center" data-sact="clear">Clear all placements</button>
     <button class="pbtn" style="align-self:center" data-sact="radiobase">${I.radio}Return all radios to base</button>
     <button class="pbtn" style="align-self:center" data-sact="scannerbase">${I.scan}Return all scanners to base</button>
-    <button class="bigset red" data-sact="roster">${I.refresh}<div><div class="a">Refresh Roster</div><div class="b">Re-pulls the latest show roster from the Master Timesheet. If a newer show is there, the app switches over to it and hides the old show's sheets.</div></div></button>
+    <button class="bigset red" data-sact="roster">${I.refresh}<div><div class="a">Refresh Roster</div><div class="b">Same button as in OnSite Settings. Re-pulls the latest show roster from the Master Timesheet. If a newer show is there, Shot O'clock and OnSite (event name, Flags and Wristbands pages) switch over to it and the old show's sheets are hidden.</div></div></button>
   </div>`;
 }
 document.addEventListener('click', async e => {
   if (!S.settingsOpen) return;
   const a = e.target.closest('[data-sact]');
   if (a) {
-    if (a.dataset.sact === 'roster' && confirm('Are you sure?\n\nThis re-pulls the latest show roster from the Master Timesheet. If there is a more current event, the app will switch over to that event and hide the current show\'s sheets.'))
+    if (a.dataset.sact === 'roster' && confirm('Are you sure?\n\nThis re-pulls the latest show roster from the Master Timesheet. If there is a more current event, Shot O\'clock and OnSite will switch over to that event and hide the current show\'s sheets.'))
       runRefresh('api_refreshRoster', 'Pulling the roster from the Master Timesheet…');
     if (a.dataset.sact === 'signout' && confirm('Are you ready to print out your Sign Out sheet for the night?\n\nIt will be emailed to Aria and Gabriel as an Excel file.'))
       runRefresh('api_sendSignOut', 'Making the sign out sheet and emailing it…');
@@ -2196,6 +2221,7 @@ function setCompact(on) {
   if (!on) { hdrSettle = Date.now() + 260; setTimeout(measureHdr, 280); }
 }
 function onScrollHdr() {
+  if (document.body.classList.contains("mlock")) return;   // a pop-up has the page locked: keep the header as it was
   const place = S.view === 'place' && !S.settingsOpen;
   setCompact(place && (compact ? scrollY > 4 : scrollY > 40));
 }
@@ -2267,6 +2293,18 @@ setInterval(poll, 3000);
 setInterval(() => { if (!S.modal && !drag && !S.settingsOpen && S.view === 'time') { renderTime(V()); fitText(); } }, 15000);
 // Placements: a "Moving to ..." warning starts 5 minutes before its time, so the board redraws itself when idle.
 setInterval(() => { if (!S.modal && !S.pop && !drag && !S.settingsOpen && !S.edit && !S.selKey && S.view === 'place') { renderPlace(V()); fitText($('#placeView')); } }, 20000);
+/* Locks the page behind while a pop-up is open (modalRoot has content) and puts it back where it was after. */
+(function lockScroll() {
+  const root = document.getElementById('modalRoot'); if (!root) return;
+  let y = 0, locked = false;
+  new MutationObserver(() => {
+    const open = !!root.querySelector('.overlay');
+    if (open === locked) return;
+    locked = open;
+    if (open) { y = window.scrollY || 0; document.body.style.top = -y + 'px'; document.body.classList.add('mlock'); }
+    else { document.body.classList.remove('mlock'); document.body.style.top = ''; window.scrollTo(0, y); }
+  }).observe(root, { childList: true, subtree: true });
+})();
 </script>
 </body>
 </html>
