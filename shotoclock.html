@@ -77,7 +77,12 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .pill.hasav{padding-right:90px}
 .pill .avi,.pill .av{position:absolute;right:16px;top:50%;width:60px;height:60px;margin-top:-30px;border-radius:50%}
 .pill .avi{display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.07);color:#71717a;font-weight:800;font-size:20px;letter-spacing:.02em}
-.pill .av{object-fit:cover;background:#e4e4e7}
+.pill .av{object-fit:cover;background:#e4e4e7;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+/* Long-press the photo: big round photo (tap anywhere to close) */
+.overlay.bigavov{display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(17,17,24,.78)}
+.bigavbox{text-align:center;padding:20px}
+.bigav{display:block;width:min(78vw,78vh,460px);height:min(78vw,78vh,460px);border-radius:50%;object-fit:cover;margin:0 auto;background:#e4e4e7;border:6px solid #fff;box-shadow:0 20px 60px rgba(0,0,0,.35);-webkit-touch-callout:none;user-select:none}
+.bigavn{margin-top:18px;color:#fff;font-size:28px;font-weight:800;text-shadow:0 2px 10px rgba(0,0,0,.5)}
 .mav{display:block;width:104px;height:104px;border-radius:50%;object-fit:cover;margin:0 auto 12px;background:#e4e4e7}
 .pill .st{font-size:16px;font-weight:600;color:var(--muted)}
 .pill.in{background:var(--blue-t);border-color:#bfdbfe}.pill.in::before{background:var(--blue)}.pill.in .st{color:var(--blue)}
@@ -570,7 +575,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '55';
+const BUILT_VERSION = '56';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -709,7 +714,7 @@ function photoUrl(p, size) {
 function initials(n) { return String(n || '').replace(/\([^)]*\)/g, ' ').trim().split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
 function avImg(p, cls, size) {
   const u = photoUrl(p, size);
-  return u ? `<img class="${cls}" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
+  return u ? `<img class="${cls}" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" draggable="false" onerror="this.remove()">` : '';
 }
 function V(raw) {
   const base = S.server || { people:[], pairs:[], event:{}, settings:{}, maxBreaks:1, breakMinutes:30, lateGrace:3 };
@@ -2052,8 +2057,9 @@ let pillHold = null, pillHeld = false;
 function pillHoldCancel() { if (pillHold) { clearTimeout(pillHold.t); pillHold.el.classList.remove('holding'); pillHold = null; } }
 document.addEventListener('pointerdown', e => {
   const el = e.target.closest('.pill');
+  const onPhoto = !!e.target.closest('.pill .av');   // 11/17: long-press on the photo = big photo, anywhere else = Hide
   pillHeld = false;
-  if (!el || VIEW_ONLY || S.settingsOpen || S.view !== 'time' || S.modal || S.pop) return;
+  if (!el || (VIEW_ONLY && !onPhoto) || S.settingsOpen || S.view !== 'time' || S.modal || S.pop) return;
   pillHoldCancel();
   el.classList.add('holding');
   pillHold = { el, x: e.clientX, y: e.clientY, t: setTimeout(() => {
@@ -2061,9 +2067,18 @@ document.addEventListener('pointerdown', e => {
     pillHoldCancel();
     pillHeld = true;
     if (navigator.vibrate) navigator.vibrate(15);
-    openHide(id);
+    if (onPhoto) openPhoto(id); else openHide(id);
   }, PILL_HOLD_MS) };
 });
+/** Big round staff photo with the name under it. Tap anywhere to close. */
+function openPhoto(id) {
+  const p = person(id); if (!p) return;
+  const u = photoUrl(p, 900); if (!u) return;
+  S.pop = { onAct: () => {} };
+  $('#modalRoot').innerHTML = `<div class="overlay bigavov" data-pact="close"><div class="bigavbox">`
+    + `<img class="bigav" src="${esc(u)}" alt="" referrerpolicy="no-referrer" draggable="false">`
+    + `<div class="bigavn">${esc(p.name)}</div></div></div>`;
+}
 document.addEventListener('pointermove', e => { if (pillHold && Math.hypot(e.clientX - pillHold.x, e.clientY - pillHold.y) > 10) pillHoldCancel(); });
 document.addEventListener('pointerup', pillHoldCancel);
 document.addEventListener('pointercancel', pillHoldCancel);
