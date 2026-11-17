@@ -61,6 +61,7 @@ nav button.on{color:var(--blue);background:var(--blue-t)}
 .hero img{width:100%;max-width:560px;display:block;margin:0 auto}
 .hero .bo{margin-top:14px;font-size:13px;font-weight:800;letter-spacing:.22em;color:#a1a1aa}
 .hero .who{margin-top:16px;font-size:17px;color:#d4d4d8;font-weight:600;text-align:center}
+.hero .whoav{display:block;width:76px;height:76px;border-radius:50%;object-fit:cover;margin:16px auto 0;border:3px solid rgba(255,255,255,.85);background:#3f3f46}   /* 11/17: staff photo */
 .mode{display:flex;align-items:center;gap:20px;width:100%;min-height:150px;border-radius:28px;padding:24px 26px;text-align:left;color:#fff;transition:transform .08s}
 .mode:active{transform:scale(.985)}
 .mode svg{width:54px;height:54px;flex:none}
@@ -522,7 +523,7 @@ const TICKET_PARAM = (new URLSearchParams(location.search).get('t') || '').toUpp
 const LOGO = 'logo.png';
 const APP_URL = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyTyzc2jY-XwgvSQmlDlJhXqWg4mQsF7yR3dqCs23wvfTx1sCPBaMHWBQc2IM9-vlETWg/exec';
-const APP_VERSION = '53';
+const APP_VERSION = '55';
 const SET_PARAM = HOSTED ? new URLSearchParams(location.search).get('settings') || '' : '';   // Shot O'clock's gear: ./?settings=shot
 const BAND_PARAM = HOSTED ? Number(new URLSearchParams(location.search).get('band')) || 0 : 0;   // from a notification tap
 
@@ -639,7 +640,7 @@ function requireLogin(then) {
         const tried = code; code = '';
         call('api_login', tried).then(r => {
           if (!r.ok) return draw(r.msg, true);
-          AUTH = { token: r.token, name: r.name, dev: !!r.dev, role: r.role === 'view' ? 'view' : 'lead' }; store.set('auth', AUTH);
+          AUTH = { token: r.token, name: r.name, dev: !!r.dev, role: r.role === 'view' ? 'view' : 'lead', photo: r.photo || '' }; store.set('auth', AUTH);
           swCfg();
           $('#modal').innerHTML = '';
           toast('Signed in as ' + r.name + (isLead() ? '' : ' (view only)'));
@@ -810,10 +811,10 @@ const TestApi = (() => {
       f.status = 'Removed'; save(); return { ok: true };
     },
     api_flagPhoto: n => { const f = db.flags.find(x => x.n === Number(n)); return f && f.photo ? { ok: true, photo: f.photo } : { ok: false, msg: 'This flag has no ID photo.' }; },
-    api_flagsClear: (how, dry) => {
+    api_flagsClear: (how, dry, scope) => {
       const mine = db.flags.filter(f => how === 'wipe' || f.status === 'Active');
       if (!dry) { if (how === 'wipe') db.flags = []; else mine.forEach(f => { f.status = 'Removed'; }); save(); }
-      return { ok: true, count: mine.length, event: 'TEST MODE' };
+      return { ok: true, count: mine.length, event: scope === 'all' ? '' : 'TEST MODE' };
     },
     api_tcpBridge: on => { if (on === true || on === false) { db.bridge = on; save(); } return { ok: true, on: !!db.bridge, allowed: true, only: [], skipped: 0 }; },
     api_refreshEvent: () => ({ ok: true, msg: 'Test mode: the Master Timesheet was not read.' }),
@@ -877,6 +878,7 @@ function renderHome() {
   const tile = (cls, id, icon, name) => '<button class="mode ' + cls + '" id="' + id + '">' + icon + '<b>' + name + '</b>' + (AUTH ? '' : '<i class="lk">' + I.padlock + '</i>') + '</button>';
   $('#main').innerHTML = '<div class="home' + (AUTH ? '' : ' out') + '">' +
     '<div class="hero"><img src="' + LOGO + '" alt="Factory Town">' +
+    (AUTH && AUTH.photo ? '<img class="whoav" src="https://lh3.googleusercontent.com/d/' + encodeURIComponent(AUTH.photo) + '=s240" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') +
     '<div class="who">' + (AUTH ? 'Signed in as <b style="color:#fff">' + esc(AUTH.name) + '</b>' + (isLead() ? '' : '<span class="vo">VIEW ONLY</span>') : 'Signed out') + '</div>' +
     (AUTH ? (!isLead() ? '<button class="hout" id="hOut">Sign out</button>' : '') : '<button class="hin" id="hIn">Sign in</button>') + '</div>' +
     tile('shot', 'goShot', I.clock, 'Shot O\'clock') +
@@ -2132,7 +2134,7 @@ function openSettings(from) {
   const redraw = () => { if ($('#setSheet')) draw(); };
   const close = () => { $('#modal').innerHTML = ''; if (setFrom === 'shot') location.href = 'shotoclock.html'; };
   // A confirm that comes back to Settings on Back, and redraws Settings before running the action.
-  const ask = (title, sub, ok, color, fn) => { confirmBox(title, sub, ok, color, () => { draw(); fn(); }); $('#cNo').onclick = draw; };
+  const ask = (title, sub, ok, color, fn) => { if ($('#setSheet')) T.y = $('#setSheet').scrollTop; confirmBox(title, sub, ok, color, () => { draw(); fn(); }); $('#cNo').onclick = draw; };
   const busyRow = (id, text) => { const b = $('#' + id); if (b) { b.disabled = true; b.querySelector('.l').textContent = text; } };
   const socRun = (fn, text, arg, id) => {
     if (test) return toast('Test mode: the live show was not changed.');
@@ -2146,6 +2148,7 @@ function openSettings(from) {
   const fmtWhen = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
 
   const draw = () => {
+    if ($('#setSheet')) T.y = $('#setSheet').scrollTop;   // keep the spot across redraws
     const info = T.info, st = T.soc, set = (st && st.settings) || {}, ps = pushState(), tcp = T.tcp, tsum = st && st.tcp;
     const days = (st && st.days) || [], lastDay = days.length && st.activeDay === days[days.length - 1].key;
     const probs = (tsum && tsum.problems) || [];
@@ -2161,7 +2164,7 @@ function openSettings(from) {
       ios.row('Show', { val: info ? (info.event || 'Not set') : '…' }) +
       ios.row('Tonight', { val: info ? info.night : '…' }) +
       (days.length > 1 ? ios.row('Show day', { val: (days.find(d => d.key === st.activeDay) || {}).label || '', sel: ios.sel('sDay', days.map(d => [d.key, d.label]), st.activeDay) }) : '') +
-      (lead ? ios.row('Refresh Roster', { id: 'sRoster', cls: 'blue' }) : ''),
+      (lead ? ios.row('Refresh Event', { id: 'sRoster', cls: 'blue' }) : ''),
       st && st.dayBlocked ? esc(st.dayBlocked) : '');
 
     const switches = ios.sec('',
@@ -2172,17 +2175,17 @@ function openSettings(from) {
         sub: ps === 'none' ? 'Open OnSite from its Home Screen icon' : ps === 'blocked' ? 'Turned off in this device\'s settings' : '' }));
 
     const shot = lead ? ios.sec('Shot O\'clock', !st ? ios.row(T.socErr || 'Loading…', { cls: 'muted' }) :
+      ios.row('Schedule tab', { val: set.scheduleTabOverride || 'Auto', sel: ios.sel('sSched', [['', 'Auto']].concat((set.scheduleTabs || []).map(t => [t, t])), set.scheduleTabOverride || '') }) +
+      ios.row('Breaks per shift', { val: mb || 'Auto (' + st.maxBreaks + ')', sel: ios.sel('sMb', [['', 'Auto'], ['1', '1 break'], ['2', '2 breaks']], mb) }) +
       ios.row('Refresh Partners', { id: 'sPartners', cls: 'blue' }) +
       ios.row('Sync with Timesheet', { id: 'sSync', cls: 'blue' }) +
-      (set.signOutBtn !== false ? ios.row('Send Sign Out Sheet', { id: 'sSignOut', cls: 'blue' }) : '') +
-      (lastDay && !st.closedOut ? ios.row('Close Out ' + ((st.event || {}).name || 'Show'), { id: 'sClose', cls: 'blue' }) : '') +
-      ios.row('Breaks per shift', { val: mb || 'Auto (' + st.maxBreaks + ')', sel: ios.sel('sMb', [['', 'Auto'], ['1', '1 break'], ['2', '2 breaks']], mb) }) +
-      ios.row('Schedule tab', { val: set.scheduleTabOverride || 'Auto', sel: ios.sel('sSched', [['', 'Auto']].concat((set.scheduleTabs || []).map(t => [t, t])), set.scheduleTabOverride || '') }) +
       ios.row('Return all radios to base', { id: 'sRadios', cls: 'blue' }) +
       ios.row('Return all scanners to base', { id: 'sScanners', cls: 'blue' }) +
+      (set.signOutBtn !== false ? ios.row('Send Sign Out Sheet', { id: 'sSignOut', cls: 'blue' }) : '') +
+      (lastDay && !st.closedOut ? ios.row('Close Out ' + ((st.event || {}).name || 'Show'), { id: 'sClose', cls: 'blue' }) : '') +
       ios.row('Clear all placements', { id: 'sClear', cls: 'red' }),
       test ? 'Test mode: these show the live show and do not change it.'
-        : st && st.closedOut ? 'Closed out. Refresh Roster when the next show is on the Master Timesheet.'
+        : st && st.closedOut ? 'Closed out. Refresh Event when the next show is on the Master Timesheet.'
         : st && (st.unmatched || []).length ? 'No break ring for: ' + esc(st.unmatched.join(', ')) + '. Use roster first names in the schedule.' : '') : '';
 
     const sheets = lead && st && (st.dataUrl || st.masterUrl) ? ios.sec('Sheets',
@@ -2191,7 +2194,7 @@ function openSettings(from) {
 
     const about = ios.sec('About',
       ios.row('Version', { val: 'App ' + APP_VERSION + (info ? ' · Server ' + info.build : '') }) +
-      ios.row('Emails left today', { val: info ? String(info.emailsLeft) : '…', vcol: info && info.emailsLeft < 15 ? 'var(--red)' : '' }) +
+      (sellScanOn() ? ios.row('Emails left today', { val: info ? String(info.emailsLeft) : '…', vcol: info && info.emailsLeft < 15 ? 'var(--red)' : '' }) : '') +
       (lead ? ios.row('Shot O\'clock sync', { val: pend ? pend + ' waiting' : 'Up to date' }) : ''));
 
     const dev = AUTH && AUTH.dev ? ios.sec('', ios.row('Developer Settings', { id: 'sDev', chev: true })) : '';
@@ -2203,6 +2206,7 @@ function openSettings(from) {
     $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet ios-sheet" id="setSheet">' +
       '<button class="close" id="mx">' + I.x + '</button><div class="mname">Settings</div>' +
       event + shot + switches + sheets + about + dev + account + '</div></div>';
+    const sh = $('#setSheet'); sh.scrollTop = T.y || 0; sh.onscroll = () => { T.y = sh.scrollTop; };   // 11/17: no jump to the top on redraw
     wire();
   };
 
@@ -2212,7 +2216,7 @@ function openSettings(from) {
     const on = (id, fn) => { const el = $('#' + id); if (el) el.onclick = fn; };
     const onChange = (id, fn) => { const el = $('#' + id); if (el) el.onchange = () => fn(el.value); };
 
-    on('sRoster', () => ask('Refresh Roster?', 'Pulls the latest show from the Master Timesheet. A newer show replaces this one in OnSite and Shot O\'clock.', 'Refresh', 'dark', () => {
+    on('sRoster', () => ask('Refresh Event?', 'Pulls the latest show from the Master Timesheet. A newer show replaces this one in OnSite and Shot O\'clock.', 'Refresh', 'dark', () => {
       if (test) return toast('Test mode: the live roster was not changed.');
       busyRow('sRoster', 'Reading the Master Timesheet…');
       callSoc('api_refreshRoster').then(r => { if (r && r.state) T.soc = r.state; toast(r.msg || (r.ok === false ? 'Could not refresh' : 'Done'), 6000); return call('api_info', AUTH.token); })
@@ -2262,7 +2266,7 @@ function openSettings(from) {
       ask('Switch to ' + d.label + '?', 'The other days\' sheets are hidden, and ' + d.label + ' gets its own timesheet, placements, radios and scanners.', 'Switch', 'dark',
         () => socRun('api_switchDay', 'Switching…', key));
     });
-    on('sDev', () => openDeveloper(draw, T));
+    on('sDev', () => { T.y = $('#setSheet').scrollTop; openDeveloper(draw, T); });
     on('sOut', () => { signOutAsk(); $('#cNo').onclick = draw; });
   };
 
@@ -2281,8 +2285,9 @@ function openSettings(from) {
 function openDeveloper(back, T) {
   T = T || {};
   const ss = sellScanOn(), tm = testOn(), dg = idDiag(), soc = T.soc, so = !!(soc && (soc.settings || {}).signOutBtn !== false);
+  if ($('#devSheet')) T.dy = $('#devSheet').scrollTop;
   const again = () => openDeveloper(back, T);
-  const ask = (title, sub, ok, color, fn) => { confirmBox(title, sub, ok, color, () => { again(); fn(); }); $('#cNo').onclick = again; };
+  const ask = (title, sub, ok, color, fn) => { if ($('#devSheet')) T.dy = $('#devSheet').scrollTop; confirmBox(title, sub, ok, color, () => { again(); fn(); }); $('#cNo').onclick = again; };
   const s = store.get(ID_STATS) || {}, keys = Object.keys(s).filter(k => k[0] !== '_').sort(), reads = s._reads || 0;
   const stats = (reads ? ios.row('Reads', { val: reads + ' · ' + ((s._secs || 0) / Math.max(1, reads)).toFixed(1) + ' s avg' }) : ios.row('No scans counted yet', { cls: 'muted' })) +
     keys.map(k => { const [n, r] = s[k]; return ios.row(k, { val: r + ' of ' + n + ' · ' + (n ? (100 * r / n).toFixed(0) : '0') + '%' }); }).join('');
@@ -2296,9 +2301,10 @@ function openDeveloper(back, T) {
       'Sign Out Sheet shows or hides Send Sign Out Sheet on every device. The rest are this device only.') +
     (tm ? ios.sec('Test mode', ios.row('Reset the sample data', { id: 'dTestReset', cls: 'blue' }), 'Shot O\'clock manager code in test mode: 123456.') : '') +
     ios.sec('ID scan stats', stats + ios.row('Reset ID scan stats', { id: 'dStatsReset', cls: 'red' })) +
-    ios.sec('Flags', ios.row('Remove flags', { id: 'dFlagsRemove', cls: 'red' }) + ios.row('Reset flags', { id: 'dFlagsWipe', cls: 'red' }),
-      'This event only. Remove keeps the rows as Removed. Reset empties the page.') +
+    ios.sec('Flags', ios.row('Hide Flags', { id: 'dFlagsRemove', cls: 'red' }) + ios.row('Delete Flags', { id: 'dFlagsWipe', cls: 'red' }),
+      'Hide keeps the rows on the sheet. Delete empties the page.') +
     '</div></div>';
+  const dsh = $('#devSheet'); dsh.scrollTop = T.dy || 0; dsh.onscroll = () => { T.dy = dsh.scrollTop; };
   $('#mx').onclick = () => { $('#modal').innerHTML = ''; if (setFrom === 'shot') location.href = 'shotoclock.html'; };
   $('#ov').onclick = e => { if (e.target.id === 'ov') $('#mx').onclick(); };
   $('#dBack').onclick = back;
@@ -2331,35 +2337,45 @@ function openDeveloper(back, T) {
     wb = null; if (mode !== 'home') { mode = 'home'; } render(); toast('Sample data reset.');
   });
   $('#dStatsReset').onclick = () => ask('Reset ID scan stats?', 'The counts on this device start again from zero.', 'Reset', 'red', () => { store.set(ID_STATS, null); again(); });
-  // Remove flags / Reset flags: ask the server how many it would touch, confirm with that number, then do it.
-  const flagsClear = (how, btn) => {
-    const wipe = how === 'wipe';
-    btn.disabled = true;
-    call('api_flagsClear', AUTH.token, how, true).then(r => {
-      btn.disabled = false;
+  // Hide Flags / Delete Flags (11/17): This Event or All Events, then the server says how many, confirm with that number, then do it.
+  const flagsClear = (how, scope) => {
+    const wipe = how === 'wipe', all = scope === 'all';
+    toast('Checking the flags…', 1500);
+    call('api_flagsClear', AUTH.token, how, true, scope).then(r => {
       if (!r.ok) return toast(r.msg || 'Could not check the flags.');
-      const ev = r.event || 'this event', n = r.count, s = n === 1 ? '' : 's';
-      if (!n) return toast(wipe ? 'The Flags page for ' + ev + ' is already empty.' : 'No active flags for ' + ev + '.');
-      ask(wipe ? 'Reset flags: delete all ' + n + ' flag' + s + '?' : 'Remove ' + n + ' active flag' + s + '?',
-        wipe ? 'Empties the Flags page for ' + ev + ', active and removed. Only the sheet\'s version history can bring them back.'
+      const ev = all ? 'every event' : (r.event || 'this event'), n = r.count, s = n === 1 ? '' : 's';
+      if (!n) return toast(wipe ? 'No flags to delete for ' + ev + '.' : 'No active flags for ' + ev + '.');
+      ask(wipe ? 'Delete ' + n + ' flag' + s + '?' : 'Hide ' + n + ' active flag' + s + '?',
+        wipe ? 'Empties the Flags ' + (all ? 'pages for every event' : 'page for ' + ev) + ', active and hidden. Only the sheet\'s version history can bring them back.'
           : 'Every active flag for ' + ev + '. They stay on the sheet as Removed.',
-        wipe ? 'Delete all' : 'Remove all', 'red', () => {
-          call('api_flagsClear', AUTH.token, how, false).then(x => toast(x.ok ? x.count + ' flag' + (x.count === 1 ? '' : 's') + (wipe ? ' deleted. The Flags page is empty.' : ' removed.') : (x.msg || 'Nothing changed.'), 4500))
+        wipe ? 'Delete' : 'Hide', 'red', () => {
+          call('api_flagsClear', AUTH.token, how, false, scope).then(x => toast(x.ok ? x.count + ' flag' + (x.count === 1 ? '' : 's') + (wipe ? ' deleted.' : ' hidden.') : (x.msg || 'Nothing changed.'), 4500))
             .catch(() => toast('No connection. Try again.'));
         });
-    }).catch(() => { btn.disabled = false; toast('No connection. Try again.'); });
+    }).catch(() => toast('No connection. Try again.'));
   };
-  $('#dFlagsRemove').onclick = e => flagsClear('remove', e.currentTarget);
-  $('#dFlagsWipe').onclick = e => flagsClear('wipe', e.currentTarget);
+  const pickScope = how => {
+    if ($('#devSheet')) T.dy = $('#devSheet').scrollTop;
+    $('#modal').innerHTML = '<div class="overlay" id="ov"><div class="sheet ios-sheet" id="scopeSheet"><div class="mname">' + (how === 'wipe' ? 'Delete Flags' : 'Hide Flags') + '</div>' +
+      ios.sec('', ios.row('This Event', { id: 'fsThis', cls: 'blue ctr' }) + ios.row('All Events', { id: 'fsAll', cls: 'red ctr' })) +
+      ios.sec('', ios.row('Back', { id: 'fsBack', cls: 'ctr' })) + '</div></div>';
+    $('#fsBack').onclick = again;
+    $('#ov').onclick = e => { if (e.target.id === 'ov') again(); };
+    $('#fsThis').onclick = () => { again(); flagsClear(how, 'event'); };
+    $('#fsAll').onclick = () => { again(); flagsClear(how, 'all'); };
+  };
+  $('#dFlagsRemove').onclick = () => pickScope('remove');
+  $('#dFlagsWipe').onclick = () => pickScope('wipe');
 }
 /** Keeps this device's access current from the server's api_info reply: developer code, lead or view only
  *  (someone moved into or out of the LEADS section), and whether band requests are sent to them. */
 function setAccess(info) {
   if (!AUTH || !info) return;
   const role = info.role === 'view' ? 'view' : 'lead';
-  if (!!AUTH.dev === !!info.dev && AUTH.role === role && !!AUTH.notify === !!info.bandNotify) return;
+  const photo = info.photo != null ? String(info.photo) : (AUTH.photo || '');   // 11/17: staff photo from Profile Pictures
+  if (!!AUTH.dev === !!info.dev && AUTH.role === role && !!AUTH.notify === !!info.bandNotify && (AUTH.photo || '') === photo) return;
   const was = isLead();
-  AUTH.dev = !!info.dev; AUTH.role = role; AUTH.notify = !!info.bandNotify; store.set('auth', AUTH);
+  AUTH.dev = !!info.dev; AUTH.role = role; AUTH.notify = !!info.bandNotify; AUTH.photo = photo; store.set('auth', AUTH);
   if (!isLead() && was) $('#modal').innerHTML = '';
   if (mode === 'home' || ((mode === 'sell' || mode === 'scan') && !sellScanOn())) goHome(); else render();
 }
