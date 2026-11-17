@@ -564,7 +564,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '52';
+const BUILT_VERSION = '53';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -2104,7 +2104,7 @@ function renderSettings(st) {
       <div class="d">Roster tab: ${esc(ev.tab || '-')} · ${st.people.length} staff<br>Schedule tab: ${esc(ev.scheduleTab || '-')} · ${st.pairs.filter(p => p.kind !== 'lead').length} teams<br>Roster refreshed ${when(ev.rosterRefreshedAt)}</div></div>
     ${daysCard(st)}
     <button class="bigset blue" data-sact="schedule">${I.map}<div><div class="a">Refresh Partners</div><div class="b">Re-reads who is partnered with who from the Master Timesheet schedule. Use it whenever partners change during the night. Teams that did not change stay where they are; any team with a new partner goes back to Available.</div></div></button>
-    <button class="bigset purple" data-sact="signout">${I.outIcon}<div><div class="a">Send Sign Out Sheet</div><div class="b">Makes tonight's sign out sheet (Excel: times, durations and a signature line for everyone who clocked in) and emails it to Aria and Gabriel to print.</div></div></button>
+    ${set.signOutBtn === false ? '' : `<button class="bigset purple" data-sact="signout">${I.outIcon}<div><div class="a">Send Sign Out Sheet</div><div class="b">Makes tonight's sign out sheet (Excel: times, durations and a signature line for everyone who clocked in) and emails it to Aria and Gabriel to print.</div></div></button>`}
     <button class="bigset green" data-sact="synctime">${I.check}<div><div class="a">Sync with Timesheet</div><div class="b">Writes every punch of this show onto the roster tab of the FT Master Timesheet (right person, right day), with TCP colors. Anything it overwrites is kept as a note on that cell.</div></div></button>
     ${closeOutBtn(st)}
     <div class="card"><h3>Breaks per shift</h3><div class="d">Auto reads the schedule: two sets of Break A/B means 2 breaks. Currently ${st.maxBreaks}.</div>
@@ -2243,7 +2243,16 @@ $('#tabScanner').onclick = () => { if (S.edit) savePartners(); S.view = 'scanner
 $('#tabTime').onclick = () => { if (S.edit) savePartners(); S.view = 'time'; S.settingsOpen = false; LS.set('shotView', 'time'); scrollTo(0, 0); renderAll(); };
 $('#tabPlace').onclick = () => { if (S.edit) savePartners(); S.view = 'place'; S.settingsOpen = false; LS.set('shotView', 'place'); scrollTo(0, 0); renderAll(); };
 $('#tabRadio').onclick = () => { if (S.edit) savePartners(); S.view = 'radio'; S.settingsOpen = false; LS.set('shotView', 'radio'); scrollTo(0, 0); renderAll(); };
-$('#gearBtn').onclick = () => { if (S.edit) savePartners(); S.settingsOpen = !S.settingsOpen; scrollTo(0, 0); renderAll(); };
+// 11/16 (v53): inside OnSite the gear opens OnSite's Settings, the one Settings for both apps (./?settings=shot).
+// Waiting punches are sent first when online; any still queued go out next time Shot O'clock opens.
+$('#gearBtn').onclick = async () => {
+  if (S.edit) savePartners();
+  if (IN_ONSITE) {
+    if (S.pending.length && S.online && !TEST_MODE) { try { await Promise.race([flush(), new Promise(r => setTimeout(r, 4000))]); } catch (e) {} }
+    location.href = './?settings=shot'; return;
+  }
+  S.settingsOpen = !S.settingsOpen; scrollTo(0, 0); renderAll();
+};
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { flush(); poll(); } });
 addEventListener('online', () => { S.online = true; flush(); poll(); });
 addEventListener('offline', () => { S.online = false; syncDot(); });
