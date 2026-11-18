@@ -594,7 +594,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '57';
+const BUILT_VERSION = '58';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -731,7 +731,8 @@ const localPhotos = {};   // photos taken on this device (11/17): shown at once,
 function photoUrl(p, size) {
   if (localPhotos[p.id]) return localPhotos[p.id];
   const id = ((S.server || {}).photos || {})[p.id];
-  return id ? 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=s' + (size || 160) : '';
+  const v = ((S.server || {}).photoVer || {})[p.id];   // a photo swapped in place keeps its id: ?v= skips the old cached copy
+  return id ? 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=s' + (size || 160) + (v ? '?v=' + v : '') : '';
 }
 function initials(n) { return String(n || '').replace(/\([^)]*\)/g, ' ').trim().split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
 function avImg(p, cls, size) {
@@ -2180,7 +2181,7 @@ async function saveCrop(p, img, view, btn, done) {
     const r = await call('api_savePhoto', p.name, data);
     if (!r || !r.ok) throw new Error((r && (r.msg || r.error)) || 'Photo not saved.');
     localPhotos[p.id] = data;
-    if (S.server) { S.server.photos = S.server.photos || {}; if (r.id) S.server.photos[p.id] = r.id; }
+    if (S.server) { S.server.photos = S.server.photos || {}; S.server.photoVer = S.server.photoVer || {}; if (r.id) S.server.photos[p.id] = r.id; if (r.ver) S.server.photoVer[p.id] = r.ver; }
     done(); popClose(); renderAll();
     toast('New photo saved for ' + (p.first || p.name));
   } catch (err) {
