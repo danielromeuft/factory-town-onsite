@@ -174,8 +174,22 @@ nav button.on.scanner{color:var(--teal);background:var(--teal-t)}
 .tcp.ok{background:var(--green-t);color:var(--green);border-color:#86efac}
 .tcp.wrong{background:#fefce8;color:#a16207;border-color:#fde047}
 .tcp.none{background:var(--red-t);color:var(--red);border-color:#fca5a5}
+.tcp.miss{background:#fff7ed;color:#c2410c;border-color:#fdba74}
 .tcp.sm{height:34px;padding:0 10px;font-size:13px;gap:4px;margin-left:8px}
 .tcp.sm svg{width:14px;height:14px}
+/* Edit Times, a row with no time yet: the pill still works and is kept once a time is typed in. */
+.tcp.sm.blank{opacity:.55}
+/* Punch notes (v59): pencil next to each time in Edit Times; the note shows under its row. */
+.ed .row{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border:2px solid var(--line);border-radius:18px}
+.ed .row label{border:0;padding:0;border-radius:0;flex-wrap:wrap}
+.ed .row label > span{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:4px}
+.notebtn{width:34px;height:34px;border-radius:999px;border:2px solid var(--line);background:#fff;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;margin-left:8px;flex:none}
+.notebtn svg{width:16px;height:16px}
+.notebtn.has{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+.notetxt{font-size:15px;font-weight:600;color:#1d4ed8;background:#eff6ff;border-radius:12px;padding:8px 12px;text-align:left;width:100%;white-space:pre-wrap;word-break:break-word}
+.noteed{display:flex;gap:8px;align-items:flex-end}
+.noteed textarea{flex:1;font-size:17px;font-family:inherit;border:1.5px solid #93c5fd;border-radius:12px;padding:8px 10px;min-height:64px;resize:vertical;color:var(--ink);background:#fff}
+.noteed button{font-size:15px;font-weight:800;color:#1d4ed8;padding:8px 6px}
 .bigset.red{background:var(--red)} .bigset.purple{background:var(--purple)} .bigset.dark{background:#27272a}
 .seg.days{flex-wrap:wrap}
 .seg.days button{height:auto;min-height:56px;padding:8px 6px;line-height:1.25;flex:1 1 140px}
@@ -576,12 +590,14 @@ const nextShow = (st, ms) => { const n = nightOf(new Date(ms).toISOString()); co
 /** Clock-in time to record: the call time when early or up to callGrace minutes late (the line), else the tap. */
 const callGraceMin = st => (st && st.callGrace) || 10;
 const recordedIn = (st, call, tsMs) => call && Math.floor((tsMs - call) / 60000) <= callGraceMin(st) ? call : tsMs;
-/* TCP status per punch, same as Code.gs: ok = matches TCP, wrong = in TCP with the wrong time, none = not in TCP. */
-const TCP_NEXT = { ok: 'wrong', wrong: 'none', none: 'ok' };
-const TCP_TEXT = { ok: 'TCP Match', wrong: 'TCP Incorrect', none: 'TCP Inactive' };
+/* TCP status per punch, same as ShotOclock.gs: ok = matches TCP, wrong = in TCP with the wrong time, none = not in TCP,
+   miss = Missed Punch (v59, orange). Tap order: Match > Incorrect > Inactive > Missed Punch > Match. */
+const TCP_NEXT = { ok: 'wrong', wrong: 'none', none: 'miss', miss: 'ok' };
+const TCP_TEXT = { ok: 'TCP Match', wrong: 'TCP Incorrect', none: 'TCP Inactive', miss: 'Missed Punch' };
+const NOTE_MAX = 300;   // same cap as the server
 /** Inactive for the rest of the day if the clock-in could not go into TCP; otherwise a match. */
 const tcpDefault = tcp => (tcp && tcp.in === 'none') ? 'none' : 'ok';
-const tcpPill = (v, attrs, sm) => `<button class="tcp ${v} ${sm ? 'sm' : ''}" ${attrs}>${v === 'ok' ? I.check : v === 'none' ? I.x : I.alert}${TCP_TEXT[v]}</button>`;
+const tcpPill = (v, attrs, sm, extra) => `<button class="tcp ${v} ${sm ? 'sm' : ''} ${extra || ''}" ${attrs}>${v === 'ok' ? I.check : v === 'none' ? I.x : v === 'miss' ? I.clock : I.alert}${TCP_TEXT[v] || TCP_TEXT.ok}</button>`;
 function totals(t) {
   let br = 0;
   [['b1o','b1i'],['b2o','b2i']].forEach(([o,i]) => { if (t[o] && t[i]) br += new Date(t[i]) - new Date(t[o]); });
@@ -594,7 +610,7 @@ function totals(t) {
 // the screens then call OnSite's doPost with {fn: 'soc.<name>', args} as text/plain (no CORS preflight).
 // Since 2026-09-30 the server is part of the OnSite Apps Script project (ShotOclock.gs); there is no separate script.
 const IN_ONSITE = true;
-const BUILT_VERSION = '58';
+const BUILT_VERSION = '59';
 // Test mode (OnSite > Settings > Developer Settings, developer codes, this device only): everything here runs on the
 // sample data below (Mock) with the same rules, and nothing is read from or written to the sheets or TimeClock Plus.
 const TEST_MODE = (() => { try { const a = JSON.parse(localStorage.getItem('ftos.auth') || 'null'); return !!(a && a.dev && JSON.parse(localStorage.getItem('ftos.testMode') || 'null')); } catch (e) { return false; } })();
@@ -779,7 +795,10 @@ function applyOp(st, op) {
     if (!s) { s = { night: '', t: blankT() }; p.shifts.push(s); }
     s.t = Object.assign(blankT(), op.times);
     s.night = op.times.in ? nightOf(op.times.in) : '';
+    const keepNotes = s.tcp && s.tcp.n;
     if (op.tcp) s.tcp = Object.assign({}, op.tcp);
+    if (op.notes) { if (Object.keys(op.notes).length) s.tcp = Object.assign(s.tcp || {}, { n: op.notes }); }
+    else if (keepNotes) s.tcp = Object.assign(s.tcp || {}, { n: keepNotes });
     reconcile(st.pairs || [], op.id, id => personStatus(st, id));
   } else if (op.type === 'place') {
     const it = st.pairs.find(x => x.key === op.key); if (it) { it.zone = op.zone; it.up = Date.now(); rejoinOnPlace(st.pairs, it); }
@@ -1131,14 +1150,20 @@ function renderModal() {
 
   else if (m.step === 'edit') {
     armIdle(180000);
-    const draft = m.draft;
+    const draft = m.draft, notes = m.dnote || {};
+    // v59 (Daniel 11/19): every punch is always listed, Clock Out included, each with its TCP pill and a note pencil,
+    // the same as the end-of-night edit, even when nothing has been recorded yet. Break 2 only when the show allows it.
     const keys = TIME_COLS.filter(k => {
       if (k === 'b2o' || k === 'b2i') return max >= 2 || draft.b2o || draft.b2i;
-      if (k === 'out') return m.clockingOut || draft.out || s === 'out';
       return true;
     });
+    const noteHtml = k => m.noteOpen === k
+      ? `<div class="noteed"><textarea data-notein="${k}" maxlength="${NOTE_MAX}" placeholder="Note for ${LABELS[k]}">${esc(notes[k] || '')}</textarea><button data-act="noteDone">Done</button></div>`
+      : notes[k] ? `<button class="notetxt" data-notek="${k}">${esc(notes[k])}</button>` : '';
     body = head((m.clockingOut ? 'Fix any times, then clock out' : 'Edit times') + (m.mgr ? ' · editing as ' + esc(m.mgr) : ''))
-      + `<div class="ed">${keys.map(k => `<label>${LABELS[k]}<span><input type="time" step="60" data-k="${k}" value="${toHM(draft[k])}"><button class="clr" data-clr="${k}">clear</button>${draft[k] ? tcpPill(m.dtcp[k] || tcpDefault(m.dtcp), `data-tcpk="${k}"`, true) : ''}</span></label>`).join('')}</div>`
+      + `<div class="ed">${keys.map(k => `<div class="row"><label>${LABELS[k]}<span><input type="time" step="60" data-k="${k}" value="${toHM(draft[k])}"><button class="clr" data-clr="${k}">clear</button>`
+        + `<button class="notebtn ${notes[k] ? 'has' : ''}" data-notek="${k}" aria-label="${notes[k] ? 'Edit' : 'Add a'} note for ${LABELS[k]}">${I.pencil}</button>`
+        + `${tcpPill(m.dtcp[k] || tcpDefault(m.dtcp), `data-tcpk="${k}"`, true, draft[k] ? '' : 'blank')}</span></label>${noteHtml(k)}</div>`).join('')}</div>`
       + (m.err ? `<div class="err">${esc(m.err)}</div>` : '')
       // Clear all times: the shift is saved with no punches at all (manager edit, written to the Edit Log).
       + (m.confirmClear
@@ -1243,6 +1268,14 @@ document.addEventListener('click', e => {
   if (clr) { e.preventDefault(); readDraft(); m.draft[clr.dataset.clr] = ''; renderModal(); return; }
   const tk = e.target.closest('[data-tcpk]');
   if (tk) { e.preventDefault(); readDraft(); const k = tk.dataset.tcpk; m.dtcp[k] = TCP_NEXT[m.dtcp[k] || tcpDefault(m.dtcp)]; renderModal(); return; }
+  // Punch note pencil (or the note text): opens that time's note box; tapping the pencil again closes it.
+  const nk = e.target.closest('[data-notek]');
+  if (nk) {
+    e.preventDefault(); readDraft(); const k = nk.dataset.notek;
+    m.noteOpen = m.noteOpen === k ? null : k; renderModal();
+    const ta = document.querySelector(`[data-notein="${k}"]`); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    return;
+  }
   const a = e.target.closest('[data-act]'); if (!a) return;
   const act = a.dataset.act;
   if (act === 'tcp') { m.tcp = TCP_NEXT[m.tcp || 'ok']; renderModal(); return; }
@@ -1255,9 +1288,18 @@ document.addEventListener('click', e => {
   else if (act === 'outConfirm') punch('out');
   else if (act === 'editStart') go('pin', { pin: '', clockingOut: m.step === 'review', outTs: m.outTs });
   else if (act === 'saveEdit') saveEdit();
+  else if (act === 'noteDone') { readDraft(); m.noteOpen = null; renderModal(); }
   else if (act === 'clearAll') { readDraft(); m.confirmClear = true; m.err = ''; renderModal(); }
   else if (act === 'clearAllNo') { m.confirmClear = false; renderModal(); }
   else if (act === 'clearAllYes') { TIME_COLS.forEach(k => { m.draft[k] = ''; }); m.confirmClear = false; saveEdit(); }
+});
+// Edit Times: a time typed into an empty row lights up that row's TCP pill (dimmed while the row has no time).
+document.addEventListener('change', e => {
+  const m = S.modal;
+  if (!m || m.step !== 'edit' || !e.target.matches('.ed input[data-k]')) return;
+  const k = e.target.dataset.k, had = !!m.draft[k];
+  readDraft();
+  if (had !== !!m.draft[k]) renderModal();
 });
 document.addEventListener('keydown', e => {
   if (!S.modal) return;
@@ -1277,7 +1319,9 @@ async function checkManagerCode(pin) {
     const draft = Object.assign({}, p.t);
     const dtcp = Object.assign({}, p.tcp);
     if (m.clockingOut && !draft.out) { draft.out = m.outTs; dtcp.out = m.tcp || tcpDefault(dtcp); }
-    go('edit', { pin: '', checking: false, token: res.token, mgr: res.name, draft, dtcp, err: '' });
+    const dnote = Object.assign({}, (p.tcp || {}).n || {});   // punch notes ride in the TCP JSON under n
+    delete dtcp.n;
+    go('edit', { pin: '', checking: false, token: res.token, mgr: res.name, draft, dtcp, dnote, noteOpen: null, err: '' });
   } else {
     go('pin', { pin: '', checking: false, shake: true, err: (res && res.msg) || 'Wrong code.' });
     setTimeout(() => { if (S.modal) S.modal.shake = false; }, 400);
@@ -1288,6 +1332,14 @@ function readDraft() {
   TIME_COLS.forEach(k => { const el = document.querySelector(`.ed input[data-k="${k}"]`); vals[k] = el ? el.value : toHM(m.draft[k]); });
   const p = person(m.id);
   m.draft = timesFromInputs(vals, Object.assign({}, p.t, m.clockingOut && !p.t.out ? { out: m.outTs } : {}));
+  const ta = document.querySelector('.ed [data-notein]');
+  if (ta) { m.dnote = m.dnote || {}; m.dnote[ta.dataset.notein] = ta.value; }
+}
+/** The note set sent with an edit: one line each, trimmed, capped, empty ones dropped (same rules as the server). */
+function cleanNotes(n) {
+  const out = {};
+  TIME_COLS.forEach(k => { const s = String((n || {})[k] || '').replace(/\s+/g, ' ').trim().slice(0, NOTE_MAX); if (s) out[k] = s; });
+  return out;
 }
 function saveEdit() {
   const m = S.modal; readDraft();
@@ -1301,7 +1353,8 @@ function saveEdit() {
   if (err) { m.err = err; renderModal(); return; }
   const p = person(m.id);
   const tcp = {}; TIME_COLS.forEach(k => { if (d[k]) tcp[k] = m.dtcp[k] || tcpDefault(m.dtcp); });
-  queue({ type: 'edit', id: p.id, night: p.night, times: d, tcp, token: m.token });
+  // notes: always the full set (empty = remove them all). The server only touches notes when this is sent.
+  queue({ type: 'edit', id: p.id, night: p.night, times: d, tcp, notes: cleanNotes(m.dnote), token: m.token });
   showDone(m.clockingOut ? 'editOut' : 'saved', d.out || new Date().toISOString(), 0, p);
 }
 
